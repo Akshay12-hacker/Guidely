@@ -1,0 +1,150 @@
+# ==============================================================================
+# Guidely Root .gitignore
+# Supports: Root Monorepo, React/Vite Client, Node/Express Server, React Native/Expo Mobile & Android
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Dependencies
+# ------------------------------------------------------------------------------
+node_modules/
+.pnp/
+.pnp.js
+.pnpm-store/
+
+# ------------------------------------------------------------------------------
+# Environment Variables & Secrets
+# ------------------------------------------------------------------------------
+.env
+.env.*
+*.env
+!.env.example
+!.env.template
+*.pem
+*.key
+*.cert
+
+# ------------------------------------------------------------------------------
+# Build & Distribution Outputs
+# ------------------------------------------------------------------------------
+dist/
+dist-ssr/
+build/
+out/
+bin/
+obj/
+*.tsbuildinfo
+.turbo/
+.cache/
+.parcel-cache/
+
+# ------------------------------------------------------------------------------
+# Logs & Diagnostic Reports
+# ------------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+report.[0-9]*.json
+
+# ------------------------------------------------------------------------------
+# Server / Database & Local Storage
+# ------------------------------------------------------------------------------
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+server/data/*.sqlite*
+server/data/*.db*
+uploads/
+**/uploads/
+tmp/
+temp/
+
+# ------------------------------------------------------------------------------
+# React Native / Expo
+# ------------------------------------------------------------------------------
+.expo/
+.expo-shared/
+web-build/
+*.jsbundle
+.metro-health-check*
+
+# ------------------------------------------------------------------------------
+# Android Native & Gradle
+# ------------------------------------------------------------------------------
+.gradle/
+build/
+local.properties
+*.apk
+*.aab
+*.hprof
+.cxx/
+*.iml
+
+# Keystores (ignore release keys, preserve debug keystores if needed)
+*.keystore
+*.jks
+!debug.keystore
+!**/debug.keystore
+
+# ------------------------------------------------------------------------------
+# iOS Native (CocoaPods & Xcode)
+# ------------------------------------------------------------------------------
+Pods/
+*.xcworkspace
+xcuserdata/
+DerivedData/
+
+# ------------------------------------------------------------------------------
+# Testing & Code Coverage
+# ------------------------------------------------------------------------------
+coverage/
+.nyc_output/
+
+# ------------------------------------------------------------------------------
+# IDEs & Developer Tooling
+# ------------------------------------------------------------------------------
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-project
+*.sublime-workspace
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ------------------------------------------------------------------------------
+# Operating System Files
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# ------------------------------------------------------------------------------
+# Office Temporary & Backup Files
+# ------------------------------------------------------------------------------
+~$*.docx
+~$*.xlsx
+~$*.pptx
+*.backup.docx
+*.backup.doc
+*.tmp

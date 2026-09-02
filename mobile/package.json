@@ -1,0 +1,32 @@
+{
+  "name": "guidely-mobile",
+  "version": "1.0.0",
+  "description": "Guidely - Modern Mobile Mentorship Platform for CSE Students (React Native + TypeScript)",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~4.0.1",
+    "@expo/ngrok": "^4.1.0",
+    "expo": "~52.0.37",
+    "expo-asset": "~11.0.4",
+    "expo-font": "~13.0.4",
+    "expo-status-bar": "~2.0.1",
+    "expo-system-ui": "~4.0.9",
+    "react": "18.3.1",
+    "react-dom": "^18.3.1",
+    "react-native": "0.76.9",
+    "react-native-web": "^0.19.13"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "babel-preset-expo": "~12.0.9",
+    "typescript": "^5.7.3"
+  }
+}
