@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Guidely",
+    "slug": "guidely-mobile",
+    "version": "1.0.0",
+    "entryPoint": "./index.js",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F8FAFC",
+    "android": {
+      "package": "com.guidely.app",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
+    }
+  }
+}
