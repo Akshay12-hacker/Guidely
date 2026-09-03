@@ -55,6 +55,18 @@ export const env = {
   // WebSocket
   WS_HEARTBEAT_INTERVAL_MS: parseInt(process.env.WS_HEARTBEAT_INTERVAL_MS || '30000', 10),
 
+  // Logging & Observability
+  LOG_LEVEL: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+  LOG_FORMAT: process.env.LOG_FORMAT || (process.env.NODE_ENV === 'production' ? 'json' : 'pretty'),
+
+  // Rate Limiting
+  RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes default
+  RATE_LIMIT_MAX: parseInt(process.env.RATE_LIMIT_MAX || '300', 10), // 300 requests per 15 min
+  AUTH_RATE_LIMIT_MAX: parseInt(process.env.AUTH_RATE_LIMIT_MAX || '20', 10), // 20 attempts per 15 min
+
+  // Proxy Configuration (Render, Cloudflare, Heroku, etc.)
+  TRUST_PROXY: process.env.TRUST_PROXY === 'true' || process.env.TRUST_PROXY === '1' || process.env.NODE_ENV === 'production',
+
   // HTTP Limits
   BODY_LIMIT: process.env.BODY_LIMIT || '10mb'
 };

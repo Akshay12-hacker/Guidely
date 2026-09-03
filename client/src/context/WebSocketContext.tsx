@@ -16,6 +16,28 @@ interface WebSocketContextType {
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
 
+function getWebSocketUrl(token: string): string {
+  const envWs = import.meta.env.VITE_WS_URL;
+  if (envWs) {
+    const separator = envWs.includes('?') ? '&' : '?';
+    return `${envWs}${separator}token=${token}`;
+  }
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE;
+  if (apiBase && (apiBase.startsWith('http://') || apiBase.startsWith('https://'))) {
+    try {
+      const parsed = new URL(apiBase);
+      const wsProtocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${wsProtocol}//${parsed.host}/ws?token=${token}`;
+    } catch {
+      // fallback
+    }
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}/ws?token=${token}`;
+}
+
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, token, isAuthenticated } = useAuth();
   const { showToast } = useToast();
@@ -33,8 +55,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!token || !isAuthenticated) return;
 
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws?token=${token}`;
+      const wsUrl = getWebSocketUrl(token);
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {

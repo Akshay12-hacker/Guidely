@@ -48,11 +48,19 @@ export class WebSocketManager {
     return WebSocketManager.instance;
   }
 
+  private heartbeatTimer: NodeJS.Timeout | null = null;
+
   public initialize(server: any): void {
     this.wss = new WebSocketServer({ server });
 
     this.wss.on('connection', (ws: AuthenticatedWebSocket, req: IncomingMessage) => {
       ws.isAlive = true;
+      const clientIp = req.socket.remoteAddress || 'unknown';
+
+      logger.ws('CONNECTION_OPEN', {
+        ip: clientIp,
+        totalClients: this.wss ? this.wss.clients.size : 1
+      });
 
       ws.on('pong', () => {
         ws.isAlive = true;
@@ -65,8 +73,16 @@ export class WebSocketManager {
         try {
           const payload = JwtService.verify(token);
           this.registerClient(payload.userId, payload.role, ws);
+          logger.ws('CLIENT_AUTHENTICATED', {
+            userId: payload.userId,
+            role: payload.role,
+            ip: clientIp
+          });
         } catch {
-          logger.warn('WebSocket connection attempt with invalid token');
+          logger.ws('AUTH_FAILED', {
+            ip: clientIp,
+            reason: 'Invalid handshake token query parameter'
+          });
         }
       }
 
@@ -78,29 +94,44 @@ export class WebSocketManager {
             payload: parsed.payload !== undefined ? parsed.payload : parsed.data
           };
           this.handleEvent(ws, event);
-        } catch (err) {
-          logger.error('Failed to parse WebSocket message:', err);
+        } catch (err: any) {
+          logger.ws('MESSAGE_PARSE_ERROR', {
+            userId: ws.userId,
+            ip: clientIp,
+            error: err.message
+          });
         }
       });
 
-      ws.on('close', () => {
+      ws.on('close', (code, reason) => {
         if (ws.userId) {
           this.unregisterClient(ws.userId, ws);
         }
+        logger.ws('CONNECTION_CLOSED', {
+          userId: ws.userId,
+          ip: clientIp,
+          code,
+          reason: reason?.toString() || 'Normal closure'
+        });
       });
 
-      ws.on('error', (err) => {
-        logger.error('WebSocket client error:', err);
+      ws.on('error', (err: any) => {
+        logger.ws('CLIENT_ERROR', {
+          userId: ws.userId,
+          ip: clientIp,
+          error: err.message
+        });
       });
     });
 
     // Heartbeat to prune dead connections
     const heartbeatInterval = parseInt(process.env.WS_HEARTBEAT_INTERVAL_MS || '', 10) || env.WS_HEARTBEAT_INTERVAL_MS;
-    const interval = setInterval(() => {
+    this.heartbeatTimer = setInterval(() => {
       if (!this.wss) return;
       this.wss.clients.forEach((ws: WebSocket) => {
         const authWs = ws as AuthenticatedWebSocket;
         if (authWs.isAlive === false) {
+          logger.ws('CONNECTION_TIMED_OUT', { userId: authWs.userId });
           return ws.terminate();
         }
         authWs.isAlive = false;
@@ -109,10 +140,13 @@ export class WebSocketManager {
     }, heartbeatInterval);
 
     this.wss.on('close', () => {
-      clearInterval(interval);
+      if (this.heartbeatTimer) {
+        clearInterval(this.heartbeatTimer);
+        this.heartbeatTimer = null;
+      }
     });
 
-    logger.info('WebSocket Server initialized');
+    logger.info('🔌 Real-Time WebSocket Server initialized');
   }
 
   private handleEvent(ws: AuthenticatedWebSocket, event: WsEventMessage): void {
@@ -321,6 +355,36 @@ export class WebSocketManager {
         onlineUserIds, 
         timestamp: new Date().toISOString() 
       }
+    });
+  }
+
+  public async close(): Promise<void> {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+
+    if (!this.wss) return;
+
+    let closedClients = 0;
+    this.wss.clients.forEach((client) => {
+      try {
+        if (client.readyState === WebSocket.OPEN) {
+          client.close(1001, 'Server shutting down');
+          closedClients++;
+        }
+      } catch {
+        // Ignore socket close errors during shutdown
+      }
+    });
+
+    return new Promise<void>((resolve) => {
+      this.wss?.close(() => {
+        logger.ws('SERVER_SHUTDOWN', { closedClients });
+        this.wss = null;
+        this.clients.clear();
+        resolve();
+      });
     });
   }
 }

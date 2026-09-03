@@ -43,24 +43,71 @@ async function bootstrap() {
       logger.info(`🚀 Guidely Full-Stack Server running on port ${PORT}`);
       logger.info(`🔌 Real-Time WebSocket active on port ${PORT}`);
       logger.info(`🌱 Health endpoint: http://localhost:${PORT}/api/health`);
+      logger.info(`🛡️ Environment: ${process.env.NODE_ENV || env.NODE_ENV} | Logging: ${env.LOG_FORMAT}`);
       logger.info(`================================================`);
     });
 
-    // Graceful shutdown handling
-    const shutdown = async () => {
-      logger.info('Shutting down gracefully...');
-      server.close(async () => {
+    // 5. Production Graceful Shutdown Handling
+    let isShuttingDown = false;
+
+    const gracefulShutdown = async (signal: string) => {
+      if (isShuttingDown) return;
+      isShuttingDown = true;
+
+      logger.info({ signal }, `🛑 Received ${signal}. Initiating graceful shutdown...`);
+
+      // Emergency force-exit timeout safeguard for production (e.g. Render deployments)
+      const forceExitTimer = setTimeout(() => {
+        logger.error('⏰ Shutdown timeout (10s) reached. Forcing immediate termination.');
+        process.exit(1);
+      }, 10000);
+      forceExitTimer.unref();
+
+      try {
+        // Step 1: Close HTTP server (stop accepting new HTTP traffic)
+        await new Promise<void>((resolve) => {
+          server.close((err) => {
+            if (err) {
+              logger.error('Error during HTTP server close:', err);
+            } else {
+              logger.info('🛑 HTTP server stopped accepting connections.');
+            }
+            resolve();
+          });
+        });
+
+        // Step 2: Cleanly close WebSocket connections and heartbeat timers
+        await wsManager.close();
+        logger.info('🔌 All real-time WebSocket connections cleanly terminated.');
+
+        // Step 3: Disconnect database safely
         await db.close();
-        logger.info('Guidely Server stopped.');
+        logger.info('🍃 Database connection cleanly disconnected.');
+
+        logger.info('✅ Guidely server shutdown completed cleanly.');
         process.exit(0);
-      });
+      } catch (shutdownErr) {
+        logger.error('Error occurred during graceful shutdown sequence:', shutdownErr);
+        process.exit(1);
+      }
     };
 
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    // Process-level failure handling
+    process.on('uncaughtException', (err) => {
+      logger.fatal({ err }, `🚨 UNCAUGHT EXCEPTION: ${err.message}`);
+      gracefulShutdown('uncaughtException');
+    });
+
+    process.on('unhandledRejection', (reason: any) => {
+      logger.fatal({ err: reason instanceof Error ? reason : undefined, reason }, `🚨 UNHANDLED PROMISE REJECTION: ${reason}`);
+      gracefulShutdown('unhandledRejection');
+    });
 
   } catch (err) {
-    logger.error('Failed to start Guidely server:', err);
+    logger.fatal('Failed to bootstrap Guidely server:', err);
     process.exit(1);
   }
 }

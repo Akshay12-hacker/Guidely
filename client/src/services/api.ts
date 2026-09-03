@@ -51,7 +51,12 @@ let dynamicNotifications = [...MOCK_NOTIFICATIONS];
 let dynamicReports = [...MOCK_REPORTS];
 
 class ApiClient {
-  private baseUrl = '/api';
+  private baseUrl = (
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_API_URL ||
+    import.meta.env.VITE_API_BASE ||
+    '/api'
+  ).replace(/\/+$/, '');
 
   private getToken(): string | null {
     return localStorage.getItem('guidely_token');
@@ -78,8 +83,11 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${cleanEndpoint}`;
+
     try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      const response = await fetch(url, {
         ...options,
         headers
       });

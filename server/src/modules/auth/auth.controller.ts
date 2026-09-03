@@ -9,6 +9,7 @@ import {
   changePasswordSchema
 } from './auth.validation.js';
 import { AuthenticatedRequest } from './auth.middleware.js';
+import { logger } from '../../shared/utils/logger.js';
 
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -17,8 +18,23 @@ export class AuthController {
     try {
       const validated = registerSchema.parse(req.body);
       const result = await this.authService.register(validated);
+
+      logger.security('USER_REGISTERED', {
+        userId: result.user.id,
+        email: validated.email,
+        role: validated.role,
+        ip: req.ip,
+        reqId: req.id
+      });
+
       res.status(201).json({ success: true, data: result });
-    } catch (err) {
+    } catch (err: any) {
+      logger.security('REGISTRATION_FAILED', {
+        email: req.body?.email,
+        reason: err.message,
+        ip: req.ip,
+        reqId: req.id
+      });
       next(err);
     }
   };
@@ -27,8 +43,25 @@ export class AuthController {
     try {
       const validated = loginSchema.parse(req.body);
       const result = await this.authService.login(validated);
+
+      logger.security('LOGIN_SUCCESS', {
+        userId: result.user.id,
+        email: validated.email,
+        role: result.user.role,
+        ip: req.ip,
+        reqId: req.id,
+        userAgent: req.get('user-agent')
+      });
+
       res.status(200).json({ success: true, data: result });
-    } catch (err) {
+    } catch (err: any) {
+      logger.security('LOGIN_FAILED', {
+        email: req.body?.email,
+        reason: err.message,
+        ip: req.ip,
+        reqId: req.id,
+        userAgent: req.get('user-agent')
+      });
       next(err);
     }
   };
@@ -37,8 +70,22 @@ export class AuthController {
     try {
       const validated = googleAuthSchema.parse(req.body);
       const result = await this.authService.googleAuth(validated);
+
+      logger.security('GOOGLE_AUTH_SUCCESS', {
+        userId: result.user.id,
+        email: validated.email,
+        ip: req.ip,
+        reqId: req.id
+      });
+
       res.status(200).json({ success: true, data: result });
-    } catch (err) {
+    } catch (err: any) {
+      logger.security('GOOGLE_AUTH_FAILED', {
+        email: req.body?.email,
+        reason: err.message,
+        ip: req.ip,
+        reqId: req.id
+      });
       next(err);
     }
   };
@@ -60,8 +107,21 @@ export class AuthController {
         validated.currentPassword,
         validated.newPassword
       );
+
+      logger.security('PASSWORD_CHANGED', {
+        userId: req.user!.userId,
+        ip: req.ip,
+        reqId: req.id
+      });
+
       res.status(200).json({ success: true, message: 'Password updated successfully' });
-    } catch (err) {
+    } catch (err: any) {
+      logger.security('PASSWORD_CHANGE_FAILED', {
+        userId: req.user?.userId,
+        reason: err.message,
+        ip: req.ip,
+        reqId: req.id
+      });
       next(err);
     }
   };
@@ -70,6 +130,13 @@ export class AuthController {
     try {
       const validated = forgotPasswordSchema.parse(req.body);
       const result = await this.authService.forgotPassword(validated.email);
+
+      logger.security('PASSWORD_RESET_REQUESTED', {
+        email: validated.email,
+        ip: req.ip,
+        reqId: req.id
+      });
+
       res.status(200).json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -80,8 +147,19 @@ export class AuthController {
     try {
       const validated = resetPasswordSchema.parse(req.body);
       await this.authService.resetPassword(validated.token, validated.password);
+
+      logger.security('PASSWORD_RESET_COMPLETED', {
+        ip: req.ip,
+        reqId: req.id
+      });
+
       res.status(200).json({ success: true, message: 'Password has been reset successfully' });
-    } catch (err) {
+    } catch (err: any) {
+      logger.security('PASSWORD_RESET_FAILED', {
+        reason: err.message,
+        ip: req.ip,
+        reqId: req.id
+      });
       next(err);
     }
   };

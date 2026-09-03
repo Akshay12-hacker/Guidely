@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { JwtService, JwtPayload } from '../../shared/utils/jwt.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import { UserRole } from '../../shared/types.js';
+import { logger } from '../../shared/utils/logger.js';
 
 export interface AuthenticatedRequest extends Request {
   user?: JwtPayload;
@@ -12,6 +13,13 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
   if (!token) {
+    logger.security('UNAUTHORIZED_ACCESS_ATTEMPT', {
+      path: req.originalUrl || req.url,
+      method: req.method,
+      ip: req.ip,
+      reqId: req.id,
+      reason: 'Missing access token in authorization header'
+    });
     return next(AppError.unauthorized('Access token is required'));
   }
 
@@ -20,6 +28,13 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
     req.user = payload;
     next();
   } catch {
+    logger.security('INVALID_TOKEN_ATTEMPT', {
+      path: req.originalUrl || req.url,
+      method: req.method,
+      ip: req.ip,
+      reqId: req.id,
+      reason: 'Invalid or expired JWT token'
+    });
     return next(AppError.unauthorized('Invalid or expired token'));
   }
 }
@@ -27,10 +42,26 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
 export function requireRole(...allowedRoles: UserRole[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
+      logger.security('UNAUTHORIZED_ACCESS_ATTEMPT', {
+        path: req.originalUrl || req.url,
+        method: req.method,
+        ip: req.ip,
+        reqId: req.id,
+        reason: 'Authentication required before role check'
+      });
       return next(AppError.unauthorized('Authentication required'));
     }
 
     if (!allowedRoles.includes(req.user.role)) {
+      logger.security('FORBIDDEN_ROLE_ATTEMPT', {
+        path: req.originalUrl || req.url,
+        method: req.method,
+        ip: req.ip,
+        reqId: req.id,
+        userId: req.user.userId,
+        userRole: req.user.role,
+        allowedRoles
+      });
       return next(AppError.forbidden(`Access restricted to roles: ${allowedRoles.join(', ')}`));
     }
 

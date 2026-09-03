@@ -6,10 +6,16 @@ import { logger } from '../../shared/utils/logger.js';
 // Ensure .env is loaded in all contexts
 dotenv.config();
 
+// Helper to sanitize MongoDB connection string and prevent credential leakage in logs
+function sanitizeMongoUri(uri: string): string {
+  return uri.replace(/\/\/([^:]+):([^@]+)@/, '//***:***@');
+}
+
 export class Database {
   private static instance: Database;
   private isConnected = false;
   private memoryServer?: any;
+  private listenersAttached = false;
 
   private constructor() {}
 
@@ -20,10 +26,49 @@ export class Database {
     return Database.instance;
   }
 
+  private attachConnectionListeners(): void {
+    if (this.listenersAttached) return;
+    this.listenersAttached = true;
+
+    mongoose.connection.on('connected', () => {
+      this.isConnected = true;
+      logger.database('CONNECTED', {
+        host: mongoose.connection.host,
+        port: mongoose.connection.port,
+        name: mongoose.connection.name
+      });
+    });
+
+    mongoose.connection.on('error', (err: any) => {
+      logger.database('CONNECTION_ERROR', {
+        error: err.message,
+        name: err.name,
+        code: err.code
+      });
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      this.isConnected = false;
+      logger.database('DISCONNECTED', {
+        message: 'MongoDB disconnected. Drivers will attempt automatic reconnection.'
+      });
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      this.isConnected = true;
+      logger.database('RECONNECTED', {
+        host: mongoose.connection.host,
+        name: mongoose.connection.name
+      });
+    });
+  }
+
   public async connect(): Promise<void> {
     if (this.isConnected && mongoose.connection.readyState === 1) {
       return;
     }
+
+    this.attachConnectionListeners();
 
     const localUri = 'mongodb://127.0.0.1:27017/guidely';
     const envUri = (process.env.MONGODB_URI || env.MONGODB_URI)?.trim();
@@ -31,7 +76,9 @@ export class Database {
 
     // Check if placeholder password was left unconfigured
     if (targetUri.includes('<db_password>') || targetUri.includes('<password>')) {
-      logger.warn('⚠️ MONGODB_URI contains unconfigured <db_password> placeholder. Falling back to local MongoDB...');
+      logger.database('CONFIG_WARNING', {
+        message: 'MONGODB_URI contains unconfigured <db_password> placeholder. Falling back to local MongoDB.'
+      });
       targetUri = localUri;
     }
 
@@ -41,16 +88,16 @@ export class Database {
     // In TEST mode without explicit TEST_MONGODB_URI, use isolated MongoMemoryServer to protect real data
     if (process.env.NODE_ENV === 'test' && !process.env.TEST_MONGODB_URI) {
       try {
-        logger.info('🧪 Running in TEST mode: Launching isolated MongoDB Memory Server...');
+        logger.database('TEST_INSTANCE_STARTING', { message: 'Launching isolated MongoDB Memory Server' });
         const { MongoMemoryServer } = await import('mongodb-memory-server');
         this.memoryServer = await MongoMemoryServer.create();
         const memUri = this.memoryServer.getUri();
         await mongoose.connect(memUri, { autoIndex: true, dbName });
         this.isConnected = true;
-        logger.info(`🍃 Connected to isolated test MongoDB at: ${memUri} (Database: ${dbName})`);
+        logger.database('CONNECTED', { dbName, uri: sanitizeMongoUri(memUri) });
         return;
       } catch (memErr: any) {
-        logger.error('Failed to start test MongoDB Memory Server:', memErr.message);
+        logger.database('TEST_INSTANCE_FAILED', { error: memErr.message });
       }
     }
 
@@ -63,19 +110,16 @@ export class Database {
       });
 
       this.isConnected = true;
-      logger.info(`🍃 Connected to MongoDB successfully at: ${targetUri.replace(/\/\/.*@/, '//***:***@')} (Database: ${dbName})`);
-
-      mongoose.connection.on('error', (err) => {
-        logger.error('MongoDB connection error:', err);
-      });
-
-      mongoose.connection.on('disconnected', () => {
-        this.isConnected = false;
-        logger.warn('MongoDB disconnected. Attempting reconnection...');
+      logger.database('CONNECTED', {
+        dbName,
+        uri: sanitizeMongoUri(targetUri)
       });
 
     } catch (err: any) {
-      logger.warn(`⚠️ Primary MongoDB connection failed (${err.message}). Trying local fallback...`);
+      logger.database('CONNECTION_FAILED', {
+        uri: sanitizeMongoUri(targetUri),
+        error: err.message
+      });
 
       if (targetUri !== localUri) {
         try {
@@ -85,37 +129,48 @@ export class Database {
             dbName
           });
           this.isConnected = true;
-          logger.info(`🍃 Successfully connected to local MongoDB fallback at: ${localUri} (Database: ${dbName})`);
+          logger.database('FALLBACK_CONNECTED', {
+            uri: localUri,
+            dbName
+          });
           return;
         } catch (localErr: any) {
-          logger.warn(`Local fallback connection to ${localUri} not available.`);
+          logger.database('FALLBACK_UNAVAILABLE', {
+            uri: localUri,
+            error: localErr.message
+          });
         }
       }
 
       // If in non-production or memory DB allowed, use MongoMemoryServer
       if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_MEMORY_DB === 'true') {
         try {
-          logger.info('🚀 Launching embedded MongoDB Memory Server for local development/testing...');
+          logger.database('MEMORY_DB_STARTING', { message: 'Launching embedded MongoDB Memory Server for local development' });
           const { MongoMemoryServer } = await import('mongodb-memory-server');
           this.memoryServer = await MongoMemoryServer.create();
           const memUri = this.memoryServer.getUri();
           await mongoose.connect(memUri, { autoIndex: true, dbName });
           this.isConnected = true;
-          logger.info(`🍃 Connected to embedded in-memory MongoDB at: ${memUri} (Database: ${dbName})`);
+          logger.database('MEMORY_DB_CONNECTED', {
+            uri: sanitizeMongoUri(memUri),
+            dbName
+          });
           return;
         } catch (memErr: any) {
-          logger.error('Failed to start MongoDB Memory Server:', memErr.message);
+          logger.database('MEMORY_DB_FAILED', { error: memErr.message });
         }
       }
 
-      logger.warn('⚠️ Server will proceed in resilient mode. Database operations will retry upon reconnection.');
+      logger.database('RESILIENT_MODE', {
+        message: 'Server will proceed in resilient mode. Database operations will retry upon reconnection.'
+      });
     }
   }
 
   public async initializeSchema(): Promise<void> {
     await this.connect();
     if (this.isConnected) {
-      logger.info('MongoDB models and indexes initialized.');
+      logger.database('SCHEMA_INITIALIZED', { message: 'MongoDB models and indexes initialized.' });
     }
   }
 
@@ -123,7 +178,7 @@ export class Database {
     if (mongoose.connection.readyState !== 0) {
       await mongoose.disconnect();
       this.isConnected = false;
-      logger.info('MongoDB connection closed.');
+      logger.database('CLOSED', { message: 'MongoDB connection cleanly closed.' });
     }
     if (this.memoryServer) {
       await this.memoryServer.stop();
