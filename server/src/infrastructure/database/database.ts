@@ -4,6 +4,7 @@ import { logger } from '../../shared/utils/logger.js';
 export class Database {
   private static instance: Database;
   private isConnected = false;
+  private memoryServer?: any;
 
   private constructor() {}
 
@@ -32,7 +33,7 @@ export class Database {
       mongoose.set('strictQuery', true);
       await mongoose.connect(targetUri, {
         autoIndex: true,
-        serverSelectionTimeoutMS: 4000
+        serverSelectionTimeoutMS: 3000
       });
 
       this.isConnected = true;
@@ -48,19 +49,35 @@ export class Database {
       });
 
     } catch (err: any) {
-      logger.error(`❌ Primary MongoDB connection failed (${err.message}). Trying local fallback...`);
+      logger.warn(`⚠️ Primary MongoDB connection failed (${err.message}). Trying local fallback...`);
 
       if (targetUri !== localUri) {
         try {
           await mongoose.connect(localUri, {
             autoIndex: true,
-            serverSelectionTimeoutMS: 3000
+            serverSelectionTimeoutMS: 2000
           });
           this.isConnected = true;
           logger.info(`🍃 Successfully connected to local MongoDB fallback at: ${localUri}`);
           return;
         } catch (localErr: any) {
-          logger.error(`❌ Local fallback also failed (${localErr.message}).`);
+          logger.warn(`Local fallback connection to ${localUri} not available.`);
+        }
+      }
+
+      // If no local or cloud Mongo daemon is running, use MongoMemoryServer for dev/testing
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          logger.info('🚀 Launching embedded MongoDB Memory Server for local development/testing...');
+          const { MongoMemoryServer } = await import('mongodb-memory-server');
+          this.memoryServer = await MongoMemoryServer.create();
+          const memUri = this.memoryServer.getUri();
+          await mongoose.connect(memUri, { autoIndex: true });
+          this.isConnected = true;
+          logger.info(`🍃 Connected to embedded in-memory MongoDB at: ${memUri}`);
+          return;
+        } catch (memErr: any) {
+          logger.error('Failed to start MongoDB Memory Server:', memErr.message);
         }
       }
 
@@ -80,6 +97,10 @@ export class Database {
       await mongoose.disconnect();
       this.isConnected = false;
       logger.info('MongoDB connection closed.');
+    }
+    if (this.memoryServer) {
+      await this.memoryServer.stop();
+      this.memoryServer = undefined;
     }
   }
 }

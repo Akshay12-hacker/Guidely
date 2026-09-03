@@ -8,7 +8,6 @@ RUN npm ci
 
 COPY tsconfig.json ./
 COPY src/ ./src/
-COPY ../shared/ ../shared/
 
 RUN npm run build
 
@@ -21,13 +20,9 @@ ENV NODE_ENV=production
 ENV PORT=5000
 
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/../shared ../shared
-
-# Data directory for SQLite
-RUN mkdir -p /app/data
 
 EXPOSE 5000
 

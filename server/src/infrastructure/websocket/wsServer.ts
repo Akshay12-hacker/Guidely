@@ -12,14 +12,25 @@ interface AuthenticatedWebSocket extends WebSocket {
 export interface WsEventMessage {
   type: 
     | 'AUTH'
+    | 'AUTH_SUCCESS'
+    | 'AUTH_ERROR'
     | 'CHAT_MESSAGE'
     | 'TYPING'
     | 'READ_RECEIPT'
     | 'NOTIFICATION'
     | 'PRESENCE'
     | 'PROJECT_UPDATE'
-    | 'SESSION_UPDATE';
+    | 'SESSION_UPDATE'
+    | 'CALL_INITIATE'
+    | 'CALL_INCOMING'
+    | 'CALL_ANSWER'
+    | 'CALL_REJECT'
+    | 'ICE_CANDIDATE'
+    | 'CALL_END';
   payload: any;
+  // Mobile client compatibility fields
+  event?: string;
+  data?: any;
 }
 
 export class WebSocketManager {
@@ -60,7 +71,11 @@ export class WebSocketManager {
 
       ws.on('message', (data: string) => {
         try {
-          const event: WsEventMessage = JSON.parse(data.toString());
+          const parsed = JSON.parse(data.toString());
+          const event: WsEventMessage = {
+            type: parsed.type || parsed.event,
+            payload: parsed.payload !== undefined ? parsed.payload : parsed.data
+          };
           this.handleEvent(ws, event);
         } catch (err) {
           logger.error('Failed to parse WebSocket message:', err);
@@ -104,9 +119,19 @@ export class WebSocketManager {
         try {
           const payload = JwtService.verify(event.payload.token);
           this.registerClient(payload.userId, payload.role, ws);
-          ws.send(JSON.stringify({ type: 'AUTH_SUCCESS', payload: { userId: payload.userId } }));
+          ws.send(JSON.stringify({
+            type: 'AUTH_SUCCESS',
+            payload: { userId: payload.userId },
+            event: 'AUTH_SUCCESS',
+            data: { userId: payload.userId }
+          }));
         } catch {
-          ws.send(JSON.stringify({ type: 'AUTH_ERROR', payload: { message: 'Invalid authentication token' } }));
+          ws.send(JSON.stringify({
+            type: 'AUTH_ERROR',
+            payload: { message: 'Invalid authentication token' },
+            event: 'AUTH_ERROR',
+            data: { message: 'Invalid authentication token' }
+          }));
         }
         break;
       }
@@ -127,6 +152,84 @@ export class WebSocketManager {
         this.sendToUser(recipientId, {
           type: 'READ_RECEIPT',
           payload: { readerId: ws.userId, conversationId }
+        });
+        break;
+      }
+
+      // WebRTC Real-Time Call Signaling
+      case 'CALL_INITIATE': {
+        if (!ws.userId) return;
+        const { recipientId, isVideo, callRoomId, sdp } = event.payload || {};
+        if (!recipientId) return;
+        this.sendToUser(recipientId, {
+          type: 'CALL_INCOMING',
+          payload: {
+            callerId: ws.userId,
+            callerRole: ws.userRole,
+            callRoomId: callRoomId || `call_${Date.now()}`,
+            isVideo: isVideo !== false,
+            sdp,
+            timestamp: new Date().toISOString()
+          }
+        });
+        break;
+      }
+
+      case 'CALL_ANSWER': {
+        if (!ws.userId) return;
+        const { callerId, accepted, callRoomId, sdp } = event.payload || {};
+        if (!callerId) return;
+        this.sendToUser(callerId, {
+          type: 'CALL_ANSWER',
+          payload: {
+            calleeId: ws.userId,
+            accepted,
+            callRoomId,
+            sdp
+          }
+        });
+        break;
+      }
+
+      case 'CALL_REJECT': {
+        if (!ws.userId) return;
+        const { callerId, reason } = event.payload || {};
+        if (!callerId) return;
+        this.sendToUser(callerId, {
+          type: 'CALL_REJECT',
+          payload: {
+            calleeId: ws.userId,
+            reason: reason || 'Declined'
+          }
+        });
+        break;
+      }
+
+      case 'ICE_CANDIDATE': {
+        if (!ws.userId) return;
+        const { targetUserId, candidate, callRoomId } = event.payload || {};
+        if (!targetUserId) return;
+        this.sendToUser(targetUserId, {
+          type: 'ICE_CANDIDATE',
+          payload: {
+            senderId: ws.userId,
+            candidate,
+            callRoomId
+          }
+        });
+        break;
+      }
+
+      case 'CALL_END': {
+        if (!ws.userId) return;
+        const { targetUserId, callRoomId } = event.payload || {};
+        if (!targetUserId) return;
+        this.sendToUser(targetUserId, {
+          type: 'CALL_END',
+          payload: {
+            senderId: ws.userId,
+            callRoomId
+          }
         });
         break;
       }
@@ -172,10 +275,16 @@ export class WebSocketManager {
     const sockets = this.clients.get(userId);
     if (!sockets || sockets.size === 0) return false;
 
-    const data = JSON.stringify(message);
+    const formatted = JSON.stringify({
+      type: message.type,
+      payload: message.payload,
+      event: message.type,
+      data: message.payload
+    });
+
     sockets.forEach((socket) => {
       if (socket.readyState === WebSocket.OPEN) {
-        socket.send(data);
+        socket.send(formatted);
       }
     });
     return true;
@@ -187,18 +296,29 @@ export class WebSocketManager {
 
   public broadcast(message: WsEventMessage): void {
     if (!this.wss) return;
-    const data = JSON.stringify(message);
+    const formatted = JSON.stringify({
+      type: message.type,
+      payload: message.payload,
+      event: message.type,
+      data: message.payload
+    });
     this.wss.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(data);
+        client.send(formatted);
       }
     });
   }
 
   private broadcastPresence(userId: string, isOnline: boolean): void {
+    const onlineUserIds = Array.from(this.clients.keys());
     this.broadcast({
       type: 'PRESENCE',
-      payload: { userId, isOnline, timestamp: new Date().toISOString() }
+      payload: { 
+        userId, 
+        isOnline, 
+        onlineUserIds, 
+        timestamp: new Date().toISOString() 
+      }
     });
   }
 }
