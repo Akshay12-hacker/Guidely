@@ -20,62 +20,101 @@ import { createNotificationRouter } from './modules/notifications/notification.r
 import { createReviewRouter } from './modules/reviews/review.routes.js';
 import { createAdminRouter } from './modules/admin/admin.routes.js';
 
+// Helper to evaluate CORS origin authorization safely
+export function isOriginAllowed(origin: string | undefined, allowedOrigins: string[]): boolean {
+  // Allow requests with no origin (e.g. mobile apps, curl, internal server-to-server, Render probes)
+  if (!origin) return true;
+
+  const cleanOrigin = origin.replace(/\/+$/, '').toLowerCase();
+
+  // Allow wildcard
+  if (allowedOrigins.includes('*')) return true;
+
+  // Explicit match against configured allowed origins
+  if (allowedOrigins.some((o) => o.replace(/\/+$/, '').toLowerCase() === cleanOrigin)) {
+    return true;
+  }
+
+  // Always permit localhost and 127.0.0.1 on any port (critical for local frontend dev against remote backend)
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin)) {
+    return true;
+  }
+
+  // Always permit Guidely frontend deployments on standard cloud hosting platforms
+  if (
+    /^https:\/\/.*\.onrender\.com$/.test(cleanOrigin) ||
+    /^https:\/\/.*\.vercel\.app$/.test(cleanOrigin) ||
+    /^https:\/\/.*\.netlify\.app$/.test(cleanOrigin)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export function createApp(): express.Application {
   const app = express();
 
-  // Trust upstream reverse proxy (Render, Cloudflare, etc.) for correct client IP detection
+  // 1. Trust upstream reverse proxy (Render, Cloudflare, etc.) for correct client IP detection
   if (env.TRUST_PROXY) {
     app.set('trust proxy', 1);
   }
 
-  // 1. Production-grade Helmet security headers
+  // 2. Unique Request ID correlation middleware (MUST run before all other middleware so req.id is always available)
+  app.use(requestIdMiddleware);
+
+  // 3. High-resolution HTTP request/response observability logger
+  app.use(httpLoggerMiddleware);
+
+  // 4. Production-grade Helmet security headers
   app.use(securityHeadersMiddleware());
 
-  // 2. Strict, environment-aware CORS protection
-  const rawOrigins = process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN || env.CLIENT_ORIGIN;
-  const allowedOrigins = rawOrigins.split(',').map(o => o.trim()).filter(Boolean);
-  const isProduction = process.env.NODE_ENV === 'production';
+  // 5. Strict, environment-aware CORS protection
+  const rawOrigins =
+    process.env.CLIENT_ORIGIN ||
+    process.env.CORS_ORIGIN ||
+    process.env.ALLOWED_ORIGINS ||
+    env.CLIENT_ORIGIN ||
+    'http://localhost:5173,http://localhost:3000';
+  const allowedOrigins = rawOrigins.split(',').map((o) => o.trim()).filter(Boolean);
 
-  app.use(cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, internal server-to-server)
-      if (!origin) return callback(null, true);
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (isOriginAllowed(origin, allowedOrigins)) {
+          return callback(null, true);
+        }
+        return callback(null, false);
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+      exposedHeaders: ['X-Request-Id', 'X-Response-Time'],
+      maxAge: 86400 // Cache preflight requests for 24 hours
+    })
+  );
 
-      // Allow wildcard or explicit allowed origins
-      if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      // Allow localhost on any port for local development and testing
-      if (!isProduction && (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'))) {
-        return callback(null, true);
-      }
-
-      // Block disallowed origins in production
-      return callback(new AppError(`CORS origin '${origin}' blocked by security policy`, 403));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
-    exposedHeaders: ['X-Request-Id', 'X-Response-Time'],
-    maxAge: 86400 // Cache preflight requests for 24 hours
-  }));
-
-  // 3. Request body parsing with strict size limits
+  // 6. Request body parsing with strict size limits
   const bodyLimit = process.env.BODY_LIMIT || env.BODY_LIMIT;
   app.use(express.json({ limit: bodyLimit }));
   app.use(express.urlencoded({ extended: true, limit: bodyLimit }));
 
-  // 4. Unique Request ID correlation middleware
-  app.use(requestIdMiddleware);
+  // 7. Root probe endpoint for platform health monitors (Render, Cloudflare, load balancers)
+  app.all('/', (req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'online',
+      service: 'Guidely Full-Stack Server',
+      version: '1.0.0',
+      health: '/api/health',
+      timestamp: new Date().toISOString(),
+      requestId: req.id
+    });
+  });
 
-  // 5. High-resolution HTTP request/response observability logger
-  app.use(httpLoggerMiddleware);
-
-  // 6. Global API rate limiter (protects all /api endpoints)
+  // 8. Global API rate limiter (protects all /api endpoints)
   app.use('/api', createApiRateLimiter());
 
-  // 7. Health & Telemetry check endpoint
+  // 9. Health & Telemetry check endpoint
   app.get('/api/health', (req: Request, res: Response) => {
     res.status(200).json({
       status: 'healthy',

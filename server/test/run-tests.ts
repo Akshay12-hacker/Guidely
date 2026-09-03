@@ -198,6 +198,16 @@ async function runAllTests() {
   });
 
   console.log('\n--- 9. Helmet Security Headers & CORS Protection ---');
+  await test('Responds 200 OK to root platform probes (HEAD / and GET /)', async () => {
+    const headRes = await fetch(`${baseUrl}/`, { method: 'HEAD' });
+    assert.strictEqual(headRes.status, 200);
+
+    const getRes = await fetch(`${baseUrl}/`);
+    assert.strictEqual(getRes.status, 200);
+    const json = await getRes.json() as any;
+    assert.strictEqual(json.status, 'online');
+  });
+
   await test('Enforces Helmet security headers (nosniff, deny frame, hides x-powered-by)', async () => {
     const res = await fetch(`${baseUrl}/api/health`);
     assert.strictEqual(res.headers.get('x-content-type-options'), 'nosniff');
@@ -207,15 +217,30 @@ async function runAllTests() {
     assert.strictEqual(res.headers.get('cross-origin-opener-policy'), 'same-origin-allow-popups');
   });
 
-  await test('Exposes security telemetry headers in CORS preflight', async () => {
-    const res = await fetch(`${baseUrl}/api/health`, {
+  await test('Permits CORS preflight for localhost:5173 and cloud frontends with credentials', async () => {
+    const localRes = await fetch(`${baseUrl}/api/auth/me`, {
       method: 'OPTIONS',
       headers: {
         'Origin': 'http://localhost:5173',
+        'Access-Control-Request-Method': 'GET',
+        'Access-Control-Request-Headers': 'Authorization,Content-Type'
+      }
+    });
+    assert.strictEqual(localRes.status, 204);
+    assert.strictEqual(localRes.headers.get('access-control-allow-origin'), 'http://localhost:5173');
+    assert.strictEqual(localRes.headers.get('access-control-allow-credentials'), 'true');
+
+    const renderRes = await fetch(`${baseUrl}/api/students/dashboard`, {
+      method: 'OPTIONS',
+      headers: {
+        'Origin': 'https://guidely-frontend.onrender.com',
         'Access-Control-Request-Method': 'GET'
       }
     });
-    const exposed = res.headers.get('access-control-expose-headers');
+    assert.strictEqual(renderRes.status, 204);
+    assert.strictEqual(renderRes.headers.get('access-control-allow-origin'), 'https://guidely-frontend.onrender.com');
+
+    const exposed = localRes.headers.get('access-control-expose-headers');
     assert(exposed && exposed.includes('X-Request-Id'), 'Must expose X-Request-Id');
     assert(exposed && exposed.includes('X-Response-Time'), 'Must expose X-Response-Time');
   });

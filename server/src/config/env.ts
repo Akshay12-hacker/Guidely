@@ -33,7 +33,7 @@ export const env = {
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV === 'development',
   isTest: process.env.NODE_ENV === 'test',
-  PORT: parseInt(process.env.PORT || '5000', 10),
+  PORT: parseInt(process.env.PORT || (process.env.NODE_ENV === 'production' ? '10000' : '5000'), 10),
 
   // Database (MongoDB Atlas / Local)
   MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/guidely',

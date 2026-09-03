@@ -43,7 +43,11 @@ export function httpLoggerMiddleware(req: Request, res: Response, next: NextFunc
     const durationMs = Number((Number(elapsedNs) / 1_000_000).toFixed(2));
 
     const statusCode = res.statusCode;
-    const isHealthEndpoint = req.originalUrl === '/api/health' || req.path === '/api/health';
+    const isProbeEndpoint =
+      req.originalUrl === '/' ||
+      req.path === '/' ||
+      req.originalUrl === '/api/health' ||
+      req.path === '/api/health';
     const userId = (req as any).user?.userId;
 
     const logMeta = {
@@ -58,9 +62,9 @@ export function httpLoggerMiddleware(req: Request, res: Response, next: NextFunc
       ...(userId ? { userId } : {})
     };
 
-    // Keep health check logs at debug level to keep Render logs clean and focused
-    if (isHealthEndpoint && statusCode === 200) {
-      logger.debug(logMeta, `Health check ping (${durationMs}ms)`);
+    // Keep platform probes (Render / load balancers) at debug level when healthy
+    if (isProbeEndpoint && statusCode === 200) {
+      logger.debug(logMeta, `Health probe ping (${durationMs}ms)`);
       return;
     }
 
