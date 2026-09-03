@@ -1,5 +1,10 @@
+import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import { env } from '../../config/env.js';
 import { logger } from '../../shared/utils/logger.js';
+
+// Ensure .env is loaded in all contexts
+dotenv.config();
 
 export class Database {
   private static instance: Database;
@@ -21,7 +26,8 @@ export class Database {
     }
 
     const localUri = 'mongodb://127.0.0.1:27017/guidely';
-    let targetUri = process.env.MONGODB_URI || localUri;
+    const envUri = (process.env.MONGODB_URI || env.MONGODB_URI)?.trim();
+    let targetUri = envUri || localUri;
 
     // Check if placeholder password was left unconfigured
     if (targetUri.includes('<db_password>') || targetUri.includes('<password>')) {
@@ -29,15 +35,35 @@ export class Database {
       targetUri = localUri;
     }
 
+    const dbName = process.env.MONGODB_DB_NAME || env.MONGODB_DB_NAME || 'guidely';
+    const timeoutMs = parseInt(process.env.MONGODB_TIMEOUT_MS || '', 10) || env.MONGODB_TIMEOUT_MS || 5000;
+
+    // In TEST mode without explicit TEST_MONGODB_URI, use isolated MongoMemoryServer to protect real data
+    if (process.env.NODE_ENV === 'test' && !process.env.TEST_MONGODB_URI) {
+      try {
+        logger.info('🧪 Running in TEST mode: Launching isolated MongoDB Memory Server...');
+        const { MongoMemoryServer } = await import('mongodb-memory-server');
+        this.memoryServer = await MongoMemoryServer.create();
+        const memUri = this.memoryServer.getUri();
+        await mongoose.connect(memUri, { autoIndex: true, dbName });
+        this.isConnected = true;
+        logger.info(`🍃 Connected to isolated test MongoDB at: ${memUri} (Database: ${dbName})`);
+        return;
+      } catch (memErr: any) {
+        logger.error('Failed to start test MongoDB Memory Server:', memErr.message);
+      }
+    }
+
     try {
       mongoose.set('strictQuery', true);
       await mongoose.connect(targetUri, {
         autoIndex: true,
-        serverSelectionTimeoutMS: 3000
+        serverSelectionTimeoutMS: timeoutMs,
+        dbName
       });
 
       this.isConnected = true;
-      logger.info(`🍃 Connected to MongoDB successfully at: ${targetUri.replace(/\/\/.*@/, '//***:***@')}`);
+      logger.info(`🍃 Connected to MongoDB successfully at: ${targetUri.replace(/\/\/.*@/, '//***:***@')} (Database: ${dbName})`);
 
       mongoose.connection.on('error', (err) => {
         logger.error('MongoDB connection error:', err);
@@ -55,26 +81,27 @@ export class Database {
         try {
           await mongoose.connect(localUri, {
             autoIndex: true,
-            serverSelectionTimeoutMS: 2000
+            serverSelectionTimeoutMS: 2000,
+            dbName
           });
           this.isConnected = true;
-          logger.info(`🍃 Successfully connected to local MongoDB fallback at: ${localUri}`);
+          logger.info(`🍃 Successfully connected to local MongoDB fallback at: ${localUri} (Database: ${dbName})`);
           return;
         } catch (localErr: any) {
           logger.warn(`Local fallback connection to ${localUri} not available.`);
         }
       }
 
-      // If no local or cloud Mongo daemon is running, use MongoMemoryServer for dev/testing
-      if (process.env.NODE_ENV !== 'production') {
+      // If in non-production or memory DB allowed, use MongoMemoryServer
+      if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_MEMORY_DB === 'true') {
         try {
           logger.info('🚀 Launching embedded MongoDB Memory Server for local development/testing...');
           const { MongoMemoryServer } = await import('mongodb-memory-server');
           this.memoryServer = await MongoMemoryServer.create();
           const memUri = this.memoryServer.getUri();
-          await mongoose.connect(memUri, { autoIndex: true });
+          await mongoose.connect(memUri, { autoIndex: true, dbName });
           this.isConnected = true;
-          logger.info(`🍃 Connected to embedded in-memory MongoDB at: ${memUri}`);
+          logger.info(`🍃 Connected to embedded in-memory MongoDB at: ${memUri} (Database: ${dbName})`);
           return;
         } catch (memErr: any) {
           logger.error('Failed to start MongoDB Memory Server:', memErr.message);

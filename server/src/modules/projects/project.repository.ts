@@ -167,7 +167,7 @@ export class MongoProjectRepository implements IProjectRepository {
     if (data.repositoryUrl !== undefined) updateData.repositoryUrl = data.repositoryUrl;
     if (data.liveUrl !== undefined) updateData.liveUrl = data.liveUrl;
 
-    const updated = await ProjectModel.findByIdAndUpdate(id, updateData, { new: true }).lean();
+    const updated = await ProjectModel.findByIdAndUpdate(id, updateData, { returnDocument: 'after' }).lean();
     if (!updated) return null;
     return this.populateProject(updated);
   }

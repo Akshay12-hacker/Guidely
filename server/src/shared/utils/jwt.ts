@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../types.js';
+import { env } from '../../config/env.js';
 
 export interface JwtPayload {
   userId: string;
@@ -8,14 +9,19 @@ export interface JwtPayload {
 }
 
 export class JwtService {
-  private static readonly SECRET = process.env.JWT_SECRET || 'guidely-super-secret-jwt-key-2026-production-ready';
-  private static readonly EXPIRES_IN = '7d';
+  private static get secret(): string {
+    return process.env.JWT_SECRET || env.JWT_SECRET;
+  }
+
+  private static get expiresIn(): any {
+    return process.env.JWT_EXPIRES_IN || env.JWT_EXPIRES_IN;
+  }
 
   static sign(payload: JwtPayload): string {
-    return jwt.sign(payload, this.SECRET, { expiresIn: this.EXPIRES_IN });
+    return jwt.sign(payload, this.secret, { expiresIn: this.expiresIn });
   }
 
   static verify(token: string): JwtPayload {
-    return jwt.verify(token, this.SECRET) as JwtPayload;
+    return jwt.verify(token, this.secret) as JwtPayload;
   }
 }

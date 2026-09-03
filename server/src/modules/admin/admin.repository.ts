@@ -135,7 +135,7 @@ export class MongoAdminRepository implements IAdminRepository {
   }
 
   async updateUserStatus(userId: string, status: 'ACTIVE' | 'SUSPENDED'): Promise<User | null> {
-    const updated = await UserModel.findByIdAndUpdate(userId, { status }, { new: true }).lean();
+    const updated = await UserModel.findByIdAndUpdate(userId, { status }, { returnDocument: 'after' }).lean();
     if (!updated) return null;
 
     return {
@@ -215,7 +215,7 @@ export class MongoAdminRepository implements IAdminRepository {
           verificationNotes: notes || null
         }
       },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     if (!updated) return null;

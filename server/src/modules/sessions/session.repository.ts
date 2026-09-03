@@ -58,7 +58,7 @@ export class MongoSessionRepository implements ISessionRepository {
     if (meetingUrl !== undefined) update.meetingUrl = meetingUrl;
     if (sessionNotes !== undefined) update.sessionNotes = sessionNotes;
 
-    const updated = await MentorshipSessionModel.findByIdAndUpdate(id, update, { new: true }).lean();
+    const updated = await MentorshipSessionModel.findByIdAndUpdate(id, update, { returnDocument: 'after' }).lean();
     if (!updated) return null;
     return this.populateSession(updated);
   }
@@ -67,7 +67,7 @@ export class MongoSessionRepository implements ISessionRepository {
     const updated = await MentorshipSessionModel.findByIdAndUpdate(
       id,
       { scheduledAt: newScheduledAt, status: 'RESCHEDULED' },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     if (!updated) return null;
@@ -78,7 +78,7 @@ export class MongoSessionRepository implements ISessionRepository {
     const updated = await MentorshipSessionModel.findByIdAndUpdate(
       id,
       { studentFeedback: feedback, studentRating: rating },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     if (!updated) return null;

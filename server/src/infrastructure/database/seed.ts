@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+import { env } from '../../config/env.js';
 import {
   UserModel,
   MentorProfileModel,
@@ -14,6 +16,9 @@ import {
 import { PasswordHasher } from '../../shared/utils/password.js';
 import { logger } from '../../shared/utils/logger.js';
 import { Database } from './database.js';
+
+// Ensure .env is loaded
+dotenv.config();
 
 export async function seedDatabase(force = false): Promise<void> {
   const db = Database.getInstance();
@@ -293,7 +298,7 @@ export async function seedDatabase(force = false): Promise<void> {
     progressPercentage: 68,
     status: 'IN_PROGRESS',
     repositoryUrl: 'https://github.com/Akshay-Rahangdale/Guidely',
-    liveUrl: 'http://localhost:5173',
+    liveUrl: process.env.CLIENT_URL || process.env.CLIENT_ORIGIN || env.CLIENT_ORIGIN || 'http://localhost:5173',
     goals: [
       {
         id: 'goal_1',
@@ -581,4 +586,27 @@ export async function seedDatabase(force = false): Promise<void> {
   });
 
   logger.info('Database seeded successfully with Guidely dataset! 🎉');
+}
+
+// Support direct CLI execution: e.g. npm run seed or tsx seed.ts [--force]
+const isMain = process.argv[1] && (
+  process.argv[1].endsWith('seed.ts') || 
+  process.argv[1].endsWith('seed.js')
+);
+
+if (isMain) {
+  const force = process.argv.includes('--force') || process.env.FORCE_SEED === 'true';
+  seedDatabase(force)
+    .then(async () => {
+      await Database.getInstance().close();
+      logger.info('Database seeding process finished.');
+      process.exit(0);
+    })
+    .catch(async (err) => {
+      logger.error('Database seeding failed:', err);
+      try {
+        await Database.getInstance().close();
+      } catch {}
+      process.exit(1);
+    });
 }

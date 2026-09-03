@@ -1,5 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
+import { env } from './config/env.js';
 import { AppError } from './shared/errors/AppError.js';
 import { logger } from './shared/utils/logger.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
@@ -18,7 +20,7 @@ export function createApp(): express.Application {
   const app = express();
 
   // Configure CORS allowing web frontends and mobile clients
-  const rawOrigins = process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN || 'http://localhost:5173';
+  const rawOrigins = process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN || env.CLIENT_ORIGIN;
   const allowedOrigins = rawOrigins.split(',').map(o => o.trim()).filter(Boolean);
 
   app.use(cors({
@@ -39,11 +41,12 @@ export function createApp(): express.Application {
     allowedHeaders: ['Content-Type', 'Authorization']
   }));
 
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  const bodyLimit = process.env.BODY_LIMIT || env.BODY_LIMIT;
+  app.use(express.json({ limit: bodyLimit }));
+  app.use(express.urlencoded({ extended: true, limit: bodyLimit }));
 
   // Request logger in dev
-  if (process.env.NODE_ENV === 'development') {
+  if ((process.env.NODE_ENV || env.NODE_ENV) === 'development' || process.env.LOG_LEVEL === 'debug') {
     app.use((req: Request, res: Response, next: NextFunction) => {
       logger.debug(`${req.method} ${req.path}`);
       next();
@@ -56,7 +59,9 @@ export function createApp(): express.Application {
       status: 'healthy',
       service: 'Guidely API',
       timestamp: new Date().toISOString(),
-      version: '1.0.0'
+      version: '1.0.0',
+      env: process.env.NODE_ENV || env.NODE_ENV,
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
     });
   });
 

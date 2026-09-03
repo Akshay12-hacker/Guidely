@@ -1,5 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
+import { env } from '../../config/env.js';
 import { JwtService } from '../../shared/utils/jwt.js';
 import { logger } from '../../shared/utils/logger.js';
 
@@ -94,6 +95,7 @@ export class WebSocketManager {
     });
 
     // Heartbeat to prune dead connections
+    const heartbeatInterval = parseInt(process.env.WS_HEARTBEAT_INTERVAL_MS || '', 10) || env.WS_HEARTBEAT_INTERVAL_MS;
     const interval = setInterval(() => {
       if (!this.wss) return;
       this.wss.clients.forEach((ws: WebSocket) => {
@@ -104,7 +106,7 @@ export class WebSocketManager {
         authWs.isAlive = false;
         authWs.ping();
       });
-    }, 30000);
+    }, heartbeatInterval);
 
     this.wss.on('close', () => {
       clearInterval(interval);

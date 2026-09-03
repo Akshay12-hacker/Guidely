@@ -49,7 +49,7 @@ export class MongoMentorRepository implements IMentorRepository {
         $set: updateData,
         $setOnInsert: { userId: profile.userId }
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     ).lean();
 
     return this.mapDocToProfile(doc);

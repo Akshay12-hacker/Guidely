@@ -51,7 +51,7 @@ export class MongoMentorshipRepository implements IMentorshipRepository {
     const update: any = { status };
     if (notes !== undefined) update.mentorNotes = notes;
 
-    const updated = await MentorshipRequestModel.findByIdAndUpdate(id, update, { new: true }).lean();
+    const updated = await MentorshipRequestModel.findByIdAndUpdate(id, update, { returnDocument: 'after' }).lean();
     if (!updated) return null;
     return this.populateRequest(updated);
   }
@@ -60,7 +60,7 @@ export class MongoMentorshipRepository implements IMentorshipRepository {
     const updated = await MentorshipRequestModel.findByIdAndUpdate(
       id,
       { additionalMessage, status: 'INFO_PROVIDED' },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     if (!updated) return null;

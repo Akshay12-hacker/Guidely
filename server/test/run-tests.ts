@@ -1,3 +1,4 @@
+process.env.NODE_ENV = 'test';
 import assert from 'assert';
 import { Database } from '../src/infrastructure/database/database.js';
 import { seedDatabase } from '../src/infrastructure/database/seed.js';
@@ -163,6 +164,8 @@ async function runAllTests() {
   console.log('\n=========================================');
   console.log(`📊 Test Results: ${passed} passed, ${failed} failed`);
   console.log('=========================================\n');
+
+  await db.close();
 
   if (failed > 0) process.exit(1);
 }

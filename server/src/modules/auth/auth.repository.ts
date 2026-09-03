@@ -79,7 +79,7 @@ export class MongoAuthRepository implements IAuthRepository {
         headline: data.headline,
         status: data.status
       },
-      { new: true }
+      { returnDocument: 'after' }
     ).lean();
 
     if (!updated) return null;
