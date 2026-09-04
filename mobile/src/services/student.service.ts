@@ -16,6 +16,10 @@ export const studentService = {
     return apiClient.post<StudentProfile>('/students/onboarding/step', { step, data });
   },
 
+  async getOnboardingOptions(): Promise<{ targetTechnologies: string[]; helpNeededAreas: string[]; skillCategories: string[] }> {
+    return apiClient.get<{ targetTechnologies: string[]; helpNeededAreas: string[]; skillCategories: string[] }>('/students/onboarding-options');
+  },
+
   async getAvailableSkills(query?: string, category?: string): Promise<{ skills: any[]; categories: string[]; total: number }> {
     const params: any = {};
     if (query) params.q = query;

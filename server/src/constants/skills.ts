@@ -138,12 +138,71 @@ export function searchSkillsCatalog(query?: string, category?: string): SkillIte
 }
 
 /**
- * Normalize skill name casing to official preset casing if known, otherwise clean whitespace
+ * Standard Target Technologies for Student Onboarding & Projects
+ * Includes "No idea (Help Me Decide)" and high-demand modern technologies.
+ */
+export const TARGET_TECHNOLOGIES = [
+  'No idea (Help Me Decide)',
+  'AI Agents & LangChain',
+  'LLMs & Fine-Tuning',
+  'Go (Golang)',
+  'Rust',
+  'PyTorch & Deep Learning',
+  'Kubernetes & Cloud Native',
+  'Docker & Microservices',
+  'Next.js & React',
+  'TypeScript / Node.js',
+  'FastAPI & Python',
+  'PostgreSQL & pgvector',
+  'Redis & Caching',
+  'Apache Kafka',
+  'GraphQL & gRPC',
+  'WebSockets & Realtime',
+  'Flutter & Mobile',
+  'React Native & Expo',
+  'AWS / Cloud Architecture',
+  'Solidity & Smart Contracts',
+  'Cybersecurity & SIEM',
+  'Supabase & Serverless'
+] as const;
+
+/**
+ * Standard Guidance Areas for Student Onboarding & Mentorship Requests
+ * Includes "No idea (Need Guidance to Figure Out)" and modern engineering mentorship topics.
+ */
+export const HELP_NEEDED_AREAS = [
+  'No idea (Need Guidance to Figure Out)',
+  'Architecture & System Design',
+  'Project Ideation & 0-to-1 Scoping',
+  'Tech Stack & Framework Selection',
+  'Concurrency & Deadlock Prevention',
+  'Database Schema & Normalization',
+  '1-on-1 Code Reviews & Clean Code',
+  'AI Model Integration & Prompts',
+  'Benchmarking, Latency & Load Testing',
+  'CI/CD Pipelines & Cloud Deployment',
+  'Authentication, RBAC & Security Hardening',
+  'Resume, GitHub & Portfolio Review',
+  'Technical Interview & Viva Prep'
+] as const;
+
+/**
+ * Normalize skill or technology name casing to official preset casing if known, otherwise clean whitespace
  */
 export function normalizeSkillName(raw: string): string {
   const trimmed = raw.trim();
-  const match = PRESET_SKILLS.find(s => s.name.toLowerCase() === trimmed.toLowerCase());
-  return match ? match.name : trimmed;
+  const lower = trimmed.toLowerCase();
+
+  const skillMatch = PRESET_SKILLS.find(s => s.name.toLowerCase() === lower);
+  if (skillMatch) return skillMatch.name;
+
+  const techMatch = TARGET_TECHNOLOGIES.find(t => t.toLowerCase() === lower);
+  if (techMatch) return techMatch;
+
+  const helpMatch = HELP_NEEDED_AREAS.find(h => h.toLowerCase() === lower);
+  if (helpMatch) return helpMatch;
+
+  return trimmed;
 }
 
 /**
@@ -158,7 +217,7 @@ export function sanitizeSkillsList(skills: unknown): string[] {
   for (const item of skills) {
     if (typeof item !== 'string') continue;
     const clean = normalizeSkillName(item);
-    if (!clean || clean.length > 60) continue;
+    if (!clean || clean.length > 70) continue;
 
     const lower = clean.toLowerCase();
     if (!seen.has(lower)) {

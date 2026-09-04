@@ -12,8 +12,9 @@ export function createStudentRouter(): Router {
   const studentService = new StudentService(studentRepo, authRepo);
   const studentController = new StudentController(studentService);
 
-  // Public/unauthenticated skills directory & search endpoint
+  // Public/unauthenticated skills directory & onboarding options
   router.get('/skills', studentController.getSkills);
+  router.get('/onboarding-options', studentController.getOnboardingOptions);
 
   // Authenticated student routes
   router.use(authenticateToken);

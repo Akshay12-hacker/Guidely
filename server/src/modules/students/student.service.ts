@@ -10,10 +10,12 @@ import {
   StudentProfileModel
 } from '../../infrastructure/database/models/index.js';
 import { AppError } from '../../shared/errors/AppError.js';
-import { StudentProfile, SkillItem, SkillsDirectoryResponse } from '../../shared/types.js';
+import { StudentProfile, SkillItem, SkillsDirectoryResponse, StudentOnboardingOptions } from '../../shared/types.js';
 import {
   PRESET_SKILLS,
   SKILL_CATEGORIES,
+  TARGET_TECHNOLOGIES,
+  HELP_NEEDED_AREAS,
   searchSkillsCatalog,
   normalizeSkillName,
   sanitizeSkillsList
@@ -303,6 +305,14 @@ export class StudentService {
       pendingRequests,
       recentConversations,
       recommendedMentors: formattedMentors
+    };
+  }
+
+  getOnboardingOptions(): StudentOnboardingOptions {
+    return {
+      targetTechnologies: [...TARGET_TECHNOLOGIES],
+      helpNeededAreas: [...HELP_NEEDED_AREAS],
+      skillCategories: [...SKILL_CATEGORIES]
     };
   }
 }

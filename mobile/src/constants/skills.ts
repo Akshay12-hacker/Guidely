@@ -121,3 +121,55 @@ export const PRESET_SKILLS: SkillItem[] = [
 ];
 
 export const PRESET_SKILL_NAMES = new Set(PRESET_SKILLS.map(s => s.name.toLowerCase()));
+
+/**
+ * Standard Target Technologies for Student Onboarding & Projects
+ * Includes "No idea (Help Me Decide)" and high-demand modern technologies.
+ */
+export const TARGET_TECHNOLOGIES = [
+  'No idea (Help Me Decide)',
+  'AI Agents & LangChain',
+  'LLMs & Fine-Tuning',
+  'Go (Golang)',
+  'Rust',
+  'PyTorch & Deep Learning',
+  'Kubernetes & Cloud Native',
+  'Docker & Microservices',
+  'Next.js & React',
+  'TypeScript / Node.js',
+  'FastAPI & Python',
+  'PostgreSQL & pgvector',
+  'Redis & Caching',
+  'Apache Kafka',
+  'GraphQL & gRPC',
+  'WebSockets & Realtime',
+  'Flutter & Mobile',
+  'React Native & Expo',
+  'AWS / Cloud Architecture',
+  'Solidity & Smart Contracts',
+  'Cybersecurity & SIEM',
+  'Supabase & Serverless'
+] as const;
+
+/**
+ * Standard Guidance Areas for Student Onboarding & Mentorship Requests
+ * Includes "No idea (Need Guidance to Figure Out)" and modern engineering mentorship topics.
+ */
+export const HELP_NEEDED_AREAS = [
+  'No idea (Need Guidance to Figure Out)',
+  'Architecture & System Design',
+  'Project Ideation & 0-to-1 Scoping',
+  'Tech Stack & Framework Selection',
+  'Concurrency & Deadlock Prevention',
+  'Database Schema & Normalization',
+  '1-on-1 Code Reviews & Clean Code',
+  'AI Model Integration & Prompts',
+  'Benchmarking, Latency & Load Testing',
+  'CI/CD Pipelines & Cloud Deployment',
+  'Authentication, RBAC & Security Hardening',
+  'Resume, GitHub & Portfolio Review',
+  'Technical Interview & Viva Prep'
+] as const;
+
+export const NO_IDEA_TECH = 'No idea (Help Me Decide)';
+export const NO_IDEA_HELP = 'No idea (Need Guidance to Figure Out)';

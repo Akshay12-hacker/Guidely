@@ -21,7 +21,14 @@ import { ProgressBar } from '../../components/common/ProgressBar';
 import { Chip } from '../../components/common/Chip';
 import { Badge } from '../../components/common/Badge';
 import { Icon } from '../../components/icons/Icon';
-import { PRESET_SKILLS, SKILL_CATEGORIES } from '../../constants/skills';
+import {
+  PRESET_SKILLS,
+  SKILL_CATEGORIES,
+  TARGET_TECHNOLOGIES,
+  HELP_NEEDED_AREAS,
+  NO_IDEA_TECH,
+  NO_IDEA_HELP
+} from '../../constants/skills';
 import { colors } from '../../theme/colors';
 import { spacing, radius, shadows } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
@@ -41,6 +48,15 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
   const [otherSkillInput, setOtherSkillInput] = useState('');
   const [customSkills, setCustomSkills] = useState<string[]>([]);
   const [selectedSkillCategory, setSelectedSkillCategory] = useState<string>('All');
+
+  const [customTechs, setCustomTechs] = useState<string[]>([]);
+  const [isAddingOtherTech, setIsAddingOtherTech] = useState(false);
+  const [otherTechInput, setOtherTechInput] = useState('');
+
+  const [customHelpAreas, setCustomHelpAreas] = useState<string[]>([]);
+  const [isAddingOtherHelp, setIsAddingOtherHelp] = useState(false);
+  const [otherHelpInput, setOtherHelpInput] = useState('');
+
   const [profile, setProfile] = useState<Partial<StudentProfile>>({
     college: 'IIT Delhi',
     degree: 'B.Tech Computer Science & Engineering',
@@ -48,7 +64,7 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
     currentSkills: ['Go', 'C++', 'Data Structures', 'Linux'],
     projectIdea: 'Distributed fault-tolerant task queue with Raft consensus and worker crash heartbeats.',
     targetTechnologies: ['Go (Golang)', 'gRPC', 'PostgreSQL', 'Docker'],
-    helpNeededAreas: ['Architecture Design', 'Concurrency & Deadlocks', 'Worker Heartbeats'],
+    helpNeededAreas: ['Architecture & System Design', 'Concurrency & Deadlock Prevention'],
     availability: 'Weekdays post 6 PM & Weekend mornings',
     githubUrl: 'https://github.com',
     linkedinUrl: 'https://linkedin.com'
@@ -65,6 +81,20 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
             const loadedCustom = data.currentSkills.filter(s => !presetLower.has(s.toLowerCase()));
             if (loadedCustom.length > 0) {
               setCustomSkills(prev => Array.from(new Set([...prev, ...loadedCustom])));
+            }
+          }
+          if (data.targetTechnologies && data.targetTechnologies.length > 0) {
+            const presetTechLower = new Set(TARGET_TECHNOLOGIES.map(t => t.toLowerCase()));
+            const loadedCustomTech = data.targetTechnologies.filter(t => !presetTechLower.has(t.toLowerCase()));
+            if (loadedCustomTech.length > 0) {
+              setCustomTechs(prev => Array.from(new Set([...prev, ...loadedCustomTech])));
+            }
+          }
+          if (data.helpNeededAreas && data.helpNeededAreas.length > 0) {
+            const presetHelpLower = new Set(HELP_NEEDED_AREAS.map(h => h.toLowerCase()));
+            const loadedCustomHelp = data.helpNeededAreas.filter(h => !presetHelpLower.has(h.toLowerCase()));
+            if (loadedCustomHelp.length > 0) {
+              setCustomHelpAreas(prev => Array.from(new Set([...prev, ...loadedCustomHelp])));
             }
           }
           if (data.onboardingStep && data.onboardingStep > 1) {
@@ -195,36 +225,119 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
     );
   }, [queryTrimmed, customSkills, profile.currentSkills]);
 
+  const allTargetTechOptions = useMemo(() => {
+    const presets = TARGET_TECHNOLOGIES.filter(t => t !== NO_IDEA_TECH);
+    const combined = [...customTechs, ...presets];
+    const seen = new Set<string>();
+    return combined.filter(t => {
+      const lower = t.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+  }, [customTechs]);
+
+  const allHelpAreaOptions = useMemo(() => {
+    const presets = HELP_NEEDED_AREAS.filter(h => h !== NO_IDEA_HELP);
+    const combined = [...customHelpAreas, ...presets];
+    const seen = new Set<string>();
+    return combined.filter(h => {
+      const lower = h.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+  }, [customHelpAreas]);
+
   const toggleTargetTech = (tech: string) => {
-    const list = profile.targetTechnologies || [];
-    setProfile(prev => ({
-      ...prev,
-      targetTechnologies: list.includes(tech) ? list.filter(t => t !== tech) : [...list, tech]
-    }));
+    setProfile(prev => {
+      const list = prev.targetTechnologies || [];
+      if (tech === NO_IDEA_TECH) {
+        // Toggle No idea exclusively
+        return {
+          ...prev,
+          targetTechnologies: list.includes(NO_IDEA_TECH) ? [] : [NO_IDEA_TECH]
+        };
+      } else {
+        // Specific tech selected: remove "No idea" if present
+        const withoutNoIdea = list.filter(t => t !== NO_IDEA_TECH);
+        return {
+          ...prev,
+          targetTechnologies: withoutNoIdea.includes(tech)
+            ? withoutNoIdea.filter(t => t !== tech)
+            : [...withoutNoIdea, tech]
+        };
+      }
+    });
+  };
+
+  const handleAddCustomTech = (name?: string) => {
+    const raw = (name !== undefined ? name : otherTechInput).trim();
+    if (!raw) return;
+
+    const existingPreset = TARGET_TECHNOLOGIES.find(t => t.toLowerCase() === raw.toLowerCase());
+    const resolved = existingPreset || raw;
+
+    setProfile(prev => {
+      const list = (prev.targetTechnologies || []).filter(t => t !== NO_IDEA_TECH);
+      if (!list.includes(resolved)) {
+        return { ...prev, targetTechnologies: [...list, resolved] };
+      }
+      return prev;
+    });
+
+    if (!existingPreset) {
+      setCustomTechs(prev => Array.from(new Set([...prev, resolved])));
+    }
+    setOtherTechInput('');
+    setIsAddingOtherTech(false);
+    showToast('success', 'Tech Added', `"${resolved}" added to your target technologies.`);
   };
 
   const toggleHelpArea = (area: string) => {
-    const list = profile.helpNeededAreas || [];
-    setProfile(prev => ({
-      ...prev,
-      helpNeededAreas: list.includes(area) ? list.filter(a => a !== area) : [...list, area]
-    }));
+    setProfile(prev => {
+      const list = prev.helpNeededAreas || [];
+      if (area === NO_IDEA_HELP) {
+        // Toggle No idea exclusively
+        return {
+          ...prev,
+          helpNeededAreas: list.includes(NO_IDEA_HELP) ? [] : [NO_IDEA_HELP]
+        };
+      } else {
+        // Specific area selected: remove "No idea" if present
+        const withoutNoIdea = list.filter(a => a !== NO_IDEA_HELP);
+        return {
+          ...prev,
+          helpNeededAreas: withoutNoIdea.includes(area)
+            ? withoutNoIdea.filter(a => a !== area)
+            : [...withoutNoIdea, area]
+        };
+      }
+    });
   };
 
-  const allTechList = [
-    'Go (Golang)', 'PyTorch', 'Rust', 'Kubernetes', 'gRPC', 'WebRTC',
-    'Next.js', 'Solidity', 'Apache Spark', 'Kafka', 'Redis', 'WebSockets'
-  ];
+  const handleAddCustomHelp = (name?: string) => {
+    const raw = (name !== undefined ? name : otherHelpInput).trim();
+    if (!raw) return;
 
-  const allHelpAreas = [
-    'Architecture & System Design',
-    'Concurrency & Deadlock Prevention',
-    'Database Schema & Normalization',
-    '1-on-1 Code Reviews & Best Practices',
-    'Model Fine-Tuning & Evaluation',
-    'Benchmarking & Load Testing',
-    'Deployment & Production Hardening'
-  ];
+    const existingPreset = HELP_NEEDED_AREAS.find(h => h.toLowerCase() === raw.toLowerCase());
+    const resolved = existingPreset || raw;
+
+    setProfile(prev => {
+      const list = (prev.helpNeededAreas || []).filter(h => h !== NO_IDEA_HELP);
+      if (!list.includes(resolved)) {
+        return { ...prev, helpNeededAreas: [...list, resolved] };
+      }
+      return prev;
+    });
+
+    if (!existingPreset) {
+      setCustomHelpAreas(prev => Array.from(new Set([...prev, resolved])));
+    }
+    setOtherHelpInput('');
+    setIsAddingOtherHelp(false);
+    showToast('success', 'Guidance Area Added', `"${resolved}" added to your guidance areas.`);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -513,17 +626,112 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
             <View>
               <Text style={[typography.h3, styles.stepTitle]}>Target Technologies</Text>
               <Text style={[typography.body, styles.stepDesc]}>
-                Which tools or languages are you aiming to learn and build this project with?
+                Which tools or languages are you aiming to learn and build this project with? If you're not sure, select "No idea" and mentors will recommend the best stack.
               </Text>
+
+              {/* Special No Idea Card */}
+              <TouchableOpacity
+                onPress={() => toggleTargetTech(NO_IDEA_TECH)}
+                style={[
+                  styles.otherInputCard,
+                  {
+                    borderWidth: profile.targetTechnologies?.includes(NO_IDEA_TECH) ? 2 : 1,
+                    borderColor: profile.targetTechnologies?.includes(NO_IDEA_TECH) ? colors.primary : colors.border,
+                    backgroundColor: profile.targetTechnologies?.includes(NO_IDEA_TECH) ? colors.primaryLight : colors.surfaceSubtle,
+                    marginBottom: spacing.md
+                  }
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1, paddingRight: spacing.sm }}>
+                    <Text style={[typography.bodyBold, { color: profile.targetTechnologies?.includes(NO_IDEA_TECH) ? colors.primary : colors.textMain }]}>
+                      {NO_IDEA_TECH}
+                    </Text>
+                    <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]}>
+                      Unsure which stack fits best? Your mentor will review requirements and recommend the stack during kickoff.
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 11,
+                      backgroundColor: profile.targetTechnologies?.includes(NO_IDEA_TECH) ? colors.primary : colors.white,
+                      borderWidth: profile.targetTechnologies?.includes(NO_IDEA_TECH) ? 0 : 1.5,
+                      borderColor: colors.border,
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    {profile.targetTechnologies?.includes(NO_IDEA_TECH) && (
+                      <Text style={{ color: colors.white, fontSize: 12, fontWeight: 'bold' }}>✓</Text>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              {/* Inline Custom Tech Form */}
+              {isAddingOtherTech && (
+                <View style={styles.otherInputCard}>
+                  <Text style={[typography.captionBold, { color: colors.textMain, marginBottom: spacing.xs }]}>
+                    Add Custom Technology or Framework
+                  </Text>
+                  <Input
+                    placeholder="e.g. Elixir, Apache Flink, Neo4j, Unreal Engine"
+                    value={otherTechInput}
+                    onChangeText={setOtherTechInput}
+                    autoFocus
+                  />
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: spacing.xs }}>
+                    <Button
+                      size="sm"
+                      onPress={() => handleAddCustomTech()}
+                      disabled={!otherTechInput.trim()}
+                    >
+                      Add Tech
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onPress={() => {
+                        setIsAddingOtherTech(false);
+                        setOtherTechInput('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </View>
+                </View>
+              )}
+
+              <View style={{ marginBottom: spacing.xs }}>
+                <Text style={[typography.captionBold, { color: colors.textMuted, marginBottom: spacing.xs }]}>
+                  SELECT SPECIFIC TECHNOLOGIES ({allTargetTechOptions.length})
+                </Text>
+              </View>
+
               <View style={styles.chipsWrap}>
-                {allTechList.map(tech => (
+                {allTargetTechOptions.map(tech => (
                   <Chip
                     key={tech}
                     label={tech}
                     selected={profile.targetTechnologies?.includes(tech)}
                     onPress={() => toggleTargetTech(tech)}
+                    style={{ marginRight: 6, marginBottom: 6 }}
                   />
                 ))}
+
+                {/* + Other Tech Chip */}
+                <Chip
+                  label="+ Other Tech"
+                  selected={isAddingOtherTech}
+                  onPress={() => setIsAddingOtherTech(prev => !prev)}
+                  style={{
+                    marginRight: 6,
+                    marginBottom: 6,
+                    borderStyle: 'dashed'
+                  }}
+                />
               </View>
             </View>
           )}
@@ -533,17 +741,112 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
             <View>
               <Text style={[typography.h3, styles.stepTitle]}>Where Do You Need Guidance?</Text>
               <Text style={[typography.body, styles.stepDesc]}>
-                Select the primary areas where human mentor guidance will unblock you:
+                Select the primary areas where mentor guidance will unblock you the most. If you're unsure where to start, choose "No idea".
               </Text>
+
+              {/* Special No Idea Card */}
+              <TouchableOpacity
+                onPress={() => toggleHelpArea(NO_IDEA_HELP)}
+                style={[
+                  styles.otherInputCard,
+                  {
+                    borderWidth: profile.helpNeededAreas?.includes(NO_IDEA_HELP) ? 2 : 1,
+                    borderColor: profile.helpNeededAreas?.includes(NO_IDEA_HELP) ? colors.primary : colors.border,
+                    backgroundColor: profile.helpNeededAreas?.includes(NO_IDEA_HELP) ? colors.primaryLight : colors.surfaceSubtle,
+                    marginBottom: spacing.md
+                  }
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1, paddingRight: spacing.sm }}>
+                    <Text style={[typography.bodyBold, { color: profile.helpNeededAreas?.includes(NO_IDEA_HELP) ? colors.primary : colors.textMain }]}>
+                      {NO_IDEA_HELP}
+                    </Text>
+                    <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]}>
+                      Unsure what will block you? Mentors will run a 0-to-1 project discovery & roadmap session with you.
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 11,
+                      backgroundColor: profile.helpNeededAreas?.includes(NO_IDEA_HELP) ? colors.primary : colors.white,
+                      borderWidth: profile.helpNeededAreas?.includes(NO_IDEA_HELP) ? 0 : 1.5,
+                      borderColor: colors.border,
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    {profile.helpNeededAreas?.includes(NO_IDEA_HELP) && (
+                      <Text style={{ color: colors.white, fontSize: 12, fontWeight: 'bold' }}>✓</Text>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              {/* Inline Custom Help Form */}
+              {isAddingOtherHelp && (
+                <View style={styles.otherInputCard}>
+                  <Text style={[typography.captionBold, { color: colors.textMain, marginBottom: spacing.xs }]}>
+                    Add Custom Guidance Focus
+                  </Text>
+                  <Input
+                    placeholder="e.g. Memory profiling & leak detection, Kafka partition rebalancing"
+                    value={otherHelpInput}
+                    onChangeText={setOtherHelpInput}
+                    autoFocus
+                  />
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: spacing.xs }}>
+                    <Button
+                      size="sm"
+                      onPress={() => handleAddCustomHelp()}
+                      disabled={!otherHelpInput.trim()}
+                    >
+                      Add Area
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onPress={() => {
+                        setIsAddingOtherHelp(false);
+                        setOtherHelpInput('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </View>
+                </View>
+              )}
+
+              <View style={{ marginBottom: spacing.xs }}>
+                <Text style={[typography.captionBold, { color: colors.textMuted, marginBottom: spacing.xs }]}>
+                  SELECT GUIDANCE TOPICS ({allHelpAreaOptions.length})
+                </Text>
+              </View>
+
               <View style={styles.chipsWrap}>
-                {allHelpAreas.map(area => (
+                {allHelpAreaOptions.map(area => (
                   <Chip
                     key={area}
                     label={area}
                     selected={profile.helpNeededAreas?.includes(area)}
                     onPress={() => toggleHelpArea(area)}
+                    style={{ marginRight: 6, marginBottom: 6 }}
                   />
                 ))}
+
+                {/* + Other Guidance Chip */}
+                <Chip
+                  label="+ Other Guidance"
+                  selected={isAddingOtherHelp}
+                  onPress={() => setIsAddingOtherHelp(prev => !prev)}
+                  style={{
+                    marginRight: 6,
+                    marginBottom: 6,
+                    borderStyle: 'dashed'
+                  }}
+                />
               </View>
             </View>
           )}
@@ -611,11 +914,44 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
 
                 <Text style={[typography.captionBold, { color: colors.textSubtle }]}>TARGET TECHNOLOGIES</Text>
                 <View style={styles.chipsWrap}>
-                  {profile.targetTechnologies?.map(t => (
-                    <Badge key={t} variant="primary" size="sm" style={{ marginRight: 4, marginTop: 4 }}>
-                      {t}
-                    </Badge>
-                  ))}
+                  {profile.targetTechnologies && profile.targetTechnologies.length > 0 ? (
+                    profile.targetTechnologies.map(t => (
+                      <Badge
+                        key={t}
+                        variant={t === NO_IDEA_TECH ? 'secondary' : 'primary'}
+                        size="sm"
+                        style={{ marginRight: 4, marginTop: 4 }}
+                      >
+                        {t}
+                      </Badge>
+                    ))
+                  ) : (
+                    <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]}>
+                      None selected (Mentor advice)
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.previewDivider} />
+
+                <Text style={[typography.captionBold, { color: colors.textSubtle }]}>GUIDANCE NEEDED IN</Text>
+                <View style={styles.chipsWrap}>
+                  {profile.helpNeededAreas && profile.helpNeededAreas.length > 0 ? (
+                    profile.helpNeededAreas.map(h => (
+                      <Badge
+                        key={h}
+                        variant={h === NO_IDEA_HELP ? 'secondary' : 'warning'}
+                        size="sm"
+                        style={{ marginRight: 4, marginTop: 4 }}
+                      >
+                        {h}
+                      </Badge>
+                    ))
+                  ) : (
+                    <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]}>
+                      None selected (Discovery session)
+                    </Text>
+                  )}
                 </View>
               </View>
             </View>

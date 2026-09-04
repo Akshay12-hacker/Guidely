@@ -13,6 +13,12 @@ import { colors } from '../../theme/colors';
 import { spacing, radius } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { Icon } from '../../components/icons/Icon';
+import {
+  TARGET_TECHNOLOGIES,
+  HELP_NEEDED_AREAS,
+  NO_IDEA_TECH,
+  NO_IDEA_HELP
+} from '../../constants/skills';
 
 export interface MentorshipRequestModalProps {
   visible: boolean;
@@ -41,15 +47,33 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
   const [additionalMessage, setAdditionalMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const availableTech = ['Go (Golang)', 'PyTorch', 'Rust', 'Kubernetes', 'gRPC', 'WebRTC', 'React', 'Node.js', 'PostgreSQL'];
-  const availableHelp = ['Architecture & System Design', 'Concurrency & Deadlocks', '1-on-1 Code Reviews', 'Testing & Benchmarking', 'Deployment'];
+  const availableTech = TARGET_TECHNOLOGIES;
+  const availableHelp = HELP_NEEDED_AREAS;
 
   const toggleTech = (t: string) => {
-    setSelectedTech(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+    setSelectedTech(prev => {
+      if (t === NO_IDEA_TECH) {
+        return prev.includes(NO_IDEA_TECH) ? [] : [NO_IDEA_TECH];
+      } else {
+        const withoutNoIdea = prev.filter(x => x !== NO_IDEA_TECH);
+        return withoutNoIdea.includes(t)
+          ? withoutNoIdea.filter(x => x !== t)
+          : [...withoutNoIdea, t];
+      }
+    });
   };
 
   const toggleHelp = (h: string) => {
-    setSelectedHelp(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
+    setSelectedHelp(prev => {
+      if (h === NO_IDEA_HELP) {
+        return prev.includes(NO_IDEA_HELP) ? [] : [NO_IDEA_HELP];
+      } else {
+        const withoutNoIdea = prev.filter(x => x !== NO_IDEA_HELP);
+        return withoutNoIdea.includes(h)
+          ? withoutNoIdea.filter(x => x !== h)
+          : [...withoutNoIdea, h];
+      }
+    });
   };
 
   const handleSubmit = async () => {

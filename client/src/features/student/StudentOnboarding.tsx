@@ -13,7 +13,14 @@ import { ProgressBar } from '../../components/ui/ProgressBar.js';
 import { Badge } from '../../components/ui/Badge.js';
 import { Avatar } from '../../components/ui/Avatar.js';
 import { ProfilePhotoModal } from '../../components/ui/ProfilePhotoModal.js';
-import { PRESET_SKILLS, SKILL_CATEGORIES } from '../../constants/skills.js';
+import {
+  PRESET_SKILLS,
+  SKILL_CATEGORIES,
+  TARGET_TECHNOLOGIES,
+  HELP_NEEDED_AREAS,
+  NO_IDEA_TECH,
+  NO_IDEA_HELP
+} from '../../constants/skills.js';
 import {
   User,
   GraduationCap,
@@ -30,7 +37,8 @@ import {
   Camera,
   Search,
   Plus,
-  X
+  X,
+  Info
 } from 'lucide-react';
 
 interface StudentOnboardingProps {
@@ -49,6 +57,13 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
   const [isAddingOtherSkill, setIsAddingOtherSkill] = useState(false);
   const [otherSkillInput, setOtherSkillInput] = useState('');
   const [customSkills, setCustomSkills] = useState<string[]>([]);
+  const [customTechs, setCustomTechs] = useState<string[]>([]);
+  const [isAddingOtherTech, setIsAddingOtherTech] = useState(false);
+  const [otherTechInput, setOtherTechInput] = useState('');
+  const [customHelpAreas, setCustomHelpAreas] = useState<string[]>([]);
+  const [isAddingOtherHelp, setIsAddingOtherHelp] = useState(false);
+  const [otherHelpInput, setOtherHelpInput] = useState('');
+
   const [profile, setProfile] = useState<Partial<StudentProfile>>({
     college: 'IIT Delhi',
     degree: 'B.Tech Computer Science and Engineering',
@@ -56,7 +71,7 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
     currentSkills: ['Go', 'C++', 'Data Structures', 'Linux'],
     projectIdea: 'Distributed fault-tolerant task queue with Raft consensus and worker heartbeats.',
     targetTechnologies: ['Go (Golang)', 'gRPC', 'PostgreSQL', 'Docker'],
-    helpNeededAreas: ['Architecture Design', 'Concurrency & Deadlocks', 'Worker Heartbeats'],
+    helpNeededAreas: ['Architecture & System Design', 'Concurrency & Deadlock Prevention'],
     availability: 'Weekdays post 6 PM & Weekend mornings',
     githubUrl: 'https://github.com',
     linkedinUrl: 'https://linkedin.com'
@@ -73,6 +88,20 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
             const loadedCustom = data.currentSkills.filter(s => !presetLower.has(s.toLowerCase()));
             if (loadedCustom.length > 0) {
               setCustomSkills(prev => Array.from(new Set([...prev, ...loadedCustom])));
+            }
+          }
+          if (data.targetTechnologies && data.targetTechnologies.length > 0) {
+            const presetTechLower = new Set(TARGET_TECHNOLOGIES.map(t => t.toLowerCase()));
+            const loadedCustomTech = data.targetTechnologies.filter(t => !presetTechLower.has(t.toLowerCase()));
+            if (loadedCustomTech.length > 0) {
+              setCustomTechs(prev => Array.from(new Set([...prev, ...loadedCustomTech])));
+            }
+          }
+          if (data.helpNeededAreas && data.helpNeededAreas.length > 0) {
+            const presetHelpLower = new Set(HELP_NEEDED_AREAS.map(h => h.toLowerCase()));
+            const loadedCustomHelp = data.helpNeededAreas.filter(h => !presetHelpLower.has(h.toLowerCase()));
+            if (loadedCustomHelp.length > 0) {
+              setCustomHelpAreas(prev => Array.from(new Set([...prev, ...loadedCustomHelp])));
             }
           }
           if (data.onboardingStep && data.onboardingStep > 1) {
@@ -218,20 +247,118 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
     );
   }, [queryTrimmed, customSkills, profile.currentSkills]);
 
+  const allTargetTechOptions = useMemo(() => {
+    const presets = TARGET_TECHNOLOGIES.filter(t => t !== NO_IDEA_TECH);
+    const combined = [...customTechs, ...presets];
+    const seen = new Set<string>();
+    return combined.filter(t => {
+      const lower = t.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+  }, [customTechs]);
+
+  const allHelpAreaOptions = useMemo(() => {
+    const presets = HELP_NEEDED_AREAS.filter(h => h !== NO_IDEA_HELP);
+    const combined = [...customHelpAreas, ...presets];
+    const seen = new Set<string>();
+    return combined.filter(h => {
+      const lower = h.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+  }, [customHelpAreas]);
+
   const toggleTargetTech = (tech: string) => {
-    const list = profile.targetTechnologies || [];
-    setProfile(prev => ({
-      ...prev,
-      targetTechnologies: list.includes(tech) ? list.filter(t => t !== tech) : [...list, tech]
-    }));
+    setProfile(prev => {
+      const list = prev.targetTechnologies || [];
+      if (tech === NO_IDEA_TECH) {
+        // Toggle No idea exclusively
+        return {
+          ...prev,
+          targetTechnologies: list.includes(NO_IDEA_TECH) ? [] : [NO_IDEA_TECH]
+        };
+      } else {
+        // Specific tech selected: remove "No idea" if present
+        const withoutNoIdea = list.filter(t => t !== NO_IDEA_TECH);
+        return {
+          ...prev,
+          targetTechnologies: withoutNoIdea.includes(tech)
+            ? withoutNoIdea.filter(t => t !== tech)
+            : [...withoutNoIdea, tech]
+        };
+      }
+    });
+  };
+
+  const handleAddCustomTech = (name?: string) => {
+    const raw = (name !== undefined ? name : otherTechInput).trim();
+    if (!raw) return;
+
+    const existingPreset = TARGET_TECHNOLOGIES.find(t => t.toLowerCase() === raw.toLowerCase());
+    const resolved = existingPreset || raw;
+
+    setProfile(prev => {
+      const list = (prev.targetTechnologies || []).filter(t => t !== NO_IDEA_TECH);
+      if (!list.includes(resolved)) {
+        return { ...prev, targetTechnologies: [...list, resolved] };
+      }
+      return prev;
+    });
+
+    if (!existingPreset) {
+      setCustomTechs(prev => Array.from(new Set([...prev, resolved])));
+    }
+    setOtherTechInput('');
+    setIsAddingOtherTech(false);
+    showToast('success', 'Tech Added', `"${resolved}" added to your target technologies.`);
   };
 
   const toggleHelpArea = (area: string) => {
-    const list = profile.helpNeededAreas || [];
-    setProfile(prev => ({
-      ...prev,
-      helpNeededAreas: list.includes(area) ? list.filter(a => a !== area) : [...list, area]
-    }));
+    setProfile(prev => {
+      const list = prev.helpNeededAreas || [];
+      if (area === NO_IDEA_HELP) {
+        // Toggle No idea exclusively
+        return {
+          ...prev,
+          helpNeededAreas: list.includes(NO_IDEA_HELP) ? [] : [NO_IDEA_HELP]
+        };
+      } else {
+        // Specific area selected: remove "No idea" if present
+        const withoutNoIdea = list.filter(a => a !== NO_IDEA_HELP);
+        return {
+          ...prev,
+          helpNeededAreas: withoutNoIdea.includes(area)
+            ? withoutNoIdea.filter(a => a !== area)
+            : [...withoutNoIdea, area]
+        };
+      }
+    });
+  };
+
+  const handleAddCustomHelp = (name?: string) => {
+    const raw = (name !== undefined ? name : otherHelpInput).trim();
+    if (!raw) return;
+
+    const existingPreset = HELP_NEEDED_AREAS.find(h => h.toLowerCase() === raw.toLowerCase());
+    const resolved = existingPreset || raw;
+
+    setProfile(prev => {
+      const list = (prev.helpNeededAreas || []).filter(h => h !== NO_IDEA_HELP);
+      if (!list.includes(resolved)) {
+        return { ...prev, helpNeededAreas: [...list, resolved] };
+      }
+      return prev;
+    });
+
+    if (!existingPreset) {
+      setCustomHelpAreas(prev => Array.from(new Set([...prev, resolved])));
+    }
+    setOtherHelpInput('');
+    setIsAddingOtherHelp(false);
+    showToast('success', 'Guidance Area Added', `"${resolved}" added to your guidance areas.`);
   };
 
   return (
@@ -766,16 +893,180 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
         {/* Step 5: Target Technologies */}
         {currentStep === 5 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} className="animate-fade-in">
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Technologies of Interest</h3>
-            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-              Which tech stack are you aiming to master or build this project with?
-            </p>
+            <div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Technologies of Interest</h3>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                Which tech stack are you aiming to master or build this project with? If you're unsure, select "No idea" and mentors will recommend the ideal stack for your vision.
+              </p>
+            </div>
+
+            {/* Special "No idea" Option Card */}
+            <div
+              onClick={() => toggleTargetTech(NO_IDEA_TECH)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 18px',
+                borderRadius: 'var(--radius-md)',
+                border: profile.targetTechnologies?.includes(NO_IDEA_TECH)
+                  ? '2px solid var(--primary)'
+                  : '1.5px dashed var(--border)',
+                backgroundColor: profile.targetTechnologies?.includes(NO_IDEA_TECH)
+                  ? 'var(--primary-light)'
+                  : 'var(--bg-subtle)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    backgroundColor: profile.targetTechnologies?.includes(NO_IDEA_TECH)
+                      ? 'var(--primary)'
+                      : 'var(--border)',
+                    color: profile.targetTechnologies?.includes(NO_IDEA_TECH)
+                      ? '#FFFFFF'
+                      : 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}
+                >
+                  <HelpCircle size={20} />
+                </div>
+                <div>
+                  <span style={{
+                    fontSize: '0.95rem',
+                    fontWeight: 700,
+                    color: profile.targetTechnologies?.includes(NO_IDEA_TECH) ? 'var(--primary)' : 'var(--text-main)',
+                    display: 'block'
+                  }}>
+                    {NO_IDEA_TECH}
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    Don't know yet? Your mentor will review your project requirements and recommend the optimal stack.
+                  </span>
+                </div>
+              </div>
+              <div
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  border: profile.targetTechnologies?.includes(NO_IDEA_TECH) ? 'none' : '1.5px solid var(--border)',
+                  backgroundColor: profile.targetTechnologies?.includes(NO_IDEA_TECH) ? 'var(--primary)' : '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFFFF',
+                  fontSize: '12px',
+                  fontWeight: 800
+                }}
+              >
+                {profile.targetTechnologies?.includes(NO_IDEA_TECH) && '✓'}
+              </div>
+            </div>
+
+            {/* Mentor suggestion tip card when No idea is selected */}
+            {profile.targetTechnologies?.includes(NO_IDEA_TECH) && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                padding: '12px 16px',
+                backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                borderRadius: 'var(--radius-md)'
+              }}>
+                <Info size={18} color="var(--primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  <strong>Mentor Guidance Included:</strong> Great choice! When you connect with a mentor, you can discuss architecture trade-offs (e.g. Go vs Rust for throughput, Next.js vs Flutter for multi-platform) before writing code.
+                </span>
+              </div>
+            )}
+
+            {/* Header for Specific Technologies */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Select Specific Technologies ({allTargetTechOptions.length})
+              </span>
+              <Button
+                variant={isAddingOtherTech ? 'secondary' : 'outline'}
+                size="sm"
+                type="button"
+                onClick={() => setIsAddingOtherTech(prev => !prev)}
+                leftIcon={<Plus size={14} />}
+              >
+                {isAddingOtherTech ? 'Close Other' : '+ Other Tech'}
+              </Button>
+            </div>
+
+            {/* Inline Custom Tech Form */}
+            {isAddingOtherTech && (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                padding: '12px 14px',
+                backgroundColor: 'var(--bg-subtle)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border)'
+              }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                  Add Custom Technology or Framework
+                </span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder="e.g. Elixir, Apache Flink, Neo4j, Unreal Engine, PyTorch Lightning..."
+                    value={otherTechInput}
+                    onChange={(e) => setOtherTechInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCustomTech();
+                      } else if (e.key === 'Escape') {
+                        setIsAddingOtherTech(false);
+                        setOtherTechInput('');
+                      }
+                    }}
+                    autoFocus
+                    className="guidely-input"
+                    style={{ flex: 1, padding: '8px 12px', fontSize: '0.88rem' }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    type="button"
+                    onClick={() => handleAddCustomTech()}
+                    disabled={!otherTechInput.trim()}
+                    leftIcon={<Plus size={14} />}
+                  >
+                    Add
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    type="button"
+                    onClick={() => {
+                      setIsAddingOtherTech(false);
+                      setOtherTechInput('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Technologies Grid */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {[
-                'Go (Golang)', 'PyTorch', 'Rust', 'Kubernetes', 'gRPC', 'WebRTC',
-                'Next.js', 'Solidity', 'Apache Spark', 'Kafka', 'Redis', 'WebSockets',
-                'FastAPI', 'GraphQL', 'AWS / Cloud Native'
-              ].map(tech => {
+              {allTargetTechOptions.map(tech => {
                 const isSelected = profile.targetTechnologies?.includes(tech);
                 return (
                   <button
@@ -791,10 +1082,14 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
                       fontSize: '0.86rem',
                       fontWeight: isSelected ? 700 : 500,
                       cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    {tech} {isSelected && '✓'}
+                    <span>{tech}</span>
+                    {isSelected && <span style={{ color: 'var(--primary)', fontWeight: 800 }}>✓</span>}
                   </button>
                 );
               })}
@@ -805,20 +1100,180 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
         {/* Step 6: Help Needed Areas */}
         {currentStep === 6 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} className="animate-fade-in">
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Where Do You Need Guidance?</h3>
-            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-              Select the primary areas where human mentor guidance will unblock you the most.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
-              {[
-                'Architecture & System Design',
-                'Concurrency & Deadlock Prevention',
-                'Database Schema & Normalization',
-                '1-on-1 Code Reviews & Best Practices',
-                'Model Fine-Tuning & Evaluation',
-                'Benchmarking & Load Testing',
-                'Deployment & Production Hardening'
-              ].map(area => {
+            <div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Where Do You Need Guidance?</h3>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                Select the primary areas where human mentor guidance will unblock you the most. If you're not sure where to start, choose "No idea" and mentors will help map out your engineering journey.
+              </p>
+            </div>
+
+            {/* Special "No idea" Option Card */}
+            <div
+              onClick={() => toggleHelpArea(NO_IDEA_HELP)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 18px',
+                borderRadius: 'var(--radius-md)',
+                border: profile.helpNeededAreas?.includes(NO_IDEA_HELP)
+                  ? '2px solid var(--primary)'
+                  : '1.5px dashed var(--border)',
+                backgroundColor: profile.helpNeededAreas?.includes(NO_IDEA_HELP)
+                  ? 'var(--primary-light)'
+                  : 'var(--bg-subtle)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    backgroundColor: profile.helpNeededAreas?.includes(NO_IDEA_HELP)
+                      ? 'var(--primary)'
+                      : 'var(--border)',
+                    color: profile.helpNeededAreas?.includes(NO_IDEA_HELP)
+                      ? '#FFFFFF'
+                      : 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}
+                >
+                  <Lightbulb size={20} />
+                </div>
+                <div>
+                  <span style={{
+                    fontSize: '0.95rem',
+                    fontWeight: 700,
+                    color: profile.helpNeededAreas?.includes(NO_IDEA_HELP) ? 'var(--primary)' : 'var(--text-main)',
+                    display: 'block'
+                  }}>
+                    {NO_IDEA_HELP}
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    Unsure where you will get stuck? Mentors will run a 0-to-1 project discovery & scoping session with you.
+                  </span>
+                </div>
+              </div>
+              <div
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  border: profile.helpNeededAreas?.includes(NO_IDEA_HELP) ? 'none' : '1.5px solid var(--border)',
+                  backgroundColor: profile.helpNeededAreas?.includes(NO_IDEA_HELP) ? 'var(--primary)' : '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFFFF',
+                  fontSize: '12px',
+                  fontWeight: 800
+                }}
+              >
+                {profile.helpNeededAreas?.includes(NO_IDEA_HELP) && '✓'}
+              </div>
+            </div>
+
+            {/* Mentor suggestion tip card when No idea is selected */}
+            {profile.helpNeededAreas?.includes(NO_IDEA_HELP) && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                padding: '12px 16px',
+                backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                borderRadius: 'var(--radius-md)'
+              }}>
+                <Info size={18} color="var(--primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  <strong>Scoping & Discovery Session:</strong> That's completely fine! Many builders start with an appetite to learn rather than an exact breakdown. Mentors will help scope your architecture, milestones, and deliverable goals.
+                </span>
+              </div>
+            )}
+
+            {/* Header for Specific Areas */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Select Guidance Areas ({allHelpAreaOptions.length})
+              </span>
+              <Button
+                variant={isAddingOtherHelp ? 'secondary' : 'outline'}
+                size="sm"
+                type="button"
+                onClick={() => setIsAddingOtherHelp(prev => !prev)}
+                leftIcon={<Plus size={14} />}
+              >
+                {isAddingOtherHelp ? 'Close Other' : '+ Other Area'}
+              </Button>
+            </div>
+
+            {/* Inline Custom Help Form */}
+            {isAddingOtherHelp && (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                padding: '12px 14px',
+                backgroundColor: 'var(--bg-subtle)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border)'
+              }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                  Add Custom Guidance Focus
+                </span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder="e.g. Memory profiling & leak detection, Kafka partition rebalancing..."
+                    value={otherHelpInput}
+                    onChange={(e) => setOtherHelpInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCustomHelp();
+                      } else if (e.key === 'Escape') {
+                        setIsAddingOtherHelp(false);
+                        setOtherHelpInput('');
+                      }
+                    }}
+                    autoFocus
+                    className="guidely-input"
+                    style={{ flex: 1, padding: '8px 12px', fontSize: '0.88rem' }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    type="button"
+                    onClick={() => handleAddCustomHelp()}
+                    disabled={!otherHelpInput.trim()}
+                    leftIcon={<Plus size={14} />}
+                  >
+                    Add
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    type="button"
+                    onClick={() => {
+                      setIsAddingOtherHelp(false);
+                      setOtherHelpInput('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Help Areas Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
+              {allHelpAreaOptions.map(area => {
                 const isSelected = profile.helpNeededAreas?.includes(area);
                 return (
                   <div
@@ -835,7 +1290,8 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
                       gap: '10px',
                       fontSize: '0.88rem',
                       fontWeight: isSelected ? 700 : 500,
-                      color: isSelected ? 'var(--primary)' : 'var(--text-main)'
+                      color: isSelected ? 'var(--primary)' : 'var(--text-main)',
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     <div
@@ -918,14 +1374,38 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
               <div>
                 <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-subtle)' }}>Target Technologies</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
-                  {profile.targetTechnologies?.map(t => <Badge key={t} variant="primary" size="sm">{t}</Badge>)}
+                  {profile.targetTechnologies && profile.targetTechnologies.length > 0 ? (
+                    profile.targetTechnologies.map(t => (
+                      <Badge
+                        key={t}
+                        variant={t === NO_IDEA_TECH ? 'neutral' : 'primary'}
+                        size="sm"
+                      >
+                        {t}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>None selected (Open to mentor advice)</span>
+                  )}
                 </div>
               </div>
 
               <div>
                 <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-subtle)' }}>Guidance Needed In</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
-                  {profile.helpNeededAreas?.map(h => <Badge key={h} variant="warning" size="sm">{h}</Badge>)}
+                  {profile.helpNeededAreas && profile.helpNeededAreas.length > 0 ? (
+                    profile.helpNeededAreas.map(h => (
+                      <Badge
+                        key={h}
+                        variant={h === NO_IDEA_HELP ? 'neutral' : 'warning'}
+                        size="sm"
+                      >
+                        {h}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>None selected (Discovery session)</span>
+                  )}
                 </div>
               </div>
             </div>

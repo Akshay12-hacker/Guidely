@@ -16,6 +16,15 @@ export class StudentController {
     }
   };
 
+  getOnboardingOptions = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = this.studentService.getOnboardingOptions();
+      res.status(200).json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   addCustomSkill = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const { skill } = req.body;

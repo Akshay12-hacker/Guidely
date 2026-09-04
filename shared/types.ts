@@ -433,3 +433,9 @@ export interface SkillsDirectoryResponse {
   total: number;
 }
 
+export interface StudentOnboardingOptions {
+  targetTechnologies: string[];
+  helpNeededAreas: string[];
+  skillCategories: string[];
+}
+

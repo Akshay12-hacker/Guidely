@@ -6,7 +6,8 @@ import { Button } from '../../components/ui/Button.js';
 import { api } from '../../services/api.js';
 import { useToast } from '../../context/ToastContext.js';
 import { MentorProfile, User } from '../../../../shared/types.js';
-import { Send } from 'lucide-react';
+import { HELP_NEEDED_AREAS, NO_IDEA_HELP } from '../../constants/skills.js';
+import { Send, HelpCircle } from 'lucide-react';
 
 interface MentorshipRequestModalProps {
   isOpen: boolean;
@@ -71,9 +72,16 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
   };
 
   const toggleHelpArea = (area: string) => {
-    setHelpNeeded(prev =>
-      prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area]
-    );
+    setHelpNeeded(prev => {
+      if (area === NO_IDEA_HELP) {
+        return prev.includes(NO_IDEA_HELP) ? [] : [NO_IDEA_HELP];
+      } else {
+        const withoutNoIdea = prev.filter(a => a !== NO_IDEA_HELP);
+        return withoutNoIdea.includes(area)
+          ? withoutNoIdea.filter(a => a !== area)
+          : [...withoutNoIdea, area];
+      }
+    });
   };
 
   return (
@@ -82,7 +90,7 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
       onClose={onClose}
       title={`Request Mentorship from ${mentor.user.fullName}`}
       subtitle={`${mentor.title} @ ${mentor.company}`}
-      maxWidth="620px"
+      maxWidth="640px"
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
@@ -117,19 +125,18 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
         />
 
         <div>
-          <label style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-main)', display: 'block', marginBottom: '6px' }}>
-            Areas Where Guidance Is Most Needed
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-            {[
-              'Architecture Design',
-              'Concurrency & Channel Leaks',
-              'Worker Failover Strategy',
-              'Database Schema & Indexing',
-              '1-on-1 Code Reviews',
-              'Benchmarking & Load Testing'
-            ].map(area => {
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <label style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-main)' }}>
+              Areas Where Guidance Is Most Needed
+            </label>
+            <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+              Select specific topics or "No idea"
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', maxHeight: '200px', overflowY: 'auto', padding: '2px' }}>
+            {HELP_NEEDED_AREAS.map(area => {
               const isSelected = helpNeeded.includes(area);
+              const isNoIdea = area === NO_IDEA_HELP;
               return (
                 <button
                   key={area}
@@ -139,18 +146,23 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
                     padding: '7px 10px',
                     borderRadius: 'var(--radius-xs)',
                     border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border)',
-                    backgroundColor: isSelected ? 'var(--primary-light)' : '#FFFFFF',
+                    backgroundColor: isSelected
+                      ? 'var(--primary-light)'
+                      : isNoIdea
+                      ? 'var(--bg-subtle)'
+                      : '#FFFFFF',
                     cursor: 'pointer',
                     fontSize: '0.78rem',
-                    fontWeight: isSelected ? 700 : 500,
+                    fontWeight: isSelected ? 700 : isNoIdea ? 600 : 500,
                     color: isSelected ? 'var(--primary)' : 'var(--text-main)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    textAlign: 'left'
+                    textAlign: 'left',
+                    gridColumn: isNoIdea ? '1 / -1' : undefined
                   }}
                 >
-                  <span style={{ color: 'var(--primary)' }}>{isSelected ? '✓' : '•'}</span>
+                  <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{isSelected ? '✓' : '•'}</span>
                   <span>{area}</span>
                 </button>
               );

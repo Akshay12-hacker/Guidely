@@ -19,8 +19,10 @@ import {
   AdminAnalytics,
   MentorFilters,
   CloudinaryUploadResult,
-  UploadSignatureResponse
+  UploadSignatureResponse,
+  StudentOnboardingOptions
 } from '../../../shared/types.js';
+import { TARGET_TECHNOLOGIES, HELP_NEEDED_AREAS, SKILL_CATEGORIES } from '../constants/skills.js';
 
 import {
   MOCK_USERS,
@@ -286,6 +288,18 @@ class ApiClient {
 
   async saveStudentOnboardingStep(step: number, data: Partial<StudentProfile>): Promise<StudentProfile> {
     return this.updateStudentProfile({ ...data, onboardingStep: step });
+  }
+
+  async getStudentOnboardingOptions(): Promise<StudentOnboardingOptions> {
+    try {
+      return await this.request<StudentOnboardingOptions>('/students/onboarding-options');
+    } catch {
+      return {
+        targetTechnologies: [...TARGET_TECHNOLOGIES],
+        helpNeededAreas: [...HELP_NEEDED_AREAS],
+        skillCategories: [...SKILL_CATEGORIES]
+      };
+    }
   }
 
   async getAvailableSkills(query?: string, category?: string): Promise<{ skills: Array<{ name: string; category: string; isCustom?: boolean }>; categories: string[]; total: number }> {
