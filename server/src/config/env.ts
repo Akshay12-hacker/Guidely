@@ -28,22 +28,29 @@ if (!envLoaded) {
 }
 
 function parseCloudinaryConfig() {
-  let cloudName = process.env.CLOUDINARY_CLOUD_NAME || '';
-  let apiKey = process.env.CLOUDINARY_API_KEY || '';
-  let apiSecret = process.env.CLOUDINARY_API_SECRET || '';
+  let cloudName = (process.env.CLOUDINARY_CLOUD_NAME || '').trim();
+  let apiKey = (process.env.CLOUDINARY_API_KEY || '').trim();
+  let apiSecret = (process.env.CLOUDINARY_API_SECRET || '').trim();
+  let uploadPreset = (process.env.CLOUDINARY_UPLOAD_PRESET || '').trim();
+
+  // Strip wrapping quotes if user pasted "value" into Render or .env
+  cloudName = cloudName.replace(/^["']|["']$/g, '');
+  apiKey = apiKey.replace(/^["']|["']$/g, '');
+  apiSecret = apiSecret.replace(/^["']|["']$/g, '');
+  uploadPreset = uploadPreset.replace(/^["']|["']$/g, '');
 
   if (process.env.CLOUDINARY_URL && (!cloudName || !apiKey || !apiSecret)) {
     try {
-      const url = new URL(process.env.CLOUDINARY_URL);
-      apiKey = apiKey || decodeURIComponent(url.username);
-      apiSecret = apiSecret || decodeURIComponent(url.password);
-      cloudName = cloudName || url.hostname || url.pathname.replace(/^\//, '');
+      const url = new URL(process.env.CLOUDINARY_URL.trim());
+      apiKey = apiKey || decodeURIComponent(url.username).trim();
+      apiSecret = apiSecret || decodeURIComponent(url.password).trim();
+      cloudName = cloudName || (url.hostname || url.pathname.replace(/^\//, '')).trim();
     } catch {
       // Ignore URL parsing error
     }
   }
 
-  return { cloudName, apiKey, apiSecret };
+  return { cloudName, apiKey, apiSecret, uploadPreset };
 }
 
 const cloudinaryConfig = parseCloudinaryConfig();
@@ -95,6 +102,7 @@ export const env = {
   CLOUDINARY_CLOUD_NAME: cloudinaryConfig.cloudName,
   CLOUDINARY_API_KEY: cloudinaryConfig.apiKey,
   CLOUDINARY_API_SECRET: cloudinaryConfig.apiSecret,
+  CLOUDINARY_UPLOAD_PRESET: cloudinaryConfig.uploadPreset,
   get isCloudinaryConfigured(): boolean {
     const secret = this.CLOUDINARY_API_SECRET;
     const isPlaceholder =

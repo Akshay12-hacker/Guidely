@@ -21,8 +21,10 @@ export class UploadController {
 
   /**
    * Upload and update user profile photo
-   * Replaces existing photo and removes old Cloudinary asset to avoid orphaned files.
-   * Enforces that users can only upload profile photos for themselves.
+   * Flow:
+   * 1. Upload new photo to Cloudinary first
+   * 2. Update database with new avatar URL and publicId only after Cloudinary success
+   * 3. Delete old Cloudinary asset only after database update succeeds
    */
   uploadProfilePhoto = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -30,30 +32,35 @@ export class UploadController {
       if (!userId) throw AppError.unauthorized('Authentication required');
       if (!req.file) throw AppError.badRequest('No image file provided');
 
+      const reqId = req.id || (req.headers['x-request-id'] as string) || 'unknown';
+
       const existingUser = await this.authRepo.findById(userId);
       if (!existingUser) throw AppError.notFound('User not found');
 
-      // Cleanup old avatar from Cloudinary if one exists to save Free-Tier storage credits
-      if (existingUser.avatarPublicId) {
-        try {
-          await cloudinaryService.deleteAsset(existingUser.avatarPublicId, 'image');
-          logger.info(`Cleaned up old avatar asset for user ${userId}: ${existingUser.avatarPublicId}`);
-        } catch (cleanupErr: any) {
-          logger.warn(`Could not clean up previous avatar ${existingUser.avatarPublicId}: ${cleanupErr.message}`);
-        }
-      }
+      const oldAvatarPublicId = existingUser.avatarPublicId;
 
-      // Upload new photo with automatic web optimization and safe limit bounds
+      // STEP 1: Upload the new profile photo to Cloudinary FIRST
       const uploadResult = await cloudinaryService.uploadProfilePhoto(req.file.buffer, userId, {
         mimeType: req.file.mimetype,
-        filename: req.file.originalname
+        filename: req.file.originalname,
+        requestId: reqId
       });
 
-      // Persist secure Cloudinary URL and publicId in database
+      // STEP 2: Update the database ONLY AFTER Cloudinary upload succeeded
       const updatedUser = await this.authRepo.updateProfile(userId, {
         avatarUrl: uploadResult.secureUrl,
         avatarPublicId: uploadResult.publicId
       });
+
+      // STEP 3: Delete the old Cloudinary asset ONLY AFTER database update succeeds
+      if (oldAvatarPublicId && oldAvatarPublicId !== uploadResult.publicId) {
+        try {
+          await cloudinaryService.deleteAsset(oldAvatarPublicId, 'image');
+          logger.info({ userId, oldAvatarPublicId, reqId }, `Cleaned up old avatar asset for user ${userId}: ${oldAvatarPublicId}`);
+        } catch (cleanupErr: any) {
+          logger.warn({ userId, oldAvatarPublicId, error: cleanupErr.message }, `Could not clean up previous avatar ${oldAvatarPublicId}: ${cleanupErr.message}`);
+        }
+      }
 
       res.status(200).json({
         success: true,
@@ -85,14 +92,22 @@ export class UploadController {
       const existingUser = await this.authRepo.findById(userId);
       if (!existingUser) throw AppError.notFound('User not found');
 
-      if (existingUser.avatarPublicId) {
-        await cloudinaryService.deleteAsset(existingUser.avatarPublicId, 'image');
-      }
+      const oldAvatarPublicId = existingUser.avatarPublicId;
 
+      // 1. Update database first
       const updatedUser = await this.authRepo.updateProfile(userId, {
         avatarUrl: undefined,
         avatarPublicId: undefined
       });
+
+      // 2. Delete from Cloudinary after database update succeeds
+      if (oldAvatarPublicId) {
+        try {
+          await cloudinaryService.deleteAsset(oldAvatarPublicId, 'image');
+        } catch (cleanupErr: any) {
+          logger.warn({ userId, oldAvatarPublicId, error: cleanupErr.message }, 'Failed to delete avatar from Cloudinary (non-fatal)');
+        }
+      }
 
       res.status(200).json({
         success: true,
@@ -112,6 +127,7 @@ export class UploadController {
     try {
       if (!req.file) throw AppError.badRequest('No media file provided');
 
+      const reqId = req.id || (req.headers['x-request-id'] as string) || 'unknown';
       const requestedFolder = ((req.body?.folder || req.query?.folder || 'general') as string).toLowerCase();
       const targetFolder = ALLOWED_FOLDERS[requestedFolder] || 'guidely/general';
       const projectId = (req.body?.projectId || req.query?.projectId) as string | undefined;
@@ -146,6 +162,7 @@ export class UploadController {
         resourceType,
         filename: originalName,
         mimeType: req.file.mimetype,
+        requestId: reqId,
         tags: ['guidely', requestedFolder, req.user?.userId || 'user']
       });
 

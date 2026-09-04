@@ -1168,16 +1168,10 @@ class ApiClient {
     const formData = new FormData();
     formData.append('file', file);
 
-    try {
-      const res = await this.uploadWithProgress<any>('/upload/profile-photo', formData, onProgress);
-      const uid = this.getCurrentMockUserId();
-      if (dynamicUsers[uid]) {
-        dynamicUsers[uid].avatarUrl = res.secureUrl || res.url;
-        dynamicUsers[uid].avatarPublicId = res.publicId;
-      }
-      return res;
-    } catch {
-      // Offline fallback with simulated progress
+    const token = this.getToken();
+    const isMock = token?.startsWith('mock_token_');
+
+    if (isMock) {
       if (onProgress) {
         for (let p = 15; p <= 100; p += 35) {
           onProgress(p);
@@ -1207,20 +1201,20 @@ class ApiClient {
         } as User)
       };
     }
+
+    // Real server upload: Throw real errors on failure so the frontend never receives a fake success
+    const res = await this.uploadWithProgress<any>('/upload/profile-photo', formData, onProgress);
+    const uid = this.getCurrentMockUserId();
+    if (dynamicUsers[uid]) {
+      dynamicUsers[uid].avatarUrl = res.secureUrl || res.url;
+      dynamicUsers[uid].avatarPublicId = res.publicId;
+    }
+    return res;
   }
 
   async deleteProfilePhoto(): Promise<{ user: User }> {
-    try {
-      const res = await this.request<any>('/upload/profile-photo', {
-        method: 'DELETE'
-      });
-      const uid = this.getCurrentMockUserId();
-      if (dynamicUsers[uid]) {
-        dynamicUsers[uid].avatarUrl = undefined;
-        dynamicUsers[uid].avatarPublicId = undefined;
-      }
-      return res;
-    } catch {
+    const token = this.getToken();
+    if (token?.startsWith('mock_token_')) {
       const uid = this.getCurrentMockUserId();
       if (dynamicUsers[uid]) {
         dynamicUsers[uid].avatarUrl = undefined;
@@ -1228,6 +1222,16 @@ class ApiClient {
       }
       return { user: dynamicUsers[uid] };
     }
+
+    const res = await this.request<any>('/upload/profile-photo', {
+      method: 'DELETE'
+    });
+    const uid = this.getCurrentMockUserId();
+    if (dynamicUsers[uid]) {
+      dynamicUsers[uid].avatarUrl = undefined;
+      dynamicUsers[uid].avatarPublicId = undefined;
+    }
+    return res;
   }
 
   async uploadMedia(

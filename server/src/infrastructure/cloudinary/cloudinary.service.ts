@@ -13,6 +13,7 @@ export interface UploadOptions {
   tags?: string[];
   filename?: string;
   mimeType?: string;
+  requestId?: string;
 }
 
 export interface TransformOptions {
@@ -57,7 +58,7 @@ export class CloudinaryService {
       logger.info(`☁️ Cloudinary media service configured (cloud: ${cloudName}, apiKey: ***${apiKey.slice(-4)})`);
     } else {
       this.isConfigured = false;
-      logger.warn('⚠️ Cloudinary media credentials incomplete or using placeholders. Media uploads will operate in resilient data-URI fallback mode.');
+      logger.warn('⚠️ Cloudinary media credentials incomplete or using placeholders. Signed uploads will fail with an informative configuration error in production.');
     }
   }
 
@@ -70,82 +71,113 @@ export class CloudinaryService {
   }
 
   /**
-   * Resilient fallback asset generator: converts buffer to base64 data-URI
-   * Ensures user profile photo uploads succeed seamlessly even if Cloudinary credentials fail upstream.
+   * Mock asset generator for offline test suite execution only.
+   * NEVER used in production or development.
    */
-  private createFallbackAsset(
+  private createMockTestAsset(
     buffer: Buffer,
     options: UploadOptions,
     folder: string,
     resourceType: 'image' | 'video' | 'raw' | 'auto'
   ): CloudinaryUploadResult {
-    const mockPublicId = `${folder}/${options.publicId || 'fallback_' + Date.now()}`;
+    const mockPublicId = `${folder}/${options.publicId || 'mock_' + Date.now()}`;
+    const cloudName = env.CLOUDINARY_CLOUD_NAME || 'guidely';
     const isVideo = resourceType === 'video';
-    const mimeType = options.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg');
-    const dataUri = `data:${mimeType};base64,${buffer.toString('base64')}`;
+    const ext = isVideo ? 'mp4' : (options.mimeType?.split('/')[1] || 'png');
+    const mockUrl = `https://res.cloudinary.com/${cloudName}/${isVideo ? 'video' : 'image'}/upload/v1/${mockPublicId}.${ext}`;
 
     return {
-      url: dataUri,
-      secureUrl: dataUri,
+      url: mockUrl,
+      secureUrl: mockUrl,
       publicId: mockPublicId,
       resourceType: isVideo ? 'video' : 'image',
-      format: isVideo ? 'mp4' : (options.mimeType?.split('/')[1] || 'jpeg'),
+      format: ext,
       bytes: buffer.length,
       width: 400,
       height: 400,
-      originalFilename: options.filename || 'uploaded-photo.jpg',
+      originalFilename: options.filename || `mock-file.${ext}`,
       createdAt: new Date().toISOString()
     };
   }
 
   /**
-   * Upload buffer directly to Cloudinary with Free-Tier optimizations:
+   * Upload buffer directly to Cloudinary using signed server-side uploads.
+   * Features:
    * - Content hash deduplication (avoids re-uploading identical assets)
-   * - Automatic WebP/AVIF generation (f_auto)
-   * - Intelligent quality compression (q_auto:good / q_auto:eco)
-   * - Max dimension constraints to prevent storing large RAW originals
+   * - Strict signed uploads authenticated with API key & secret
+   * - Detailed diagnostic error logging (HTTP code, Cloudinary code, folder, publicId, transformation, request ID)
+   * - Separate original error and retry error logging to identify root cause in Render logs
+   * - Automatic retry without incoming transformations on 400/403 to bypass restricted transformation rules
+   * - Never returns a fake success in production
    */
   public async uploadBuffer(buffer: Buffer, options: UploadOptions = {}): Promise<CloudinaryUploadResult> {
     const folder = options.folder || 'guidely/general';
     const resourceType = options.resourceType || 'auto';
+    const requestId = options.requestId || 'unknown';
 
-    // 1. Content Hash Deduplication: Check if identical file was previously uploaded to save free-tier storage
+    // 1. Content Hash Deduplication: Check if identical file was previously uploaded to save storage credits
     const contentHash = crypto.createHash('sha256').update(buffer).digest('hex').slice(0, 24);
     const dedupeKey = `${folder}:${contentHash}`;
 
     if (this.assetHashCache.has(dedupeKey)) {
       const cached = this.assetHashCache.get(dedupeKey)!;
-      logger.info(`✨ Deduplication: identical asset found (${dedupeKey}). Reusing existing Cloudinary asset to conserve storage credits.`);
+      logger.info({
+        requestId,
+        dedupeKey,
+        publicId: cached.publicId
+      }, '✨ Deduplication: identical asset found. Reusing existing Cloudinary asset to conserve storage credits.');
       return cached;
     }
 
-    // If Cloudinary is not configured or using placeholders, use resilient data-URI fallback immediately
+    // 2. Cloudinary Configuration Verification
     if (!this.isConfigured) {
-      logger.warn('Serving resilient data-URI fallback because Cloudinary is not configured in server environment.');
-      const fallback = this.createFallbackAsset(buffer, options, folder, resourceType);
-      this.assetHashCache.set(dedupeKey, fallback);
-      return fallback;
+      if (process.env.NODE_ENV === 'test') {
+        const mockAsset = this.createMockTestAsset(buffer, options, folder, resourceType);
+        this.assetHashCache.set(dedupeKey, mockAsset);
+        return mockAsset;
+      }
+
+      logger.error({
+        requestId,
+        cloudName: env.CLOUDINARY_CLOUD_NAME,
+        hasApiKey: Boolean(env.CLOUDINARY_API_KEY),
+        hasApiSecret: Boolean(env.CLOUDINARY_API_SECRET)
+      }, '❌ Cloudinary is not properly configured. Cannot process signed upload.');
+
+      throw AppError.badRequest(
+        'Cloudinary media storage is not configured. Please configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in the server environment.'
+      );
     }
 
+    // Ensure Cloudinary SDK is initialized with latest credentials
+    cloudinary.config({
+      cloud_name: env.CLOUDINARY_CLOUD_NAME,
+      api_key: env.CLOUDINARY_API_KEY,
+      api_secret: env.CLOUDINARY_API_SECRET,
+      secure: true
+    });
+
+    const publicId = options.publicId || `${resourceType}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+
+    // 3. Prepare Signed Upload Options
     const uploadOptions: UploadApiOptions = {
       folder,
       resource_type: resourceType,
-      public_id: options.publicId,
+      public_id: publicId,
       tags: options.tags || ['guidely'],
       overwrite: true,
-      invalidate: true
+      invalidate: true,
+      ...(env.CLOUDINARY_UPLOAD_PRESET ? { upload_preset: env.CLOUDINARY_UPLOAD_PRESET } : {})
     };
 
-    // 2. Cloudinary Free-Tier Transformations (Compress, Limit Dimension, Auto-Format)
+    // Transformations (standard safe bounds)
     if (options.transformation && options.transformation.length > 0) {
       uploadOptions.transformation = options.transformation;
     } else if (resourceType === 'image') {
-      // Limit images to max 1280x1280 to prevent blowing out free tier storage with multi-megapixel camera shots
       uploadOptions.transformation = [
         { width: 1280, height: 1280, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' }
       ];
     } else if (resourceType === 'video') {
-      // Limit videos to 720p HD with eco compression for free tier bandwidth savings
       uploadOptions.transformation = [
         { width: 1280, height: 720, crop: 'limit', quality: 'auto:eco', video_codec: 'auto' }
       ];
@@ -162,66 +194,127 @@ export class CloudinaryService {
       });
     };
 
-    try {
-      let result: UploadApiResponse;
+    let result: UploadApiResponse | null = null;
+    let firstErr: any = null;
+    let retryErr: any = null;
 
-      try {
-        result = await sendToCloudinary(uploadOptions);
-      } catch (firstErr: any) {
-        // If Cloudinary rejected with 400, 401, or 403 and transformations were provided,
-        // it may be caused by restricted incoming transformations or face-gravity add-on restrictions.
-        // Retry upload once without incoming transformations.
-        if (uploadOptions.transformation && (firstErr.http_code === 400 || firstErr.http_code === 403)) {
-          logger.warn(
-            { error: firstErr.message, code: firstErr.http_code },
-            '⚠️ Cloudinary rejected upload with transformations. Retrying upload without incoming transformations...'
-          );
-          const cleanOptions = { ...uploadOptions };
-          delete cleanOptions.transformation;
+    try {
+      result = await sendToCloudinary(uploadOptions);
+    } catch (err: any) {
+      firstErr = err;
+
+      // Log the original error with all required diagnostic fields
+      logger.error({
+        event: 'CLOUDINARY_UPLOAD_ORIGINAL_ERROR',
+        exactErrorMessage: firstErr.message || firstErr.error?.message || String(firstErr),
+        httpStatus: firstErr.http_code || 403,
+        cloudinaryErrorCode: firstErr.code || firstErr.error?.code || 'UNEXPECTED_STATUS_403',
+        requestId,
+        uploadFolder: folder,
+        resourceType,
+        publicId: uploadOptions.public_id,
+        transformationSettings: uploadOptions.transformation ? JSON.stringify(uploadOptions.transformation) : 'none',
+        isSigned: true,
+        uploadPreset: uploadOptions.upload_preset || 'none',
+        cloudName: env.CLOUDINARY_CLOUD_NAME
+      }, `❌ Cloudinary original signed upload failed: [HTTP ${firstErr.http_code || 403}] ${firstErr.message || 'Server returned unexpected status code - 403'} (folder: ${folder}, publicId: ${uploadOptions.public_id})`);
+
+      // If transformations were present and failed with 400 or 403,
+      // retry signed upload without incoming transformations (bypasses "Disallow incoming transformations" account restrictions)
+      if (uploadOptions.transformation && (firstErr.http_code === 400 || firstErr.http_code === 403)) {
+        logger.warn({
+          event: 'CLOUDINARY_UPLOAD_RETRY_INITIATED',
+          requestId,
+          folder,
+          publicId: uploadOptions.public_id
+        }, '⚠️ Retrying Cloudinary signed upload without incoming transformations to bypass transformation restrictions...');
+
+        const cleanOptions: UploadApiOptions = { ...uploadOptions };
+        delete cleanOptions.transformation;
+
+        try {
           result = await sendToCloudinary(cleanOptions);
-        } else {
-          throw firstErr;
+          logger.info({
+            event: 'CLOUDINARY_UPLOAD_RETRY_SUCCESS',
+            requestId,
+            publicId: result.public_id,
+            folder
+          }, '✅ Cloudinary retry signed upload without incoming transformations succeeded');
+        } catch (secondErr: any) {
+          retryErr = secondErr;
+
+          // Log the retry error separately with all required diagnostic fields
+          logger.error({
+            event: 'CLOUDINARY_UPLOAD_RETRY_ERROR',
+            requestId,
+            originalError: {
+              exactErrorMessage: firstErr.message || firstErr.error?.message || String(firstErr),
+              httpStatus: firstErr.http_code || 403,
+              cloudinaryErrorCode: firstErr.code || firstErr.error?.code || 'UNEXPECTED_STATUS_403'
+            },
+            retryError: {
+              exactErrorMessage: retryErr.message || retryErr.error?.message || String(retryErr),
+              httpStatus: retryErr.http_code || 403,
+              cloudinaryErrorCode: retryErr.code || retryErr.error?.code || 'UNEXPECTED_STATUS_403'
+            },
+            uploadFolder: folder,
+            resourceType,
+            publicId: cleanOptions.public_id,
+            transformationSettings: 'none',
+            isSigned: true,
+            uploadPreset: cleanOptions.upload_preset || 'none',
+            cloudName: env.CLOUDINARY_CLOUD_NAME
+          }, `❌ Cloudinary retry signed upload also failed: [HTTP ${retryErr.http_code || 403}] ${retryErr.message || 'Server returned unexpected status code - 403'} (folder: ${folder}, publicId: ${cleanOptions.public_id})`);
         }
       }
-
-      const uploadResult: CloudinaryUploadResult = {
-        url: result.url,
-        secureUrl: result.secure_url,
-        publicId: result.public_id,
-        resourceType: result.resource_type as 'image' | 'video' | 'raw',
-        format: result.format || 'unknown',
-        bytes: result.bytes,
-        width: result.width,
-        height: result.height,
-        duration: result.duration,
-        originalFilename: options.filename || result.original_filename,
-        createdAt: result.created_at || new Date().toISOString()
-      };
-
-      // Store in deduplication cache
-      this.assetHashCache.set(dedupeKey, uploadResult);
-
-      return uploadResult;
-    } catch (err: any) {
-      logger.error({
-        error: err.message || err,
-        code: err.http_code,
-        folder,
-        resourceType
-      }, 'Cloudinary upload failed - activating resilient fallback');
-
-      // Resilient fallback: regardless of whether Cloudinary rejected due to 403 Forbidden,
-      // 401 Unauthorized, quota limits, IP restriction, or temporary network failure,
-      // NEVER crash the server with a 500 error! Serve data-URI fallback seamlessly.
-      logger.warn(
-        { error: err.message, code: err.http_code },
-        '🛡️ Serving resilient data-URI asset fallback so the profile upload succeeds seamlessly.'
-      );
-
-      const fallbackResult = this.createFallbackAsset(buffer, options, folder, resourceType);
-      this.assetHashCache.set(dedupeKey, fallbackResult);
-      return fallbackResult;
     }
+
+    if (!result) {
+      // In TEST environment only: return mock asset so offline unit tests pass
+      if (process.env.NODE_ENV === 'test') {
+        logger.warn({ requestId }, 'Serving mock asset in test environment');
+        const mock = this.createMockTestAsset(buffer, options, folder, resourceType);
+        this.assetHashCache.set(dedupeKey, mock);
+        return mock;
+      }
+
+      const finalErr = retryErr || firstErr;
+      const httpStatus = finalErr.http_code === 403 ? 403 : (finalErr.http_code === 401 ? 401 : (finalErr.http_code || 502));
+      const rawMessage = finalErr.message || 'Server returned unexpected status code - 403';
+
+      throw new AppError(
+        `Cloudinary media upload failed: ${rawMessage}. Please verify your Cloudinary credentials, account status, and permissions.`,
+        httpStatus,
+        {
+          requestId,
+          httpStatus,
+          cloudinaryErrorCode: finalErr.code || finalErr.error?.code,
+          folder,
+          publicId: uploadOptions.public_id,
+          isSigned: true
+        },
+        true // operational error: sends structured JSON to client instead of 500 crash
+      );
+    }
+
+    const uploadResult: CloudinaryUploadResult = {
+      url: result.url,
+      secureUrl: result.secure_url,
+      publicId: result.public_id,
+      resourceType: result.resource_type as 'image' | 'video' | 'raw',
+      format: result.format || 'unknown',
+      bytes: result.bytes,
+      width: result.width,
+      height: result.height,
+      duration: result.duration,
+      originalFilename: options.filename || result.original_filename,
+      createdAt: result.created_at || new Date().toISOString()
+    };
+
+    // Store in deduplication cache
+    this.assetHashCache.set(dedupeKey, uploadResult);
+
+    return uploadResult;
   }
 
   /**
@@ -230,7 +323,7 @@ export class CloudinaryService {
   public async uploadProfilePhoto(
     buffer: Buffer,
     userId: string,
-    options: { mimeType?: string; filename?: string } = {}
+    options: { mimeType?: string; filename?: string; requestId?: string } = {}
   ): Promise<CloudinaryUploadResult> {
     return this.uploadBuffer(buffer, {
       folder: 'guidely/profiles',
@@ -239,6 +332,7 @@ export class CloudinaryService {
       tags: ['guidely', 'profile', userId],
       mimeType: options.mimeType,
       filename: options.filename,
+      requestId: options.requestId,
       transformation: [
         { width: 400, height: 400, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' }
       ]
