@@ -43,8 +43,11 @@ export class UploadController {
         }
       }
 
-      // Upload new photo with face centering and automatic web optimization
-      const uploadResult = await cloudinaryService.uploadProfilePhoto(req.file.buffer, userId);
+      // Upload new photo with automatic web optimization and safe limit bounds
+      const uploadResult = await cloudinaryService.uploadProfilePhoto(req.file.buffer, userId, {
+        mimeType: req.file.mimetype,
+        filename: req.file.originalname
+      });
 
       // Persist secure Cloudinary URL and publicId in database
       const updatedUser = await this.authRepo.updateProfile(userId, {
@@ -142,6 +145,7 @@ export class UploadController {
         folder: targetFolder,
         resourceType,
         filename: originalName,
+        mimeType: req.file.mimetype,
         tags: ['guidely', requestedFolder, req.user?.userId || 'user']
       });
 

@@ -27,6 +27,27 @@ if (!envLoaded) {
   dotenv.config();
 }
 
+function parseCloudinaryConfig() {
+  let cloudName = process.env.CLOUDINARY_CLOUD_NAME || '';
+  let apiKey = process.env.CLOUDINARY_API_KEY || '';
+  let apiSecret = process.env.CLOUDINARY_API_SECRET || '';
+
+  if (process.env.CLOUDINARY_URL && (!cloudName || !apiKey || !apiSecret)) {
+    try {
+      const url = new URL(process.env.CLOUDINARY_URL);
+      apiKey = apiKey || decodeURIComponent(url.username);
+      apiSecret = apiSecret || decodeURIComponent(url.password);
+      cloudName = cloudName || url.hostname || url.pathname.replace(/^\//, '');
+    } catch {
+      // Ignore URL parsing error
+    }
+  }
+
+  return { cloudName, apiKey, apiSecret };
+}
+
+const cloudinaryConfig = parseCloudinaryConfig();
+
 export const env = {
   // Server & Environment
   NODE_ENV: process.env.NODE_ENV || 'development',
@@ -71,9 +92,9 @@ export const env = {
   BODY_LIMIT: process.env.BODY_LIMIT || '10mb',
 
   // Cloudinary Media Management
-  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
-  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
-  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
+  CLOUDINARY_CLOUD_NAME: cloudinaryConfig.cloudName,
+  CLOUDINARY_API_KEY: cloudinaryConfig.apiKey,
+  CLOUDINARY_API_SECRET: cloudinaryConfig.apiSecret,
   get isCloudinaryConfigured(): boolean {
     const secret = this.CLOUDINARY_API_SECRET;
     const isPlaceholder =
