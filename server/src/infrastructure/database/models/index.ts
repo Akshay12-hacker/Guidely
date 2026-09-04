@@ -30,6 +30,7 @@ export interface IUser {
   role: UserRole;
   fullName: string;
   avatarUrl?: string;
+  avatarPublicId?: string;
   bio?: string;
   headline?: string;
   status: UserStatus;
@@ -45,6 +46,7 @@ const UserSchema = new Schema<IUser>(
     role: { type: String, enum: ['STUDENT', 'MENTOR', 'ADMIN'], required: true, index: true },
     fullName: { type: String, required: true },
     avatarUrl: { type: String },
+    avatarPublicId: { type: String },
     bio: { type: String },
     headline: { type: String },
     status: { type: String, enum: ['ACTIVE', 'SUSPENDED', 'PENDING_VERIFICATION'], default: 'ACTIVE' }

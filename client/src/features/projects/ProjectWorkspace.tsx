@@ -24,6 +24,10 @@ import { Textarea } from '../../components/ui/Textarea.js';
 import { Select } from '../../components/ui/Select.js';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton.js';
 import { EmptyState } from '../../components/ui/EmptyState.js';
+import { MediaUpload } from '../../components/ui/MediaUpload.js';
+import { MediaSaveButton } from '../../components/ui/MediaSaveButton.js';
+import { WhatsAppMediaViewer } from '../../components/ui/WhatsAppMediaViewer.js';
+import { getOptimizedCloudinaryUrl, getVideoPosterUrl } from '../../utils/cloudinary.js';
 import {
   FolderKanban,
   Target,
@@ -38,10 +42,8 @@ import {
   Calendar,
   ExternalLink,
   CheckCircle2,
-  Clock,
   Video,
-  GitBranch,
-  Sparkles
+  GitBranch
 } from 'lucide-react';
 
 interface ProjectWorkspaceProps {
@@ -97,6 +99,15 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [repoUrl, setRepoUrl] = useState('');
   const [liveDemoUrl, setLiveDemoUrl] = useState('');
+  const [viewerMedia, setViewerMedia] = useState<{
+    isOpen: boolean;
+    url: string;
+    title?: string;
+    type?: 'image' | 'video' | 'raw';
+  }>({
+    isOpen: false,
+    url: ''
+  });
 
   const fetchWorkspace = async () => {
     setIsLoading(true);
@@ -130,10 +141,10 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <LoadingSkeleton height="40px" width="300px" />
-        <LoadingSkeleton height="140px" />
-        <LoadingSkeleton height="300px" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <LoadingSkeleton height="36px" width="280px" />
+        <LoadingSkeleton height="120px" />
+        <LoadingSkeleton height="280px" />
       </div>
     );
   }
@@ -141,9 +152,9 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
   if (!workspace) {
     return (
       <EmptyState
-        icon={<FolderKanban size={36} />}
+        icon={<FolderKanban size={32} />}
         title="No Project Workspace Found"
-        description="Once your mentorship proposal is accepted, your collaborative workspace will appear here."
+        description="Once your mentorship proposal is accepted by an industry mentor, your collaborative workspace will appear here."
         actionText="Explore Mentors →"
         onAction={() => onNavigate('find-mentor')}
       />
@@ -314,21 +325,21 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
   };
 
   const tabsList = [
-    { id: 'overview', label: 'Overview', icon: <FolderKanban size={17} /> },
-    { id: 'goals', label: 'Goals', count: goals.length, icon: <Target size={17} /> },
-    { id: 'milestones', label: 'Milestones & Tasks', count: tasks.length, icon: <CheckSquare size={17} /> },
-    { id: 'resources', label: 'Resources & Docs', count: resources.length, icon: <Link2 size={17} /> },
-    { id: 'notes', label: 'Notes', count: notes.length, icon: <FileText size={17} /> }
+    { id: 'overview', label: 'Overview', icon: <FolderKanban size={16} /> },
+    { id: 'goals', label: 'Goals', count: goals.length, icon: <Target size={16} /> },
+    { id: 'milestones', label: 'Milestones & Tasks', count: tasks.length, icon: <CheckSquare size={16} /> },
+    { id: 'resources', label: 'Resources & Docs', count: resources.length, icon: <Link2 size={16} /> },
+    { id: 'notes', label: 'Notes', count: notes.length, icon: <FileText size={16} /> }
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} className="animate-fade-in">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }} className="animate-fade-in">
       {/* Workspace Header Card */}
-      <Card padding="lg" style={{ boxShadow: 'var(--shadow-md)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+      <Card padding="lg">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '18px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
                 {project.title}
               </h1>
               <Badge variant={project.status === 'COMPLETED' ? 'completed' : 'in_progress'}>
@@ -336,19 +347,19 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
               </Badge>
               <Badge variant="neutral">{project.category}</Badge>
             </div>
-            <p style={{ fontSize: '0.94rem', color: 'var(--text-muted)', maxWidth: '750px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', maxWidth: '720px', lineHeight: 1.5 }}>
               {project.description}
             </p>
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '4px', flexWrap: 'wrap' }}>
               {project.repositoryUrl && (
                 <a
                   href={project.repositoryUrl}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', fontWeight: 600, color: 'var(--primary)' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--primary)' }}
                 >
-                  <GitBranch size={15} /> GitHub Repository <ExternalLink size={13} />
+                  <GitBranch size={14} /> Repository <ExternalLink size={12} />
                 </a>
               )}
               {project.liveUrl && (
@@ -356,47 +367,47 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
                   href={project.liveUrl}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', fontWeight: 600, color: 'var(--success)' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.82rem', fontWeight: 600, color: 'var(--success-dark)' }}
                 >
-                  <ExternalLink size={15} /> Live Demo <ExternalLink size={13} />
+                  <ExternalLink size={14} /> Live Deployment <ExternalLink size={12} />
                 </a>
               )}
             </div>
           </div>
 
           {/* Members info */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px', backgroundColor: 'var(--bg-subtle)', padding: '14px 20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '18px', backgroundColor: 'var(--bg-subtle)', padding: '10px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Avatar name={project.student?.fullName || 'Student'} src={project.student?.avatarUrl} size="sm" />
               <div>
-                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Student</span>
-                <p style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-main)' }}>{project.student?.fullName}</p>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Student</span>
+                <p style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)' }}>{project.student?.fullName}</p>
               </div>
             </div>
 
-            <div style={{ width: '1px', height: '32px', backgroundColor: 'var(--border)' }} />
+            <div style={{ width: '1px', height: '28px', backgroundColor: 'var(--border)' }} />
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Avatar name={project.mentor?.fullName || 'Mentor'} src={project.mentor?.avatarUrl} size="sm" isVerified={true} />
               <div>
-                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Mentor</span>
-                <p style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-main)' }}>{project.mentor?.fullName}</p>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Mentor</span>
+                <p style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)' }}>{project.mentor?.fullName}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Live Progress Bar */}
-        <div style={{ marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-main)' }}>
+        <div style={{ marginTop: '18px', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)' }}>
               Collaborative Project Progress
             </span>
-            <span style={{ fontSize: '0.94rem', fontWeight: 800, color: 'var(--primary)' }}>
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--primary)' }}>
               {project.progressPercentage}%
             </span>
           </div>
-          <ProgressBar value={project.progressPercentage} size="lg" />
+          <ProgressBar value={project.progressPercentage} size="md" />
         </div>
       </Card>
 
@@ -405,12 +416,12 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
 
       {/* TAB 1: OVERVIEW */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }} className="animate-fade-in workspace-overview-grid">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Stage & Target Technologies */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }} className="animate-fade-in workspace-overview-grid">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {/* Target Technologies */}
             <Card padding="md">
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px' }}>Target Technologies & Architecture</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '10px' }}>Target Technologies & Architecture</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                 {project.targetTechnologies.map(t => (
                   <Badge key={t} variant="primary">{t}</Badge>
                 ))}
@@ -419,40 +430,41 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
 
             {/* Quick Milestones Summary */}
             <Card padding="md">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Milestone Progression</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Milestone Progression</h3>
                 <Button size="sm" variant="outline" onClick={() => setActiveTab('milestones')}>
                   View Tasks Board →
                 </Button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {milestones.map((m, i) => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {milestones.map((m) => (
                   <div
                     key={m.id}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '12px 14px',
+                      padding: '10px 12px',
                       borderRadius: 'var(--radius-sm)',
                       backgroundColor: 'var(--bg-subtle)',
                       border: '1px solid var(--border)'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <button
                         onClick={() => handleToggleMilestone(m)}
                         style={{
                           background: 'none',
                           border: 'none',
                           cursor: 'pointer',
-                          color: m.status === 'COMPLETED' ? 'var(--success)' : 'var(--text-subtle)'
+                          color: m.status === 'COMPLETED' ? 'var(--success)' : 'var(--text-subtle)',
+                          display: 'flex'
                         }}
                       >
-                        <CheckCircle2 size={20} />
+                        <CheckCircle2 size={18} />
                       </button>
-                      <span style={{ fontWeight: 600, fontSize: '0.92rem', textDecoration: m.status === 'COMPLETED' ? 'line-through' : 'none', color: m.status === 'COMPLETED' ? 'var(--text-muted)' : 'var(--text-main)' }}>
+                      <span style={{ fontWeight: 600, fontSize: '0.88rem', textDecoration: m.status === 'COMPLETED' ? 'line-through' : 'none', color: m.status === 'COMPLETED' ? 'var(--text-muted)' : 'var(--text-main)' }}>
                         {m.title}
                       </span>
                     </div>
@@ -465,25 +477,25 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
             </Card>
           </div>
 
-          {/* Right Column: Project Links & Actions */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Right Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             <Card padding="md">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <h4 style={{ fontSize: '1rem', fontWeight: 700 }}>Project Links</h4>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <h4 style={{ fontSize: '0.94rem', fontWeight: 700 }}>Project Links</h4>
                 <Button size="sm" variant="ghost" onClick={() => setIsEditProjectModalOpen(true)}>
-                  <Edit2 size={14} />
+                  <Edit2 size={13} />
                 </Button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.88rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.84rem' }}>
                 <div>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', textTransform: 'uppercase', fontWeight: 700 }}>Repository URL</span>
-                  <p style={{ wordBreak: 'break-all', fontWeight: 600, color: 'var(--primary)' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', fontWeight: 700 }}>Repository URL</span>
+                  <p style={{ wordBreak: 'break-all', fontWeight: 600, color: 'var(--primary)', marginTop: '2px' }}>
                     {project.repositoryUrl || 'No repository linked yet'}
                   </p>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', textTransform: 'uppercase', fontWeight: 700 }}>Live Deployment URL</span>
-                  <p style={{ wordBreak: 'break-all', fontWeight: 600, color: 'var(--success)' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', fontWeight: 700 }}>Live Deployment</span>
+                  <p style={{ wordBreak: 'break-all', fontWeight: 600, color: 'var(--success-dark)', marginTop: '2px' }}>
                     {project.liveUrl || 'Not deployed yet'}
                   </p>
                 </div>
@@ -491,12 +503,12 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
             </Card>
 
             <Card padding="md">
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '8px' }}>Mentorship Mode</h4>
-              <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '12px' }}>
-                Need to discuss design trade-offs? Launch a 1-on-1 video call or send a direct message.
+              <h4 style={{ fontSize: '0.94rem', fontWeight: 700, marginBottom: '6px' }}>Direct Collaboration</h4>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '10px' }}>
+                Need to discuss design trade-offs? Launch a video sync or send a direct message.
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <Button size="sm" variant="secondary" onClick={() => onNavigate('messages')} leftIcon={<Video size={16} />}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <Button size="sm" variant="secondary" onClick={() => onNavigate('messages')} leftIcon={<Video size={14} />}>
                   Chat with {user?.role === 'STUDENT' ? project.mentor?.fullName : project.student?.fullName}
                 </Button>
               </div>
@@ -507,23 +519,23 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
 
       {/* TAB 2: GOALS */}
       {activeTab === 'goals' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className="animate-fade-in">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} className="animate-fade-in">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h3 style={{ fontSize: '1.24rem', fontWeight: 700 }}>Project Goals Checklist</h3>
-              <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Project Goals Checklist</h3>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                 Collaboratively formulated targets between mentor and student
               </p>
             </div>
-            <Button size="sm" onClick={() => setIsGoalModalOpen(true)} leftIcon={<Plus size={16} />}>
+            <Button size="sm" onClick={() => setIsGoalModalOpen(true)} leftIcon={<Plus size={15} />}>
               Add Goal
             </Button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {goals.length === 0 ? (
               <EmptyState
-                icon={<Target size={28} />}
+                icon={<Target size={24} />}
                 title="No goals formulated yet"
                 description="Add project goals collaboratively with your mentor."
                 actionText="Add First Goal"
@@ -541,7 +553,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
                     backgroundColor: g.isCompleted ? 'var(--bg-subtle)' : '#FFFFFF'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
                     <button
                       onClick={() => handleToggleGoal(g)}
                       style={{
@@ -552,31 +564,31 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
                         display: 'flex'
                       }}
                     >
-                      <CheckCircle2 size={22} />
+                      <CheckCircle2 size={20} />
                     </button>
                     <div>
-                      <h4 style={{ fontSize: '1rem', fontWeight: 700, textDecoration: g.isCompleted ? 'line-through' : 'none', color: g.isCompleted ? 'var(--text-muted)' : 'var(--text-main)' }}>
+                      <h4 style={{ fontSize: '0.94rem', fontWeight: 700, textDecoration: g.isCompleted ? 'line-through' : 'none', color: g.isCompleted ? 'var(--text-muted)' : 'var(--text-main)' }}>
                         {g.title}
                       </h4>
                       {g.description && (
-                        <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                           {g.description}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {g.targetDate && (
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Calendar size={13} /> {new Date(g.targetDate).toLocaleDateString()}
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Calendar size={12} /> {new Date(g.targetDate).toLocaleDateString()}
                       </span>
                     )}
                     <button
                       onClick={() => handleDeleteGoal(g.id)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-subtle)', padding: '4px' }}
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </Card>
@@ -588,26 +600,26 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
 
       {/* TAB 3: MILESTONES & TASKS BOARD */}
       {activeTab === 'milestones' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} className="animate-fade-in">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className="animate-fade-in">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h3 style={{ fontSize: '1.24rem', fontWeight: 700 }}>Milestones & Kanban Tasks</h3>
-              <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Milestones & Kanban Board</h3>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                 Track development sprints, code reviews, and completion states
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <Button size="sm" variant="secondary" onClick={() => setIsMilestoneModalOpen(true)} leftIcon={<MilestoneIcon size={16} />}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Button size="sm" variant="secondary" onClick={() => setIsMilestoneModalOpen(true)} leftIcon={<MilestoneIcon size={15} />}>
                 Add Milestone
               </Button>
-              <Button size="sm" variant="primary" onClick={() => setIsTaskModalOpen(true)} leftIcon={<Plus size={16} />}>
+              <Button size="sm" variant="primary" onClick={() => setIsTaskModalOpen(true)} leftIcon={<Plus size={15} />}>
                 Create Task
               </Button>
             </div>
           </div>
 
-          {/* Kanban Columns (TODO, IN_PROGRESS, IN_REVIEW, DONE) */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+          {/* Kanban Columns */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
             {(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'] as TaskStatus[]).map((status) => {
               const columnTasks = tasks.filter(t => t.status === status);
               const statusTitles = {
@@ -622,24 +634,25 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
                   key={status}
                   style={{
                     backgroundColor: 'var(--bg-subtle)',
-                    padding: '16px',
-                    borderRadius: 'var(--radius-lg)',
+                    padding: '14px',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '12px',
-                    minHeight: '400px'
+                    gap: '10px',
+                    minHeight: '380px'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                    <span style={{ fontSize: '0.84rem', fontWeight: 800, color: 'var(--text-main)' }}>
                       {statusTitles[status]}
                     </span>
-                    <span style={{ backgroundColor: '#FFFFFF', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                    <span style={{ backgroundColor: '#FFFFFF', padding: '1px 6px', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border)', fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)' }}>
                       {columnTasks.length}
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {columnTasks.map(task => (
                       <Card
                         key={task.id}
@@ -649,7 +662,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
                           boxShadow: 'var(--shadow-xs)',
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '10px'
+                          gap: '8px'
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -664,7 +677,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
                           </button>
                         </div>
 
-                        <h5 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.3 }}>
+                        <h5 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.3 }}>
                           {task.title}
                         </h5>
 
@@ -674,20 +687,20 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
                           </p>
                         )}
 
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '8px', fontSize: '0.76rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '6px', fontSize: '0.74rem' }}>
                           <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
-                            Assignee: <strong>{task.assigneeRole}</strong>
+                            {task.assigneeRole}
                           </span>
 
                           <select
                             value={task.status}
                             onChange={(e) => handleTaskStatusChange(task, e.target.value as TaskStatus)}
                             style={{
-                              fontSize: '0.74rem',
+                              fontSize: '0.72rem',
                               padding: '2px 4px',
                               borderRadius: 'var(--radius-xs)',
                               border: '1px solid var(--border)',
-                              backgroundColor: 'var(--bg-subtle)'
+                              backgroundColor: 'var(--bg-body)'
                             }}
                           >
                             <option value="TODO">To Do</option>
@@ -708,23 +721,23 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
 
       {/* TAB 4: RESOURCES */}
       {activeTab === 'resources' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className="animate-fade-in">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} className="animate-fade-in">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h3 style={{ fontSize: '1.24rem', fontWeight: 700 }}>Shared Project Resources & Documentation</h3>
-              <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
-                Links, specifications, research papers, and code references
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Shared Project Resources & Docs</h3>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                Specifications, documentation links, and code references
               </p>
             </div>
-            <Button size="sm" onClick={() => setIsResourceModalOpen(true)} leftIcon={<Plus size={16} />}>
+            <Button size="sm" onClick={() => setIsResourceModalOpen(true)} leftIcon={<Plus size={15} />}>
               Share Resource
             </Button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
             {resources.length === 0 ? (
               <EmptyState
-                icon={<Link2 size={28} />}
+                icon={<Link2 size={24} />}
                 title="No shared resources yet"
                 description="Share links, research PDFs, or code references with your mentee/mentor."
                 actionText="Add First Resource"
@@ -732,41 +745,74 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
               />
             ) : (
               resources.map(r => (
-                <Card key={r.id} padding="md" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
+                <Card key={r.id} padding="md" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '10px' }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                       <Badge variant="primary" size="sm">{r.type}</Badge>
                       <button
                         onClick={() => handleDeleteResource(r.id)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-subtle)' }}
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={13} />
                       </button>
                     </div>
-                    <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px' }}>
+                    <h4 style={{ fontSize: '0.94rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '2px' }}>
                       {r.title}
                     </h4>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
                       Added by {r.addedByName || r.addedByRole}
                     </p>
+
+                    {/* Bandwidth-Optimized Media Preview with Lightbox Click */}
+                    {r.type === 'VIDEO' && r.url.includes('res.cloudinary.com') ? (
+                      <div
+                        onClick={() => setViewerMedia({ isOpen: true, url: r.url, title: r.title, type: 'video' })}
+                        style={{ marginTop: '8px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', maxHeight: '140px', backgroundColor: '#000000', cursor: 'pointer', position: 'relative' }}
+                      >
+                        <video
+                          src={r.url}
+                          poster={getVideoPosterUrl(r.url, 480)}
+                          preload="none"
+                          controls
+                          style={{ width: '100%', maxHeight: '140px', display: 'block' }}
+                        />
+                      </div>
+                    ) : r.url.match(/\.(jpg|jpeg|png|webp|gif)($|\?)/i) || (r.url.includes('res.cloudinary.com') && r.type !== 'DOC' && r.type !== 'CODE') ? (
+                      <div
+                        onClick={() => setViewerMedia({ isOpen: true, url: r.url, title: r.title, type: 'image' })}
+                        style={{ marginTop: '8px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', maxHeight: '120px', textAlign: 'center', backgroundColor: 'var(--bg-subtle)', cursor: 'pointer' }}
+                      >
+                        <img
+                          src={getOptimizedCloudinaryUrl(r.url, { width: 360, quality: 'auto:good' })}
+                          alt={r.title}
+                          loading="lazy"
+                          decoding="async"
+                          style={{ maxWidth: '100%', maxHeight: '120px', objectFit: 'contain' }}
+                        />
+                      </div>
+                    ) : null}
                   </div>
 
-                  <a
-                    href={r.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '0.84rem',
-                      fontWeight: 600,
-                      color: 'var(--primary)',
-                      marginTop: '4px'
-                    }}
-                  >
-                    Open Resource <ExternalLink size={14} />
-                  </a>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', borderTop: '1px solid var(--border)', paddingTop: '8px', marginTop: '4px' }}>
+                    <a
+                      href={r.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        color: 'var(--primary)'
+                      }}
+                    >
+                      Open Link <ExternalLink size={12} />
+                    </a>
+
+                    {/* WhatsApp-Style Save to Device / Gallery */}
+                    <MediaSaveButton mediaUrl={r.url} filename={r.title} size="sm" />
+                  </div>
                 </Card>
               ))
             )}
@@ -776,23 +822,23 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
 
       {/* TAB 5: NOTES */}
       {activeTab === 'notes' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className="animate-fade-in">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} className="animate-fade-in">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h3 style={{ fontSize: '1.24rem', fontWeight: 700 }}>Project Notes & Architecture Specs</h3>
-              <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Project Notes & Architecture Specs</h3>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                 Shared architectural notes & private mentor assessments
               </p>
             </div>
-            <Button size="sm" onClick={() => setIsNoteModalOpen(true)} leftIcon={<Plus size={16} />}>
+            <Button size="sm" onClick={() => setIsNoteModalOpen(true)} leftIcon={<Plus size={15} />}>
               Create Note
             </Button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
             {notes.length === 0 ? (
               <EmptyState
-                icon={<FileText size={28} />}
+                icon={<FileText size={24} />}
                 title="No project notes yet"
                 description="Keep track of meeting minutes, debugging insights, and architectural decisions."
                 actionText="Create First Note"
@@ -800,15 +846,15 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
               />
             ) : (
               notes.map(n => (
-                <Card key={n.id} padding="md" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <Card key={n.id} padding="md" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {n.isPrivateToMentor && (
                         <Badge variant="warning" size="sm">
-                          <Lock size={11} /> Mentor Private
+                          <Lock size={10} /> Mentor Private
                         </Badge>
                       )}
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                         by {n.authorName || n.authorRole}
                       </span>
                     </div>
@@ -816,19 +862,19 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
                       onClick={() => handleDeleteNote(n.id)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-subtle)' }}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
 
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-main)' }}>
                     {n.title}
                   </h4>
 
-                  <p style={{ fontSize: '0.88rem', color: 'var(--text-main)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                  <p style={{ fontSize: '0.84rem', color: 'var(--text-main)', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
                     {n.content}
                   </p>
 
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-subtle)', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', borderTop: '1px solid var(--border)', paddingTop: '6px' }}>
                     Updated {new Date(n.updatedAt).toLocaleDateString()}
                   </span>
                 </Card>
@@ -897,8 +943,30 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
       </Modal>
 
       {/* Modal: Add Resource */}
-      <Modal isOpen={isResourceModalOpen} onClose={() => setIsResourceModalOpen(false)} title="Share Resource / Doc">
+      <Modal isOpen={isResourceModalOpen} onClose={() => setIsResourceModalOpen(false)} title="Share Resource / Doc / Media">
         <form onSubmit={handleAddResource} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <MediaUpload
+            label="Upload to Cloudinary (Image, Video, or Document)"
+            helperText="Directly upload architecture diagram, demo video, or PDF specification to Cloudinary"
+            folder="projects"
+            acceptType="all"
+            value={resourceUrl}
+            projectId={project?.id}
+            onChange={(res) => {
+              if (res) {
+                setResourceUrl(res.secureUrl);
+                if (!resourceTitle) {
+                  setResourceTitle(res.originalFilename || 'Project Resource');
+                }
+                if (res.resourceType === 'video') {
+                  setResourceType('VIDEO');
+                } else if (res.resourceType === 'raw') {
+                  setResourceType('DOC');
+                }
+              }
+            }}
+          />
+
           <Input label="Resource Title" placeholder="e.g. Go Concurrency in Practice" value={resourceTitle} onChange={(e) => setResourceTitle(e.target.value)} required />
           <Input label="Resource URL / Link" placeholder="https://..." value={resourceUrl} onChange={(e) => setResourceUrl(e.target.value)} required />
           <Select
@@ -909,7 +977,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
               { value: 'DOC', label: 'Documentation / PDF' },
               { value: 'LINK', label: 'External Article / Link' },
               { value: 'CODE', label: 'Code Sample / Repo' },
-              { value: 'VIDEO', label: 'Video Lecture' }
+              { value: 'VIDEO', label: 'Video Lecture / Demo' }
             ]}
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
@@ -923,9 +991,9 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
       <Modal isOpen={isNoteModalOpen} onClose={() => setIsNoteModalOpen(false)} title="Create Project Note">
         <form onSubmit={handleAddNote} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <Input label="Note Title" placeholder="e.g. Architecture Decision on Worker Leases" value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)} required />
-          <Textarea label="Content" placeholder="Write markdown or structured notes..." value={noteContent} onChange={(e) => setNoteContent(e.target.value)} rows={6} required />
+          <Textarea label="Content" placeholder="Write markdown or structured notes..." value={noteContent} onChange={(e) => setNoteContent(e.target.value)} rows={5} required />
           {user?.role === 'MENTOR' && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', cursor: 'pointer' }}>
               <input type="checkbox" checked={noteIsPrivate} onChange={(e) => setNoteIsPrivate(e.target.checked)} />
               <span>Make private (only visible to mentors)</span>
             </label>
@@ -938,7 +1006,7 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
       </Modal>
 
       {/* Modal: Edit Links */}
-      <Modal isOpen={isEditProjectModalOpen} onClose={() => setIsEditProjectModalOpen(false)} title="Update Project Repository Links">
+      <Modal isOpen={isEditProjectModalOpen} onClose={() => setIsEditProjectModalOpen(false)} title="Update Repository & Deployment Links">
         <form onSubmit={handleUpdateLinks} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <Input label="GitHub Repository URL" placeholder="https://github.com/username/project" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} />
           <Input label="Live Demo URL" placeholder="https://myproject.demo.com" value={liveDemoUrl} onChange={(e) => setLiveDemoUrl(e.target.value)} />
@@ -948,6 +1016,15 @@ export const ProjectWorkspace: React.FC<ProjectWorkspaceProps> = ({ projectId, o
           </div>
         </form>
       </Modal>
+
+      {/* WhatsApp Fullscreen Media Lightbox Viewer */}
+      <WhatsAppMediaViewer
+        isOpen={viewerMedia.isOpen}
+        onClose={() => setViewerMedia(prev => ({ ...prev, isOpen: false }))}
+        mediaUrl={viewerMedia.url}
+        mediaType={viewerMedia.type}
+        title={viewerMedia.title}
+      />
     </div>
   );
 };

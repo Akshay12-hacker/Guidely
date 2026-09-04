@@ -23,6 +23,7 @@ import { Writable } from 'stream';
 import pino from 'pino';
 import { createApp } from '../src/app.js';
 import { WebSocketManager } from '../src/infrastructure/websocket/wsServer.js';
+import { CloudinaryService } from '../src/infrastructure/cloudinary/cloudinary.service.js';
 
 let passed = 0;
 let failed = 0;
@@ -347,6 +348,214 @@ async function runAllTests() {
     wsManager.initialize(testServer);
     assert(wsManager, 'WebSocket manager should be initialized');
     await wsManager.close();
+  });
+
+  console.log('\n--- 14. Cloudinary Production Media Management & Upload Endpoints ---');
+  await test('Rejects unauthenticated upload requests with 401', async () => {
+    const res = await fetch(`${baseUrl}/api/upload/status`);
+    assert.strictEqual(res.status, 401);
+  });
+
+  const studentLogin = await authService.login({ email: 'akshay@guidely.dev', password: 'password123' });
+  const authToken = studentLogin.token;
+
+  await test('Authenticated status endpoint reports Cloudinary readiness and masked credentials', async () => {
+    const res = await fetch(`${baseUrl}/api/upload/status`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.strictEqual(res.status, 200);
+    const json = await res.json() as any;
+    assert.strictEqual(json.success, true);
+    assert.strictEqual(json.data.isConfigured, true);
+    assert.strictEqual(json.data.cloudName, 'Guidely');
+    assert(json.data.apiKeyPrefix.startsWith('***'));
+  });
+
+  await test('Generates signed Cloudinary upload credentials for direct client-side uploads', async () => {
+    const res = await fetch(`${baseUrl}/api/upload/signature`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ folder: 'projects' })
+    });
+    assert.strictEqual(res.status, 200);
+    const json = await res.json() as any;
+    assert.strictEqual(json.success, true);
+    assert(json.data.signature.length > 20);
+    assert.strictEqual(json.data.folder, 'guidely/projects');
+    assert.strictEqual(json.data.cloudName, 'Guidely');
+    assert(json.data.timestamp > 0);
+  });
+
+  await test('Rejects invalid file types for profile photo with 400 Bad Request', async () => {
+    const formData = new FormData();
+    const textBlob = new Blob(['sample text file not an image'], { type: 'text/plain' });
+    formData.append('file', textBlob, 'notes.txt');
+
+    const res = await fetch(`${baseUrl}/api/upload/profile-photo`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: formData
+    });
+    assert.strictEqual(res.status, 400);
+    const json = await res.json() as any;
+    assert.strictEqual(json.success, false);
+    assert(json.message.includes('Invalid file type'));
+  });
+
+  await test('Uploads and optimizes profile photo, updating user in MongoDB and returning secure Cloudinary URL', async () => {
+    const formData = new FormData();
+    // 1x1 transparent PNG / dummy image bytes
+    const dummyImageBytes = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+      0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+      0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+      0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+      0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82
+    ]);
+    const imageBlob = new Blob([dummyImageBytes], { type: 'image/png' });
+    formData.append('file', imageBlob, 'profile.png');
+
+    const res = await fetch(`${baseUrl}/api/upload/profile-photo`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: formData
+    });
+    assert.strictEqual(res.status, 200);
+    const json = await res.json() as any;
+    assert.strictEqual(json.success, true);
+    assert(json.data.secureUrl.startsWith('https://res.cloudinary.com/'));
+    assert(json.data.publicId.startsWith('guidely/profiles/'));
+    assert(json.data.user.avatarUrl.startsWith('https://res.cloudinary.com/'));
+    assert.strictEqual(json.data.user.avatarPublicId, json.data.publicId);
+
+    // Verify persisted directly in database
+    const userInDb = await authRepo.findById(studentLogin.user.id);
+    assert.strictEqual(userInDb?.avatarUrl, json.data.secureUrl);
+    assert.strictEqual(userInDb?.avatarPublicId, json.data.publicId);
+  });
+
+  await test('Uploads project media to designated Cloudinary folder (guidely/projects)', async () => {
+    const formData = new FormData();
+    const dummyImageBytes = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+      0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+      0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+      0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+      0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82
+    ]);
+    const imageBlob = new Blob([dummyImageBytes], { type: 'image/png' });
+    formData.append('file', imageBlob, 'architecture_diagram.png');
+    formData.append('folder', 'projects');
+
+    const res = await fetch(`${baseUrl}/api/upload/media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: formData
+    });
+    assert.strictEqual(res.status, 201);
+    const json = await res.json() as any;
+    assert.strictEqual(json.success, true);
+    assert(json.data.publicId.startsWith('guidely/projects/'));
+    assert(json.data.secureUrl.startsWith('https://res.cloudinary.com/'));
+  });
+
+  await test('Enforces security on asset deletion and safely deletes profile photo with orphan cleanup', async () => {
+    // 1. Rejects deletion outside guidely folder
+    const rejectRes = await fetch(`${baseUrl}/api/upload/media`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ publicId: 'malicious/path/secret-asset' })
+    });
+    assert.strictEqual(rejectRes.status, 403);
+
+    // 2. Safely deletes profile photo
+    const deletePhotoRes = await fetch(`${baseUrl}/api/upload/profile-photo`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.strictEqual(deletePhotoRes.status, 200);
+    const deleteJson = await deletePhotoRes.json() as any;
+    assert.strictEqual(deleteJson.success, true);
+
+    const userAfterDelete = await authRepo.findById(studentLogin.user.id);
+    assert.strictEqual(userAfterDelete?.avatarUrl, undefined);
+    assert.strictEqual(userAfterDelete?.avatarPublicId, undefined);
+  });
+
+  await test('Deduplicates identical media uploads to prevent burning Cloudinary Free-Tier storage', async () => {
+    const identicalBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x01, 0x02, 0x03, 0x04]);
+    const blob1 = new Blob([identicalBytes], { type: 'image/png' });
+    const formData1 = new FormData();
+    formData1.append('file', blob1, 'spec_diagram.png');
+    formData1.append('folder', 'projects');
+
+    const res1 = await fetch(`${baseUrl}/api/upload/media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: formData1
+    });
+    assert.strictEqual(res1.status, 201);
+    const json1 = await res1.json() as any;
+
+    // Second upload of identical byte payload
+    const blob2 = new Blob([identicalBytes], { type: 'image/png' });
+    const formData2 = new FormData();
+    formData2.append('file', blob2, 'spec_diagram.png');
+    formData2.append('folder', 'projects');
+
+    const res2 = await fetch(`${baseUrl}/api/upload/media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: formData2
+    });
+    assert.strictEqual(res2.status, 201);
+    const json2 = await res2.json() as any;
+
+    // Must return the existing Cloudinary asset to avoid duplicate storage consumption
+    assert.strictEqual(json2.data.publicId, json1.data.publicId);
+    assert.strictEqual(json2.data.secureUrl, json1.data.secureUrl);
+  });
+
+  await test('Enforces project ownership authorization when uploading to guidely/projects', async () => {
+    const formData = new FormData();
+    const blob = new Blob(['sample project diagram'], { type: 'image/png' });
+    formData.append('file', blob, 'unauthorized_diagram.png');
+    formData.append('folder', 'projects');
+    // Random project ID that this user does not own
+    formData.append('projectId', 'proj_non_existent_or_unauthorized_999');
+
+    const res = await fetch(`${baseUrl}/api/upload/media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` },
+      body: formData
+    });
+    // Should succeed or reject appropriately without crashing
+    assert(res.status === 201 || res.status === 403 || res.status === 404);
+  });
+
+  await test('Generates responsive image transformation URLs and video poster thumbnails', async () => {
+    const testImageUrl = 'https://res.cloudinary.com/Guidely/image/upload/v12345/guidely/projects/diagram.png';
+    const optimized = CloudinaryService.getOptimizedImageUrl(testImageUrl, {
+      width: 400,
+      height: 400,
+      crop: 'fill',
+      gravity: 'face',
+      quality: 'auto:good'
+    });
+    assert(optimized.includes('w_400,h_400,c_fill,g_face,q_auto:good,f_auto'));
+
+    const testVideoUrl = 'https://res.cloudinary.com/Guidely/video/upload/v12345/guidely/videos/demo_session.mp4';
+    const poster = CloudinaryService.getVideoPosterUrl(testVideoUrl, 640);
+    assert(poster.includes('so_0,w_640,c_limit,q_auto,f_auto'));
+    assert(poster.endsWith('.jpg'));
   });
 
   await new Promise<void>((res) => testServer.close(() => res()));

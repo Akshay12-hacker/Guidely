@@ -26,19 +26,18 @@ export const LoadingSkeleton: React.FC<{
 
 export const CardSkeleton: React.FC = () => {
   return (
-    <div style={{ backgroundColor: '#FFFFFF', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+    <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <LoadingSkeleton width="48px" height="48px" borderRadius="50%" />
+        <LoadingSkeleton width="40px" height="40px" borderRadius="50%" />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <LoadingSkeleton width="60%" height="16px" />
-          <LoadingSkeleton width="40%" height="12px" />
+          <LoadingSkeleton width="50%" height="14px" />
+          <LoadingSkeleton width="30%" height="11px" />
         </div>
       </div>
-      <LoadingSkeleton width="100%" height="40px" />
+      <LoadingSkeleton width="100%" height="32px" />
       <div style={{ display: 'flex', gap: '8px' }}>
-        <LoadingSkeleton width="80px" height="24px" borderRadius="9999px" />
-        <LoadingSkeleton width="80px" height="24px" borderRadius="9999px" />
-        <LoadingSkeleton width="80px" height="24px" borderRadius="9999px" />
+        <LoadingSkeleton width="70px" height="22px" borderRadius="var(--radius-xs)" />
+        <LoadingSkeleton width="70px" height="22px" borderRadius="var(--radius-xs)" />
       </div>
     </div>
   );

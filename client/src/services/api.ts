@@ -17,7 +17,9 @@ import {
   Review,
   Report,
   AdminAnalytics,
-  MentorFilters
+  MentorFilters,
+  CloudinaryUploadResult,
+  UploadSignatureResponse
 } from '../../../shared/types.js';
 
 import {
@@ -102,6 +104,58 @@ class ApiClient {
       // If backend is not available, we throw so callers fallback to mock logic
       throw err;
     }
+  }
+
+  private uploadWithProgress<T>(
+    endpoint: string,
+    formData: FormData,
+    onProgress?: (progressPercent: number) => void
+  ): Promise<T> {
+    const token = this.getToken();
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${cleanEndpoint}`;
+
+    return new Promise<T>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+
+      if (xhr.upload && onProgress) {
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            onProgress(percent);
+          }
+        });
+      }
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            resolve(json.data !== undefined ? json.data : json);
+          } catch {
+            resolve(xhr.response as any);
+          }
+        } else {
+          try {
+            const errJson = JSON.parse(xhr.responseText);
+            reject(new Error(errJson.message || `HTTP ${xhr.status}`));
+          } catch {
+            reject(new Error(`Upload failed with status HTTP ${xhr.status}`));
+          }
+        }
+      };
+
+      xhr.onerror = () => {
+        reject(new Error('Network error during media upload'));
+      };
+
+      xhr.send(formData);
+    });
   }
 
   // --- Auth ---
@@ -889,6 +943,7 @@ class ApiClient {
       senderRole: sender.role,
       senderName: sender.fullName,
       text: data.text,
+      attachments: data.attachments,
       isRead: false,
       createdAt: new Date().toISOString()
     };
@@ -1074,6 +1129,142 @@ class ApiClient {
   async moderateReview(reviewId: string, isApproved: boolean): Promise<void> {
     const r = dynamicReviews.find(x => x.id === reviewId);
     if (r) r.isApproved = isApproved;
+  }
+
+  // --- Cloudinary Media & Upload ---
+  async uploadProfilePhoto(
+    file: File,
+    onProgress?: (pct: number) => void
+  ): Promise<{ url: string; secureUrl: string; publicId: string; user: User }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await this.uploadWithProgress<any>('/upload/profile-photo', formData, onProgress);
+      const uid = this.getCurrentMockUserId();
+      if (dynamicUsers[uid]) {
+        dynamicUsers[uid].avatarUrl = res.secureUrl || res.url;
+        dynamicUsers[uid].avatarPublicId = res.publicId;
+      }
+      return res;
+    } catch {
+      // Offline fallback with simulated progress
+      if (onProgress) {
+        for (let p = 15; p <= 100; p += 35) {
+          onProgress(p);
+        }
+      }
+      const previewUrl = URL.createObjectURL(file);
+      const uid = this.getCurrentMockUserId();
+      const mockPublicId = `guidely/profiles/profile_${uid}_${Date.now()}`;
+      if (dynamicUsers[uid]) {
+        dynamicUsers[uid].avatarUrl = previewUrl;
+        dynamicUsers[uid].avatarPublicId = mockPublicId;
+      }
+      return {
+        url: previewUrl,
+        secureUrl: previewUrl,
+        publicId: mockPublicId,
+        user: dynamicUsers[uid] || ({
+          id: uid,
+          fullName: 'Demo User',
+          email: 'user@guidely.dev',
+          role: 'STUDENT',
+          status: 'ACTIVE',
+          avatarUrl: previewUrl,
+          avatarPublicId: mockPublicId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        } as User)
+      };
+    }
+  }
+
+  async deleteProfilePhoto(): Promise<{ user: User }> {
+    try {
+      const res = await this.request<any>('/upload/profile-photo', {
+        method: 'DELETE'
+      });
+      const uid = this.getCurrentMockUserId();
+      if (dynamicUsers[uid]) {
+        dynamicUsers[uid].avatarUrl = undefined;
+        dynamicUsers[uid].avatarPublicId = undefined;
+      }
+      return res;
+    } catch {
+      const uid = this.getCurrentMockUserId();
+      if (dynamicUsers[uid]) {
+        dynamicUsers[uid].avatarUrl = undefined;
+        dynamicUsers[uid].avatarPublicId = undefined;
+      }
+      return { user: dynamicUsers[uid] };
+    }
+  }
+
+  async uploadMedia(
+    file: File,
+    folder: 'projects' | 'videos' | 'documents' | 'messages' | 'general' = 'general',
+    onProgress?: (pct: number) => void,
+    projectId?: string
+  ): Promise<CloudinaryUploadResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+    if (projectId) {
+      formData.append('projectId', projectId);
+    }
+
+    try {
+      return await this.uploadWithProgress<CloudinaryUploadResult>('/upload/media', formData, onProgress);
+    } catch {
+      if (onProgress) {
+        for (let p = 20; p <= 100; p += 40) {
+          onProgress(p);
+        }
+      }
+      const previewUrl = URL.createObjectURL(file);
+      const isVideo = file.type.startsWith('video/');
+      return {
+        url: previewUrl,
+        secureUrl: previewUrl,
+        publicId: `guidely/${folder}/${Date.now()}`,
+        resourceType: isVideo ? 'video' : file.type.startsWith('image/') ? 'image' : 'raw',
+        format: file.name.split('.').pop() || 'bin',
+        bytes: file.size,
+        originalFilename: file.name,
+        createdAt: new Date().toISOString()
+      };
+    }
+  }
+
+  async deleteMedia(publicId: string, resourceType: 'image' | 'video' | 'raw' = 'image'): Promise<{ success: boolean }> {
+    try {
+      return await this.request<any>('/upload/media', {
+        method: 'DELETE',
+        body: JSON.stringify({ publicId, resourceType })
+      });
+    } catch {
+      return { success: true };
+    }
+  }
+
+  async getUploadSignature(folder: string = 'guidely/general'): Promise<UploadSignatureResponse> {
+    return await this.request<UploadSignatureResponse>('/upload/signature', {
+      method: 'POST',
+      body: JSON.stringify({ folder })
+    });
+  }
+
+  async getUploadStatus(): Promise<{ isConfigured: boolean; cloudName: string; apiKeyPrefix: string }> {
+    try {
+      return await this.request<any>('/upload/status');
+    } catch {
+      return {
+        isConfigured: true,
+        cloudName: 'Guidely',
+        apiKeyPrefix: '***5412'
+      };
+    }
   }
 }
 

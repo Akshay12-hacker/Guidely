@@ -22,40 +22,25 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({
   style,
   ...props
 }, ref) => {
-  const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const generatedId = React.useId();
+  const selectId = id || (label ? `select-${label.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : generatedId);
+  const errorId = `${selectId}-error`;
+  const helperId = `${selectId}-helper`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: '100%' }}>
       {label && (
-        <label htmlFor={selectId} style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-main)' }}>
+        <label htmlFor={selectId} style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-main)' }}>
           {label}
         </label>
       )}
       <select
         ref={ref}
         id={selectId}
-        style={{
-          width: '100%',
-          padding: '10px 14px',
-          fontSize: '0.92rem',
-          borderRadius: 'var(--radius-sm)',
-          border: error ? '1.5px solid var(--danger)' : '1px solid var(--border)',
-          backgroundColor: '#FFFFFF',
-          color: 'var(--text-main)',
-          outline: 'none',
-          cursor: 'pointer',
-          transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-          ...style
-        }}
-        onFocus={(e) => {
-          if (!error) e.target.style.borderColor = 'var(--primary)';
-          e.target.style.boxShadow = '0 0 0 3px var(--primary-light)';
-        }}
-        onBlur={(e) => {
-          if (!error) e.target.style.borderColor = 'var(--border)';
-          e.target.style.boxShadow = 'none';
-        }}
-        className={className}
+        aria-invalid={!!error}
+        aria-describedby={error ? errorId : helperText ? helperId : undefined}
+        style={style}
+        className={`guidely-select ${error ? 'guidely-select-error' : ''} ${className}`}
         {...props}
       >
         {options.map((opt) => (
@@ -65,10 +50,16 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(({
         ))}
       </select>
       {error ? (
-        <span style={{ fontSize: '0.8rem', color: 'var(--danger)' }}>{error}</span>
+        <span id={errorId} style={{ fontSize: '0.78rem', color: 'var(--danger)', marginTop: '2px', fontWeight: 500 }}>
+          {error}
+        </span>
       ) : helperText ? (
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{helperText}</span>
+        <span id={helperId} style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+          {helperText}
+        </span>
       ) : null}
     </div>
   );
 });
+
+Select.displayName = 'Select';

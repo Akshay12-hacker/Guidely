@@ -27,7 +27,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '48px 24px',
+        padding: '40px 24px',
         textAlign: 'center',
         backgroundColor: '#FFFFFF',
         borderRadius: 'var(--radius-lg)',
@@ -37,27 +37,28 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     >
       <div
         style={{
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          backgroundColor: 'var(--primary-light)',
-          color: 'var(--primary)',
+          width: '48px',
+          height: '48px',
+          borderRadius: 'var(--radius-md)',
+          backgroundColor: 'var(--bg-subtle)',
+          color: 'var(--text-muted)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: '16px'
+          marginBottom: '14px',
+          border: '1px solid var(--border)'
         }}
       >
         {icon}
       </div>
-      <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
+      <h4 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px' }}>
         {title}
       </h4>
-      <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', maxWidth: '420px', lineHeight: 1.5, marginBottom: actionText ? '20px' : '0px' }}>
+      <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: 1.5, marginBottom: actionText ? '16px' : '0px' }}>
         {description}
       </p>
       {actionText && onAction && (
-        <Button onClick={onAction} leftIcon={actionIcon}>
+        <Button size="sm" onClick={onAction} leftIcon={actionIcon}>
           {actionText}
         </Button>
       )}

@@ -19,6 +19,7 @@ import { createMessagingRouter } from './modules/messaging/messaging.routes.js';
 import { createNotificationRouter } from './modules/notifications/notification.routes.js';
 import { createReviewRouter } from './modules/reviews/review.routes.js';
 import { createAdminRouter } from './modules/admin/admin.routes.js';
+import { createUploadRouter } from './modules/upload/upload.routes.js';
 
 // Helper to evaluate CORS origin authorization safely
 export function isOriginAllowed(origin: string | undefined, allowedOrigins: string[]): boolean {
@@ -140,6 +141,7 @@ export function createApp(): express.Application {
   app.use('/api/notifications', createNotificationRouter());
   app.use('/api/reviews', createReviewRouter());
   app.use('/api/admin', createAdminRouter());
+  app.use('/api/upload', createUploadRouter());
 
   // 9. 404 handler for undefined API endpoints
   app.use('/api/*', (req: Request, res: Response, next: NextFunction) => {

@@ -1059,6 +1059,24 @@ export const MOCK_MESSAGES: Record<string, Message[]> = {
       text: 'Outstanding! Looking forward to reviewing the final demo in tomorrow\'s scheduled session.',
       isRead: true,
       createdAt: pastDate(0.1)
+    },
+    {
+      id: 'msg_akshay_6',
+      conversationId: 'conv_akshay_nitin',
+      senderId: 'usr_student_akshay',
+      senderRole: 'STUDENT',
+      senderName: 'Akshay Ramkishor Rahangdale',
+      text: 'Here is our latest system architecture diagram for your review:',
+      attachments: [
+        {
+          name: 'guidely_system_architecture.png',
+          url: 'https://res.cloudinary.com/Guidely/image/upload/guidely/projects/guidely_system_architecture.png',
+          type: 'image/png',
+          size: 384000
+        }
+      ],
+      isRead: true,
+      createdAt: pastDate(0.05)
     }
   ]
 };

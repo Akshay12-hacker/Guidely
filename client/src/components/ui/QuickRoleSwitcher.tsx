@@ -1,27 +1,28 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext.js';
-import { UserCheck, Sparkles } from 'lucide-react';
+import { UserCheck, Sparkles, LogOut } from 'lucide-react';
 
 export const QuickRoleSwitcher: React.FC = () => {
   const { user, quickLoginAs, logout, isAuthenticated } = useAuth();
 
   const demoProfiles = [
-    { label: 'Akshay (Lead)', email: 'akshay@guidely.dev', role: 'STUDENT', desc: 'SAGE Bhopal, Cyber Security' },
-    { label: 'Abhimanyu (Student)', email: 'abhimanyu@guidely.dev', role: 'STUDENT', desc: 'SAGE Bhopal, Cyber Security' },
-    { label: 'Sapna (Student)', email: 'sapna@guidely.dev', role: 'STUDENT', desc: 'SAGE Bhopal, AI & ML' },
-    { label: 'Prof. Nitin (Guide)', email: 'nitin.choudhary@sageuniversity.edu.in', role: 'MENTOR', desc: 'Assistant Professor' },
-    { label: 'Priya (Google)', email: 'priya.sundaram@gmail.com', role: 'MENTOR', desc: 'Google Staff Eng' },
-    { label: 'Dr. Rohan (MSFT)', email: 'rohan.mehra@microsoft.com', role: 'MENTOR', desc: 'Microsoft AI Lead' },
-    { label: 'Admin (HOD)', email: 'admin@guidely.dev', role: 'ADMIN', desc: 'Dr Gourav Shrivastava' }
+    { label: 'Akshay (Lead)', email: 'akshay@guidely.dev', role: 'STUDENT', desc: 'SAGE Bhopal' },
+    { label: 'Abhimanyu', email: 'abhimanyu@guidely.dev', role: 'STUDENT', desc: 'Core Dev' },
+    { label: 'Sapna', email: 'sapna@guidely.dev', role: 'STUDENT', desc: 'AI/ML' },
+    { label: 'Prof. Nitin', email: 'nitin.choudhary@sageuniversity.edu.in', role: 'MENTOR', desc: 'Faculty Guide' },
+    { label: 'Priya (Google)', email: 'priya.sundaram@gmail.com', role: 'MENTOR', desc: 'Staff Eng' },
+    { label: 'Dr. Rohan (MSFT)', email: 'rohan.mehra@microsoft.com', role: 'MENTOR', desc: 'AI Lead' },
+    { label: 'Admin (HOD)', email: 'admin@guidely.dev', role: 'ADMIN', desc: 'HOD' }
   ];
 
   return (
-    <div
+    <aside
+      aria-label="Demo environment role switcher"
       style={{
         backgroundColor: '#0F172A',
-        color: '#F8FAFC',
-        padding: '6px 16px',
-        fontSize: '0.78rem',
+        color: '#E2E8F0',
+        padding: '5px 16px',
+        fontSize: '0.74rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -37,22 +38,25 @@ export const QuickRoleSwitcher: React.FC = () => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '4px',
-            backgroundColor: 'rgba(99, 102, 241, 0.25)',
-            color: '#A5B4FC',
-            padding: '2px 8px',
+            backgroundColor: 'rgba(79, 70, 229, 0.3)',
+            color: '#C7D2FE',
+            padding: '2px 7px',
             borderRadius: 'var(--radius-xs)',
-            fontWeight: 600
+            fontWeight: 700,
+            fontSize: '0.7rem',
+            letterSpacing: '0.02em',
+            textTransform: 'uppercase'
           }}
         >
-          <Sparkles size={13} />
+          <Sparkles size={11} />
           Demo Mode
         </span>
         <span style={{ color: '#94A3B8' }}>
-          Switch test identities instantly:
+          Switch persona:
         </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
         {demoProfiles.map((profile) => {
           const isCurrent = user?.email.toLowerCase() === profile.email.toLowerCase();
 
@@ -60,28 +64,29 @@ export const QuickRoleSwitcher: React.FC = () => {
             <button
               key={profile.email}
               onClick={() => quickLoginAs(profile.email)}
+              title={`${profile.email} (${profile.desc})`}
               style={{
-                backgroundColor: isCurrent ? 'var(--primary)' : '#1E293B',
+                backgroundColor: isCurrent ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
                 color: isCurrent ? '#FFFFFF' : '#CBD5E1',
-                border: isCurrent ? '1px solid #818CF8' : '1px solid #334155',
+                border: isCurrent ? '1px solid #818CF8' : '1px solid rgba(255,255,255,0.1)',
                 borderRadius: 'var(--radius-xs)',
-                padding: '3px 10px',
-                fontSize: '0.76rem',
+                padding: '2px 8px',
+                fontSize: '0.72rem',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
+                gap: '4px',
                 fontWeight: isCurrent ? 700 : 500,
                 transition: 'all 0.15s ease'
               }}
               onMouseEnter={(e) => {
-                if (!isCurrent) e.currentTarget.style.backgroundColor = '#334155';
+                if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.14)';
               }}
               onMouseLeave={(e) => {
-                if (!isCurrent) e.currentTarget.style.backgroundColor = '#1E293B';
+                if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)';
               }}
             >
-              {isCurrent && <UserCheck size={12} />}
+              {isCurrent && <UserCheck size={11} />}
               {profile.label}
             </button>
           );
@@ -92,20 +97,24 @@ export const QuickRoleSwitcher: React.FC = () => {
             onClick={logout}
             style={{
               backgroundColor: 'transparent',
-              color: '#F87171',
-              border: '1px solid #7F1D1D',
+              color: '#FCA5A5',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
               borderRadius: 'var(--radius-xs)',
-              padding: '3px 8px',
-              fontSize: '0.76rem',
+              padding: '2px 7px',
+              fontSize: '0.72rem',
               cursor: 'pointer',
               fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
               marginLeft: '4px'
             }}
           >
+            <LogOut size={11} />
             Sign Out
           </button>
         )}
       </div>
-    </div>
+    </aside>
   );
 };

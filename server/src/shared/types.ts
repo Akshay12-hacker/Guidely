@@ -10,6 +10,7 @@ export interface User {
   role: UserRole;
   fullName: string;
   avatarUrl?: string;
+  avatarPublicId?: string;
   bio?: string;
   headline?: string;
   status: UserStatus;
@@ -396,4 +397,26 @@ export interface AdminAnalytics {
   monthlyGrowth: { month: string; students: number; mentors: number; sessions: number }[];
   popularTechnologies: { name: string; count: number }[];
   domainDistribution: { domain: string; percentage: number }[];
+}
+
+export interface CloudinaryUploadResult {
+  url: string;
+  secureUrl: string;
+  publicId: string;
+  resourceType: 'image' | 'video' | 'raw';
+  format: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+  duration?: number;
+  originalFilename?: string;
+  createdAt: string;
+}
+
+export interface UploadSignatureResponse {
+  signature: string;
+  timestamp: number;
+  apiKey: string;
+  cloudName: string;
+  folder: string;
 }

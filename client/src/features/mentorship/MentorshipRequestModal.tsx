@@ -3,11 +3,10 @@ import { Modal } from '../../components/ui/Modal.js';
 import { Input } from '../../components/ui/Input.js';
 import { Textarea } from '../../components/ui/Textarea.js';
 import { Button } from '../../components/ui/Button.js';
-import { Badge } from '../../components/ui/Badge.js';
 import { api } from '../../services/api.js';
 import { useToast } from '../../context/ToastContext.js';
 import { MentorProfile, User } from '../../../../shared/types.js';
-import { Send, CheckCircle2, Sparkles } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 interface MentorshipRequestModalProps {
   isOpen: boolean;
@@ -61,7 +60,7 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
         additionalMessage
       });
 
-      showToast('success', 'Request Sent! 🎉', `Your mentorship proposal was dispatched to ${mentor.user.fullName}.`);
+      showToast('success', 'Proposal Dispatched', `Your mentorship proposal was sent to ${mentor.user.fullName}.`);
       if (onSuccess) onSuccess();
       onClose();
     } catch (err: any) {
@@ -83,11 +82,11 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
       onClose={onClose}
       title={`Request Mentorship from ${mentor.user.fullName}`}
       subtitle={`${mentor.title} @ ${mentor.company}`}
-      maxWidth="680px"
+      maxWidth="620px"
     >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-        <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', fontSize: '0.86rem', color: 'var(--text-muted)' }}>
-          Mentors review your project proposal before accepting. Provide specific details to increase match probability.
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+          Mentors evaluate technical proposals before accepting. Provide specific details to increase alignment.
         </div>
 
         <Input
@@ -99,8 +98,8 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
         />
 
         <Textarea
-          label="Project Description & Vision"
-          placeholder="Explain what the project does, key features, and your intended architecture..."
+          label="Project Description & Architecture Vision"
+          placeholder="Explain what the system does, primary components, and target requirements..."
           value={projectDescription}
           onChange={(e) => setProjectDescription(e.target.value)}
           rows={4}
@@ -118,40 +117,42 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
         />
 
         <div>
-          <label style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-main)', display: 'block', marginBottom: '8px' }}>
-            What Areas Do You Need Guidance On?
+          <label style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-main)', display: 'block', marginBottom: '6px' }}>
+            Areas Where Guidance Is Most Needed
           </label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
             {[
               'Architecture Design',
-              'Concurrency Primitives & Channel Leaks',
-              'Worker Crash Failover Strategy',
+              'Concurrency & Channel Leaks',
+              'Worker Failover Strategy',
               'Database Schema & Indexing',
               '1-on-1 Code Reviews',
-              'Load Testing & Benchmarking'
+              'Benchmarking & Load Testing'
             ].map(area => {
               const isSelected = helpNeeded.includes(area);
               return (
-                <div
+                <button
                   key={area}
+                  type="button"
                   onClick={() => toggleHelpArea(area)}
                   style={{
-                    padding: '8px 12px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: isSelected ? '1.5px solid var(--primary)' : '1px solid var(--border)',
+                    padding: '7px 10px',
+                    borderRadius: 'var(--radius-xs)',
+                    border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border)',
                     backgroundColor: isSelected ? 'var(--primary-light)' : '#FFFFFF',
                     cursor: 'pointer',
-                    fontSize: '0.82rem',
+                    fontSize: '0.78rem',
                     fontWeight: isSelected ? 700 : 500,
                     color: isSelected ? 'var(--primary)' : 'var(--text-main)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '6px',
+                    textAlign: 'left'
                   }}
                 >
                   <span style={{ color: 'var(--primary)' }}>{isSelected ? '✓' : '•'}</span>
                   <span>{area}</span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -159,7 +160,7 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
 
         <Input
           label="Expected Project Outcome"
-          placeholder="e.g. Deployed system, published research paper, open-source release"
+          placeholder="e.g. Deployed system, published paper, open-source release"
           value={expectedOutcome}
           onChange={(e) => setExpectedOutcome(e.target.value)}
         />
@@ -180,12 +181,12 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
           rows={3}
         />
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
           <Button variant="ghost" type="button" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" isLoading={isLoading} rightIcon={<Send size={16} />}>
-            Send Mentorship Request
+          <Button type="submit" isLoading={isLoading} rightIcon={<Send size={15} />}>
+            Send Proposal
           </Button>
         </div>
       </form>

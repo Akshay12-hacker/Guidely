@@ -11,6 +11,8 @@ import { Textarea } from '../../components/ui/Textarea.js';
 import { Select } from '../../components/ui/Select.js';
 import { ProgressBar } from '../../components/ui/ProgressBar.js';
 import { Badge } from '../../components/ui/Badge.js';
+import { Avatar } from '../../components/ui/Avatar.js';
+import { ProfilePhotoModal } from '../../components/ui/ProfilePhotoModal.js';
 import {
   User,
   Briefcase,
@@ -24,7 +26,8 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
-  Save
+  Save,
+  Camera
 } from 'lucide-react';
 
 interface MentorOnboardingProps {
@@ -37,6 +40,7 @@ export const MentorOnboarding: React.FC<MentorOnboardingProps> = ({ onComplete }
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [profile, setProfile] = useState<Partial<MentorProfile>>({
     title: 'Staff Software Engineer',
     company: 'Google India',
@@ -199,6 +203,33 @@ export const MentorOnboarding: React.FC<MentorOnboardingProps> = ({ onComplete }
             <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
               Provide your public profile information and social links for mentees.
             </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+              <Avatar
+                name={user?.fullName || 'Mentor'}
+                src={user?.avatarUrl}
+                size="lg"
+                isVerified={true}
+              />
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)', display: 'block' }}>
+                  Mentor Profile Photo
+                </span>
+                <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  Cloudinary face-crop & CDN optimization for high visibility
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => setIsPhotoModalOpen(true)}
+                leftIcon={<Camera size={14} />}
+              >
+                {user?.avatarUrl ? 'Change Photo' : 'Upload Photo'}
+              </Button>
+            </div>
+
             <Input label="Full Name" value={user?.fullName || ''} disabled />
             <Textarea
               label="Bio & Engineering Philosophy"
@@ -518,6 +549,11 @@ export const MentorOnboarding: React.FC<MentorOnboardingProps> = ({ onComplete }
           )}
         </div>
       </Card>
+
+      <ProfilePhotoModal
+        isOpen={isPhotoModalOpen}
+        onClose={() => setIsPhotoModalOpen(false)}
+      />
     </div>
   );
 };

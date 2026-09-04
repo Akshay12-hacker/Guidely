@@ -10,14 +10,15 @@ import {
   MessageSquare,
   LogOut,
   User as UserIcon,
-  Layers,
   Menu,
   X,
-  Shield,
   FolderKanban,
   Calendar,
-  Search
+  Search,
+  ChevronDown,
+  Camera
 } from 'lucide-react';
+import { ProfilePhotoModal } from '../ui/ProfilePhotoModal.js';
 
 interface NavbarProps {
   onNavigate: (route: string) => void;
@@ -29,7 +30,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
   const { user, isAuthenticated, logout } = useAuth();
   const { unreadNotifsCount } = useWebSocket();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,6 +43,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleBrandClick = () => {
+    if (!isAuthenticated) {
+      onNavigate('landing');
+    } else if (user?.role === 'ADMIN') {
+      onNavigate('admin');
+    } else if (user?.role === 'MENTOR') {
+      onNavigate('mentor-dashboard');
+    } else {
+      onNavigate('student-dashboard');
+    }
+  };
 
   return (
     <header
@@ -54,15 +68,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 24px',
+        padding: '0 20px',
         boxShadow: 'var(--shadow-xs)'
       }}
     >
-      {/* Left: Brand Logo & Sidebar Toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      {/* Left: Sidebar toggle + Brand */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {isAuthenticated && onToggleSidebar && (
           <button
             onClick={onToggleSidebar}
+            aria-label="Toggle navigation sidebar"
             style={{
               background: 'none',
               border: 'none',
@@ -71,74 +86,83 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
               display: 'flex',
               alignItems: 'center',
               padding: '6px',
-              borderRadius: 'var(--radius-sm)'
+              borderRadius: 'var(--radius-sm)',
+              transition: 'background-color 0.15s ease, color 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-subtle)';
+              e.currentTarget.style.color = 'var(--text-main)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--text-muted)';
             }}
           >
-            <Menu size={22} />
+            <Menu size={20} />
           </button>
         )}
 
         <div
-          onClick={() => onNavigate(isAuthenticated ? (user?.role === 'ADMIN' ? 'admin' : user?.role === 'MENTOR' ? 'mentor-dashboard' : 'student-dashboard') : 'landing')}
+          onClick={handleBrandClick}
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            gap: '8px',
             cursor: 'pointer',
             userSelect: 'none'
           }}
         >
           <div
             style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: 'var(--radius-md)',
+              width: '32px',
+              height: '32px',
+              borderRadius: 'var(--radius-sm)',
               backgroundColor: 'var(--primary)',
               color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.35)'
+              boxShadow: '0 2px 6px rgba(79, 70, 229, 0.25)'
             }}
           >
-            <Compass size={22} />
+            <Compass size={19} />
           </div>
-          <span style={{ fontSize: '1.28rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.03em' }}>
-            Guidly<span style={{ color: 'var(--primary)' }}>.</span>
+          <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
+            Guidly
           </span>
         </div>
 
-        {/* Search quick button */}
+        {/* Global search trigger for authenticated users */}
         {isAuthenticated && (
-          <div
+          <button
             onClick={() => onNavigate('find-mentor')}
             style={{
-              display: 'none',
+              display: 'flex',
               alignItems: 'center',
               gap: '8px',
               backgroundColor: 'var(--bg-subtle)',
               border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-full)',
-              padding: '6px 14px',
-              fontSize: '0.84rem',
+              borderRadius: 'var(--radius-sm)',
+              padding: '6px 12px',
+              fontSize: '0.82rem',
               color: 'var(--text-muted)',
               cursor: 'pointer',
-              marginLeft: '20px'
+              marginLeft: '12px'
             }}
             className="search-shortcut"
           >
-            <Search size={15} />
-            <span>Search mentors, topics, tech...</span>
-          </div>
+            <Search size={14} />
+            <span>Search mentors & tech...</span>
+          </button>
         )}
       </div>
 
-      {/* Right Navigation & Profile Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+      {/* Right Navigation Controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {isAuthenticated ? (
           <>
-            {/* Quick Links */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {/* Quick action buttons (desktop) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               {user?.role === 'STUDENT' && (
                 <button
                   onClick={() => onNavigate('find-mentor')}
@@ -150,13 +174,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
                     color: currentRoute === 'find-mentor' ? 'var(--primary)' : 'var(--text-muted)',
                     border: 'none',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '8px 12px',
-                    fontSize: '0.88rem',
+                    padding: '6px 10px',
+                    fontSize: '0.84rem',
                     fontWeight: 600,
                     cursor: 'pointer'
                   }}
                 >
-                  <Compass size={17} />
+                  <Compass size={16} />
                   <span>Find Mentor</span>
                 </button>
               )}
@@ -172,14 +196,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
                     color: currentRoute.includes('project') ? 'var(--primary)' : 'var(--text-muted)',
                     border: 'none',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '8px 12px',
-                    fontSize: '0.88rem',
+                    padding: '6px 10px',
+                    fontSize: '0.84rem',
                     fontWeight: 600,
                     cursor: 'pointer'
                   }}
                 >
-                  <FolderKanban size={17} />
-                  <span>My Project</span>
+                  <FolderKanban size={16} />
+                  <span>Project</span>
                 </button>
               )}
 
@@ -187,122 +211,136 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
               <button
                 onClick={() => onNavigate(user?.role === 'MENTOR' ? 'mentor-sessions' : 'student-sessions')}
                 title="Mentoring Sessions"
+                aria-label="Mentoring sessions"
                 style={{
-                  background: 'none',
+                  background: currentRoute.includes('sessions') ? 'var(--primary-light)' : 'none',
                   border: 'none',
                   cursor: 'pointer',
                   color: currentRoute.includes('sessions') ? 'var(--primary)' : 'var(--text-muted)',
-                  padding: '8px',
+                  padding: '7px',
                   borderRadius: 'var(--radius-sm)',
                   display: 'flex',
-                  alignItems: 'center',
-                  position: 'relative'
+                  alignItems: 'center'
                 }}
               >
-                <Calendar size={20} />
+                <Calendar size={18} />
               </button>
 
               {/* Messages Icon */}
               <button
                 onClick={() => onNavigate('messages')}
                 title="Direct Messages"
+                aria-label="Direct messages"
                 style={{
-                  background: 'none',
+                  background: currentRoute === 'messages' ? 'var(--primary-light)' : 'none',
                   border: 'none',
                   cursor: 'pointer',
                   color: currentRoute === 'messages' ? 'var(--primary)' : 'var(--text-muted)',
-                  padding: '8px',
+                  padding: '7px',
                   borderRadius: 'var(--radius-sm)',
                   display: 'flex',
-                  alignItems: 'center',
-                  position: 'relative'
+                  alignItems: 'center'
                 }}
               >
-                <MessageSquare size={20} />
+                <MessageSquare size={18} />
               </button>
 
-              {/* Notifications Icon */}
+              {/* Notifications Icon with unread dot */}
               <button
                 onClick={() => onNavigate('notifications')}
                 title="Notifications"
+                aria-label="Notifications"
                 style={{
-                  background: 'none',
+                  background: currentRoute === 'notifications' ? 'var(--primary-light)' : 'none',
                   border: 'none',
                   cursor: 'pointer',
                   color: currentRoute === 'notifications' ? 'var(--primary)' : 'var(--text-muted)',
-                  padding: '8px',
+                  padding: '7px',
                   borderRadius: 'var(--radius-sm)',
                   display: 'flex',
                   alignItems: 'center',
                   position: 'relative'
                 }}
               >
-                <Bell size={20} />
+                <Bell size={18} />
                 {unreadNotifsCount > 0 && (
                   <span
                     style={{
                       position: 'absolute',
-                      top: '4px',
-                      right: '4px',
-                      width: '8px',
-                      height: '8px',
+                      top: '5px',
+                      right: '5px',
+                      width: '7px',
+                      height: '7px',
                       borderRadius: '50%',
                       backgroundColor: 'var(--danger)',
-                      border: '2px solid #FFFFFF'
+                      border: '1.5px solid #FFFFFF'
                     }}
                   />
                 )}
               </button>
             </div>
 
-            {/* Profile Dropdown */}
+            <div style={{ width: '1px', height: '22px', backgroundColor: 'var(--border)', margin: '0 4px' }} />
+
+            {/* User Profile Dropdown Menu */}
             <div style={{ position: 'relative' }} ref={menuRef}>
-              <div
+              <button
                 onClick={() => setIsProfileOpen(prev => !prev)}
+                aria-expanded={isProfileOpen}
+                aria-label="User menu"
                 style={{
+                  background: 'none',
+                  border: 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
+                  gap: '8px',
                   cursor: 'pointer',
-                  padding: '4px 6px',
-                  borderRadius: 'var(--radius-md)',
+                  padding: '3px 6px',
+                  borderRadius: 'var(--radius-sm)',
                   transition: 'background-color 0.15s ease'
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-subtle)')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
-                <Avatar name={user?.fullName || 'User'} src={user?.avatarUrl} size="sm" isOnline={true} isVerified={user?.role === 'MENTOR'} />
-                <div style={{ display: 'none', flexDirection: 'column', alignItems: 'flex-start' }} className="user-info-text">
-                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)', lineHeight: 1.2 }}>
-                    {user?.fullName}
+                <Avatar
+                  name={user?.fullName || 'User'}
+                  src={user?.avatarUrl}
+                  size="sm"
+                  isOnline={true}
+                  isVerified={user?.role === 'MENTOR'}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.2 }}>
+                    {user?.fullName?.split(' ')[0]}
                   </span>
-                  <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                    {user?.role}
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                    {user?.role?.toLowerCase()}
                   </span>
                 </div>
-              </div>
+                <ChevronDown size={14} color="var(--text-muted)" />
+              </button>
 
               {isProfileOpen && (
                 <div
                   className="animate-scale-in"
                   style={{
                     position: 'absolute',
-                    top: 'calc(100% + 8px)',
+                    top: 'calc(100% + 6px)',
                     right: 0,
-                    width: '230px',
+                    width: '240px',
                     backgroundColor: '#FFFFFF',
                     borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--border)',
                     boxShadow: 'var(--shadow-lg)',
-                    padding: '8px',
+                    padding: '6px',
                     zIndex: 100
                   }}
                 >
-                  <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', marginBottom: '6px' }}>
-                    <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)', marginBottom: '4px' }}>
+                    <p style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-main)' }}>
                       {user?.fullName}
                     </p>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {user?.email}
                     </p>
                     <div style={{ marginTop: '6px' }}>
@@ -320,13 +358,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '10px',
+                      gap: '8px',
                       width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 'var(--radius-sm)',
+                      padding: '7px 10px',
+                      borderRadius: 'var(--radius-xs)',
                       backgroundColor: 'transparent',
                       border: 'none',
-                      fontSize: '0.86rem',
+                      fontSize: '0.84rem',
                       fontWeight: 500,
                       color: 'var(--text-main)',
                       cursor: 'pointer',
@@ -335,8 +373,35 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-subtle)')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
-                    <UserIcon size={16} color="var(--text-muted)" />
+                    <UserIcon size={15} color="var(--text-muted)" />
                     Profile & Settings
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      setIsPhotoModalOpen(true);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '7px 10px',
+                      borderRadius: 'var(--radius-xs)',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      fontSize: '0.84rem',
+                      fontWeight: 500,
+                      color: 'var(--text-main)',
+                      cursor: 'pointer',
+                      textAlign: 'left'
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-subtle)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <Camera size={15} color="var(--primary)" />
+                    Update Profile Photo
                   </button>
 
                   <button
@@ -348,13 +413,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '10px',
+                      gap: '8px',
                       width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 'var(--radius-sm)',
+                      padding: '7px 10px',
+                      borderRadius: 'var(--radius-xs)',
                       backgroundColor: 'transparent',
                       border: 'none',
-                      fontSize: '0.86rem',
+                      fontSize: '0.84rem',
                       fontWeight: 500,
                       color: 'var(--danger)',
                       cursor: 'pointer',
@@ -363,7 +428,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--danger-light)')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
-                    <LogOut size={16} color="var(--danger)" />
+                    <LogOut size={15} color="var(--danger)" />
                     Sign Out
                   </button>
                 </div>
@@ -371,9 +436,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
             </div>
           </>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Button variant="ghost" size="sm" onClick={() => onNavigate('login')}>
-              Log in
+              Sign in
             </Button>
             <Button variant="primary" size="sm" onClick={() => onNavigate('register')}>
               Get Started
@@ -381,6 +446,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
           </div>
         )}
       </div>
+
+      <ProfilePhotoModal
+        isOpen={isPhotoModalOpen}
+        onClose={() => setIsPhotoModalOpen(false)}
+      />
     </header>
   );
 };

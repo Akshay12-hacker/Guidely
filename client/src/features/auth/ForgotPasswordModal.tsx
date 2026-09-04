@@ -58,32 +58,32 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
       subtitle={step === 'DONE' ? undefined : 'Enter your registered email to reset your account password.'}
     >
       {step === 'REQUEST' && (
-        <form onSubmit={handleRequest} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleRequest} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <Input
             label="Email Address"
             type="email"
             placeholder="you@college.ac.in"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            leftIcon={<Mail size={17} />}
+            leftIcon={<Mail size={16} />}
             required
           />
-          <Button type="submit" isLoading={isLoading} style={{ marginTop: '8px' }}>
+          <Button type="submit" isLoading={isLoading} style={{ marginTop: '6px' }}>
             Send Reset Instructions
           </Button>
         </form>
       )}
 
       {step === 'RESET' && (
-        <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ backgroundColor: 'var(--info-light)', border: '1px solid var(--info-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: '0.82rem', color: 'var(--info)' }}>
-            Reset token prefilled for verification:
+        <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ backgroundColor: 'var(--info-light)', border: '1px solid var(--info-border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', fontSize: '0.8rem', color: 'var(--info-text)' }}>
+            Reset token generated for verification:
           </div>
           <Input
             label="Reset Token"
             value={demoToken}
             onChange={(e) => setDemoToken(e.target.value)}
-            leftIcon={<KeyRound size={17} />}
+            leftIcon={<KeyRound size={16} />}
             required
           />
           <Input
@@ -94,20 +94,20 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
             onChange={(e) => setNewPassword(e.target.value)}
             required
           />
-          <Button type="submit" isLoading={isLoading} style={{ marginTop: '8px' }}>
-            Set New Password
+          <Button type="submit" isLoading={isLoading} style={{ marginTop: '6px' }}>
+            Update Password
           </Button>
         </form>
       )}
 
       {step === 'DONE' && (
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', padding: '12px 0' }}>
-          <CheckCircle2 size={48} color="var(--success)" />
-          <h4 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Password Updated Successfully!</h4>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-            Your account security credentials have been updated.
+        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '10px 0' }}>
+          <CheckCircle2 size={40} color="var(--success)" />
+          <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)' }}>Password Updated Successfully!</h4>
+          <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+            Your account credentials have been updated. You can now log in.
           </p>
-          <Button onClick={onClose} style={{ marginTop: '10px' }}>
+          <Button onClick={onClose} style={{ marginTop: '8px' }}>
             Back to Sign In
           </Button>
         </div>

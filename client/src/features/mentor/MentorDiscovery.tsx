@@ -15,14 +15,9 @@ import {
   Search,
   Filter,
   Star,
-  ShieldCheck,
   Building,
   GraduationCap,
-  Users,
-  Briefcase,
-  Sparkles,
-  ArrowUpDown,
-  Check
+  ArrowUpDown
 } from 'lucide-react';
 
 interface MentorDiscoveryProps {
@@ -87,36 +82,40 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
     setIsRequestModalOpen(true);
   };
 
+  const hasActiveFilters = selectedTech.length > 0 || minExp > 0 || minRating > 0 || companyFilter || search;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }} className="animate-fade-in">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} className="animate-fade-in">
       {/* Header */}
       <div>
-        <Badge variant="verified" style={{ marginBottom: '8px' }}>Verified Industry Mentors</Badge>
-        <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <Badge variant="verified">Verified Industry Mentors</Badge>
+        </div>
+        <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
           Discover Mentors & Engineering Leads
         </h1>
-        <p style={{ fontSize: '0.96rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-          Connect 1-on-1 with verified software engineers, architects, and research scientists from top tech firms.
+        <p style={{ fontSize: '0.92rem', color: 'var(--text-muted)' }}>
+          Connect 1-on-1 with verified software engineers, architects, and research scientists.
         </p>
       </div>
 
       {/* Search & Sort Bar */}
-      <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
         <form onSubmit={handleSearchSubmit} style={{ flex: 1, minWidth: '280px', display: 'flex', gap: '8px' }}>
           <Input
             placeholder="Search by mentor name, company (Google, Microsoft), title, or topic..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            leftIcon={<Search size={18} />}
+            leftIcon={<Search size={16} />}
           />
           <Button type="submit" variant="primary">
             Search
           </Button>
         </form>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '0.86rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <ArrowUpDown size={15} /> Sort:
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <ArrowUpDown size={14} /> Sort:
           </span>
           <Select
             value={sortBy}
@@ -124,7 +123,7 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
             options={[
               { value: 'rating', label: 'Highest Rated' },
               { value: 'experience', label: 'Most Experience' },
-              { value: 'students', label: 'Most Students Helped' },
+              { value: 'students', label: 'Most Students Guided' },
               { value: 'name', label: 'Alphabetical' }
             ]}
           />
@@ -132,15 +131,15 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
       </div>
 
       {/* Main Filter Sidebar & Mentors Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '28px', alignItems: 'start' }} className="discovery-layout">
+      <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', gap: '24px', alignItems: 'start' }} className="discovery-layout">
         {/* Filter Sidebar */}
-        <Card padding="md" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.94rem' }}>
-              <Filter size={16} color="var(--primary)" />
+        <Card padding="md" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.88rem' }}>
+              <Filter size={15} color="var(--primary)" />
               <span>Filters</span>
             </div>
-            {(selectedTech.length > 0 || minExp > 0 || minRating > 0 || companyFilter) && (
+            {hasActiveFilters && (
               <button
                 onClick={() => {
                   setSelectedTech([]);
@@ -149,7 +148,7 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
                   setCompanyFilter('');
                   setSearch('');
                 }}
-                style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer' }}
               >
                 Clear all
               </button>
@@ -158,10 +157,10 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
 
           {/* Tech Filter */}
           <div>
-            <label style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '8px' }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '8px' }}>
               Technologies
             </label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
               {techOptions.map(tech => {
                 const isSelected = selectedTech.includes(tech);
                 return (
@@ -169,14 +168,15 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
                     key={tech}
                     onClick={() => toggleTechFilter(tech)}
                     style={{
-                      padding: '4px 10px',
-                      borderRadius: 'var(--radius-full)',
-                      border: isSelected ? '1.5px solid var(--primary)' : '1px solid var(--border)',
+                      padding: '4px 9px',
+                      borderRadius: 'var(--radius-xs)',
+                      border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border)',
                       backgroundColor: isSelected ? 'var(--primary-light)' : '#FFFFFF',
                       color: isSelected ? 'var(--primary)' : 'var(--text-main)',
-                      fontSize: '0.78rem',
+                      fontSize: '0.76rem',
                       fontWeight: isSelected ? 700 : 500,
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     {tech} {isSelected && '✓'}
@@ -188,7 +188,7 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
 
           {/* Min Experience */}
           <div>
-            <label style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '8px' }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '6px' }}>
               Minimum Experience
             </label>
             <Select
@@ -206,7 +206,7 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
 
           {/* Min Rating */}
           <div>
-            <label style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '8px' }}>
+            <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '6px' }}>
               Minimum Rating
             </label>
             <Select
@@ -225,15 +225,15 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
         {/* Mentors Grid */}
         <div>
           {isLoading ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
               <CardSkeleton />
               <CardSkeleton />
               <CardSkeleton />
             </div>
           ) : mentors.length === 0 ? (
             <EmptyState
-              icon={<Compass size={32} />}
-              title="No mentors matched your filters"
+              icon={<Compass size={28} />}
+              title="No mentors match your filters"
               description="Try adjusting your technology or experience filters to find matching mentors."
               actionText="Reset All Filters"
               onAction={() => {
@@ -244,17 +244,17 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
               }}
             />
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
               {mentors.map((mentor) => (
                 <Card
                   key={mentor.userId}
                   hoverable
                   padding="md"
-                  style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}
+                  style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}
                 >
                   <div>
                     {/* Top Row: Avatar & Details */}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '10px' }}>
                       <Avatar
                         name={mentor.user.fullName}
                         src={mentor.user.avatarUrl}
@@ -263,36 +263,34 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
                         isOnline={true}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <h3 style={{ fontSize: '1.08rem', fontWeight: 800, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {mentor.user.fullName}
-                          </h3>
-                        </div>
-                        <p style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--primary)', lineHeight: 1.3 }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {mentor.user.fullName}
+                        </h3>
+                        <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--primary)', lineHeight: 1.3 }}>
                           {mentor.title}
                         </p>
-                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                        <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                           <Building size={12} /> {mentor.company}
                         </p>
                       </div>
                     </div>
 
                     {/* Bio */}
-                    <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '14px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '12px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {mentor.bio}
                     </p>
 
                     {/* Tech Pills */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '12px' }}>
                       {mentor.technologies.slice(0, 4).map(tech => (
                         <span
                           key={tech}
                           style={{
                             backgroundColor: 'var(--bg-subtle)',
-                            color: 'var(--text-main)',
-                            padding: '2px 8px',
+                            color: 'var(--text-secondary)',
+                            padding: '2px 7px',
                             borderRadius: 'var(--radius-xs)',
-                            fontSize: '0.74rem',
+                            fontSize: '0.72rem',
                             fontWeight: 600
                           }}
                         >
@@ -301,23 +299,23 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
                       ))}
                       {mentor.technologies.length > 4 && (
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', padding: '2px 4px' }}>
-                          +{mentor.technologies.length - 4} more
+                          +{mentor.technologies.length - 4}
                         </span>
                       )}
                     </div>
                   </div>
 
                   {/* Footer Metrics & Actions */}
-                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, color: 'var(--text-main)' }}>
-                        <Star size={15} color="#F59E0B" fill="#F59E0B" />
+                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontWeight: 700, color: 'var(--text-main)' }}>
+                        <Star size={14} color="#F59E0B" fill="#F59E0B" />
                         <span>{mentor.rating.toFixed(1)}</span>
-                        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>
                           ({mentor.reviewsCount} reviews)
                         </span>
                       </div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>
                         <strong>{mentor.studentsHelpedCount}</strong> students helped
                       </div>
                     </div>
@@ -328,7 +326,7 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
                         variant="secondary"
                         onClick={() => onNavigate('mentor-profile', { mentorId: mentor.userId })}
                       >
-                        View Profile
+                        Profile
                       </Button>
                       <Button
                         size="sm"

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { getOptimizedCloudinaryUrl } from '../../utils/cloudinary.js';
 
 export interface AvatarProps {
   src?: string;
@@ -10,6 +11,16 @@ export interface AvatarProps {
   style?: React.CSSProperties;
 }
 
+const PALETTES = [
+  { bg: '#EEF2FF', text: '#4338CA' },
+  { bg: '#ECFDF5', text: '#065F46' },
+  { bg: '#EFF6FF', text: '#1D4ED8' },
+  { bg: '#F5F3FF', text: '#6D28D9' },
+  { bg: '#FFFBEB', text: '#92400E' },
+  { bg: '#FDF2F8', text: '#9D174D' },
+  { bg: '#F0FDF4', text: '#15803D' }
+];
+
 export const Avatar: React.FC<AvatarProps> = ({
   src,
   name,
@@ -18,49 +29,59 @@ export const Avatar: React.FC<AvatarProps> = ({
   isVerified,
   style
 }) => {
+  const [imgFailed, setImgFailed] = useState(false);
+
   const getDimension = () => {
     switch (size) {
-      case 'xs': return 28;
-      case 'sm': return 36;
-      case 'lg': return 56;
-      case 'xl': return 80;
+      case 'xs': return 26;
+      case 'sm': return 32;
+      case 'lg': return 48;
+      case 'xl': return 64;
       case 'md':
       default:
-        return 44;
+        return 38;
     }
   };
 
   const dim = getDimension();
-  const initials = name
+  const initials = (name || 'User')
     .split(' ')
+    .filter(Boolean)
     .map(p => p[0])
     .slice(0, 2)
     .join('')
-    .toUpperCase();
+    .toUpperCase() || 'U';
 
-  // Pick deterministic pastel hue based on name
-  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const hue = hash % 360;
+  const hash = (name || 'U').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const palette = PALETTES[hash % PALETTES.length];
+
+  const optimizedSrc = src
+    ? getOptimizedCloudinaryUrl(src, {
+        width: dim * 2, // 2x for Retina sharp rendering
+        height: dim * 2,
+        crop: 'fill',
+        gravity: 'face',
+        quality: 'auto:good'
+      })
+    : undefined;
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block', width: dim, height: dim, flexShrink: 0, ...style }}>
-      {src ? (
+    <div style={{ position: 'relative', display: 'inline-flex', width: dim, height: dim, flexShrink: 0, ...style }}>
+      {optimizedSrc && !imgFailed ? (
         <img
-          src={src}
+          src={optimizedSrc}
           alt={name}
+          loading="lazy"
+          decoding="async"
           style={{
             width: dim,
             height: dim,
             borderRadius: 'var(--radius-full)',
             objectFit: 'cover',
-            border: '2px solid #FFFFFF',
-            boxShadow: 'var(--shadow-xs)',
+            border: '1px solid rgba(0,0,0,0.06)',
             backgroundColor: '#F1F5F9'
           }}
-          onError={(e) => {
-            // fallback to initials on broken image
-            e.currentTarget.style.display = 'none';
-          }}
+          onError={() => setImgFailed(true)}
         />
       ) : (
         <div
@@ -68,34 +89,35 @@ export const Avatar: React.FC<AvatarProps> = ({
             width: dim,
             height: dim,
             borderRadius: 'var(--radius-full)',
-            backgroundColor: `hsl(${hue}, 65%, 92%)`,
-            color: `hsl(${hue}, 75%, 35%)`,
+            backgroundColor: palette.bg,
+            color: palette.text,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 700,
-            fontSize: dim * 0.38,
-            border: '2px solid #FFFFFF',
-            boxShadow: 'var(--shadow-xs)'
+            fontSize: Math.max(10, Math.floor(dim * 0.38)),
+            border: '1px solid rgba(0,0,0,0.05)',
+            userSelect: 'none'
           }}
         >
           {initials}
         </div>
       )}
 
-      {/* Online indicator dot */}
+      {/* Online indicator */}
       {isOnline !== undefined && (
         <span
           style={{
             position: 'absolute',
-            bottom: 0,
-            right: 0,
-            width: Math.max(10, dim * 0.26),
-            height: Math.max(10, dim * 0.26),
+            bottom: -1,
+            right: -1,
+            width: Math.max(8, Math.floor(dim * 0.26)),
+            height: Math.max(8, Math.floor(dim * 0.26)),
             borderRadius: '50%',
             backgroundColor: isOnline ? 'var(--success)' : 'var(--text-subtle)',
             border: '2px solid #FFFFFF'
           }}
+          title={isOnline ? 'Online' : 'Offline'}
         />
       )}
 
@@ -113,12 +135,12 @@ export const Avatar: React.FC<AvatarProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: 'var(--shadow-xs)',
-            border: '1.5px solid #FFFFFF'
+            border: '1.5px solid #FFFFFF',
+            boxShadow: 'var(--shadow-xs)'
           }}
           title="Verified Industry Mentor"
         >
-          <ShieldCheck size={Math.max(10, dim * 0.28)} />
+          <ShieldCheck size={Math.max(10, Math.floor(dim * 0.28))} />
         </span>
       )}
     </div>

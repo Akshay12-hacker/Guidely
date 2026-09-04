@@ -57,6 +57,7 @@ export class MongoAuthRepository implements IAuthRepository {
       role: user.role,
       fullName: user.fullName,
       avatarUrl: user.avatarUrl,
+      avatarPublicId: (user as any).avatarPublicId,
       bio: user.bio,
       headline: user.headline,
       status: user.status
@@ -70,15 +71,37 @@ export class MongoAuthRepository implements IAuthRepository {
   }
 
   async updateProfile(userId: string, data: Partial<User>): Promise<User | null> {
+    const updatePayload: Record<string, any> = {};
+    const unsetPayload: Record<string, any> = {};
+
+    if (data.fullName !== undefined) updatePayload.fullName = data.fullName;
+    if (data.bio !== undefined) updatePayload.bio = data.bio;
+    if (data.headline !== undefined) updatePayload.headline = data.headline;
+    if (data.status !== undefined) updatePayload.status = data.status;
+
+    if ('avatarUrl' in data) {
+      if (!data.avatarUrl) {
+        unsetPayload.avatarUrl = 1;
+      } else {
+        updatePayload.avatarUrl = data.avatarUrl;
+      }
+    }
+
+    if ('avatarPublicId' in data) {
+      if (!data.avatarPublicId) {
+        unsetPayload.avatarPublicId = 1;
+      } else {
+        updatePayload.avatarPublicId = data.avatarPublicId;
+      }
+    }
+
+    const mongoUpdate: Record<string, any> = {};
+    if (Object.keys(updatePayload).length > 0) mongoUpdate.$set = updatePayload;
+    if (Object.keys(unsetPayload).length > 0) mongoUpdate.$unset = unsetPayload;
+
     const updated = await UserModel.findByIdAndUpdate(
       userId,
-      {
-        fullName: data.fullName,
-        avatarUrl: data.avatarUrl,
-        bio: data.bio,
-        headline: data.headline,
-        status: data.status
-      },
+      mongoUpdate,
       { returnDocument: 'after' }
     ).lean();
 
@@ -93,6 +116,7 @@ export class MongoAuthRepository implements IAuthRepository {
       role: doc.role as UserRole,
       fullName: doc.fullName,
       avatarUrl: doc.avatarUrl,
+      avatarPublicId: doc.avatarPublicId,
       bio: doc.bio,
       headline: doc.headline,
       status: doc.status as UserStatus,

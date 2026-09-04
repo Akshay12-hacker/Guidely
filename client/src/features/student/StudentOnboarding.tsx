@@ -11,6 +11,8 @@ import { Textarea } from '../../components/ui/Textarea.js';
 import { Select } from '../../components/ui/Select.js';
 import { ProgressBar } from '../../components/ui/ProgressBar.js';
 import { Badge } from '../../components/ui/Badge.js';
+import { Avatar } from '../../components/ui/Avatar.js';
+import { ProfilePhotoModal } from '../../components/ui/ProfilePhotoModal.js';
 import {
   User,
   GraduationCap,
@@ -23,7 +25,8 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
-  Save
+  Save,
+  Camera
 } from 'lucide-react';
 
 interface StudentOnboardingProps {
@@ -36,6 +39,7 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [profile, setProfile] = useState<Partial<StudentProfile>>({
     college: 'IIT Delhi',
     degree: 'B.Tech Computer Science and Engineering',
@@ -195,6 +199,32 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
             <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
               Tell mentors a little about who you are and where they can find your work.
             </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+              <Avatar
+                name={user?.fullName || 'Student'}
+                src={user?.avatarUrl}
+                size="lg"
+              />
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)', display: 'block' }}>
+                  Student Profile Photo
+                </span>
+                <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  Cloudinary face-crop & fast CDN loading across project spaces
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => setIsPhotoModalOpen(true)}
+                leftIcon={<Camera size={14} />}
+              >
+                {user?.avatarUrl ? 'Change Photo' : 'Upload Photo'}
+              </Button>
+            </div>
+
             <Input
               label="Full Name"
               value={user?.fullName || ''}
@@ -483,6 +513,11 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
           )}
         </div>
       </Card>
+
+      <ProfilePhotoModal
+        isOpen={isPhotoModalOpen}
+        onClose={() => setIsPhotoModalOpen(false)}
+      />
     </div>
   );
 };

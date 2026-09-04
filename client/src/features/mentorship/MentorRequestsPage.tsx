@@ -13,12 +13,6 @@ import { EmptyState } from '../../components/ui/EmptyState.js';
 import {
   BookOpen,
   CheckCircle2,
-  XCircle,
-  HelpCircle,
-  Clock,
-  User,
-  GraduationCap,
-  Sparkles,
   ArrowRight
 } from 'lucide-react';
 
@@ -62,10 +56,10 @@ export const MentorRequestsPage: React.FC<MentorRequestsPageProps> = ({ onNaviga
     try {
       await api.respondToRequest(activeModal.request.id, activeModal.action, notes);
       const actionMsg = activeModal.action === 'ACCEPT'
-        ? 'Mentorship proposal accepted! Project workspace and conversation have been initialized.'
+        ? 'Proposal accepted! Project workspace initialized.'
         : activeModal.action === 'REJECT'
         ? 'Request declined.'
-        : 'More information requested from student.';
+        : 'Information requested from student.';
       showToast('success', 'Response Recorded', actionMsg);
       setActiveModal(null);
       setNotes('');
@@ -78,39 +72,39 @@ export const MentorRequestsPage: React.FC<MentorRequestsPageProps> = ({ onNaviga
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }} className="animate-fade-in">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} className="animate-fade-in">
       <div>
-        <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
           Mentorship Proposals & Inquiries
         </h1>
-        <p style={{ fontSize: '0.94rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '2px' }}>
           Review student project ideas and accept mentorship engagements.
         </p>
       </div>
 
       {isLoading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <CardSkeleton />
           <CardSkeleton />
         </div>
       ) : requests.length === 0 ? (
         <EmptyState
-          icon={<BookOpen size={32} />}
-          title="No pending requests"
+          icon={<BookOpen size={28} />}
+          title="No pending proposals"
           description="You are all caught up! New student project proposals will appear here."
         />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {requests.map(req => (
-            <Card key={req.id} padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <Card key={req.id} padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <Avatar name={req.student?.fullName || 'Student'} src={req.student?.avatarUrl} size="md" />
                   <div>
-                    <h3 style={{ fontSize: '1.18rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>
                       {req.projectTitle}
                     </h3>
-                    <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                       Proposed by: <strong>{req.student?.fullName}</strong> • {req.student?.degree || 'Student'} ({req.student?.college})
                     </p>
                   </div>
@@ -122,42 +116,42 @@ export const MentorRequestsPage: React.FC<MentorRequestsPageProps> = ({ onNaviga
               </div>
 
               {/* Description */}
-              <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '14px 18px', borderRadius: 'var(--radius-md)', fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: 1.6 }}>
+              <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '12px 14px', borderRadius: 'var(--radius-sm)', fontSize: '0.88rem', color: 'var(--text-main)', lineHeight: 1.55 }}>
                 <strong>Project Proposal:</strong> {req.projectDescription}
               </div>
 
               {/* Key Details Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', fontSize: '0.86rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '0.84rem' }}>
                 <div>
-                  <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.78rem', textTransform: 'uppercase' }}>Tech Known</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase' }}>Tech Known</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                     {req.techKnown.map(t => <Badge key={t} variant="neutral" size="sm">{t}</Badge>)}
                   </div>
                 </div>
 
                 <div>
-                  <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.78rem', textTransform: 'uppercase' }}>Help Needed In</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase' }}>Help Needed In</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                     {req.helpNeeded.map(h => <Badge key={h} variant="warning" size="sm">{h}</Badge>)}
                   </div>
                 </div>
 
                 <div>
-                  <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.78rem', textTransform: 'uppercase' }}>Preferred Schedule</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '0.74rem', textTransform: 'uppercase' }}>Schedule</span>
                   <p style={{ marginTop: '4px', color: 'var(--text-main)', fontWeight: 500 }}>{req.preferredTimes}</p>
                 </div>
               </div>
 
-              {/* Student's additional note if any */}
+              {/* Additional message if present */}
               {req.additionalMessage && (
-                <div style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', padding: '10px 14px', borderRadius: 'var(--radius-sm)', fontSize: '0.84rem', color: '#075985' }}>
-                  <strong>Student Note / Clarification:</strong> "{req.additionalMessage}"
+                <div style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD', padding: '10px 14px', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', color: '#075985' }}>
+                  <strong>Student Clarification:</strong> "{req.additionalMessage}"
                 </div>
               )}
 
               {/* Action Buttons for Pending or Info Provided */}
               {(req.status === 'PENDING' || req.status === 'INFO_PROVIDED' || req.status === 'INFO_REQUESTED') && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -176,7 +170,7 @@ export const MentorRequestsPage: React.FC<MentorRequestsPageProps> = ({ onNaviga
                       setNotes('');
                     }}
                   >
-                    Request More Info
+                    Request Info
                   </Button>
                   <Button
                     variant="success"
@@ -185,16 +179,16 @@ export const MentorRequestsPage: React.FC<MentorRequestsPageProps> = ({ onNaviga
                       setActiveModal({ request: req, action: 'ACCEPT' });
                       setNotes('Excited to collaborate with you on this project!');
                     }}
-                    leftIcon={<CheckCircle2 size={16} />}
+                    leftIcon={<CheckCircle2 size={15} />}
                   >
-                    Accept Mentorship & Open Workspace
+                    Accept Proposal
                   </Button>
                 </div>
               )}
 
               {req.status === 'ACCEPTED' && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-                  <Button onClick={() => onNavigate('mentor-students')} rightIcon={<ArrowRight size={16} />}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+                  <Button size="sm" onClick={() => onNavigate('mentor-students')} rightIcon={<ArrowRight size={14} />}>
                     View Active Student Projects
                   </Button>
                 </div>
@@ -212,21 +206,21 @@ export const MentorRequestsPage: React.FC<MentorRequestsPageProps> = ({ onNaviga
           activeModal?.action === 'ACCEPT'
             ? 'Accept Mentorship Proposal'
             : activeModal?.action === 'REJECT'
-            ? 'Decline Request'
-            : 'Request More Information'
+            ? 'Decline Proposal'
+            : 'Request Additional Information'
         }
       >
-        <form onSubmit={handleRespond} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+        <form onSubmit={handleRespond} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)' }}>
             {activeModal?.action === 'ACCEPT'
               ? 'Accepting will provision a shared Project Workspace and start a direct conversation with the student.'
               : activeModal?.action === 'REJECT'
-              ? 'Please provide a brief reason or feedback for the student.'
-              : 'Specify what details or clarifications you need before deciding.'}
+              ? 'Please provide constructive feedback or a brief reason for declining.'
+              : 'Specify what details or clarifications you need from the student.'}
           </p>
 
           <Textarea
-            label={activeModal?.action === 'ACCEPT' ? 'Welcome Note to Student' : 'Feedback / Inquiry Notes'}
+            label={activeModal?.action === 'ACCEPT' ? 'Welcome Note to Student' : 'Feedback / Inquiry Details'}
             placeholder="Write your note here..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -234,7 +228,7 @@ export const MentorRequestsPage: React.FC<MentorRequestsPageProps> = ({ onNaviga
             required={activeModal?.action !== 'ACCEPT'}
           />
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
             <Button variant="ghost" type="button" onClick={() => setActiveModal(null)}>
               Cancel
             </Button>

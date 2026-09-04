@@ -20,17 +20,17 @@ export const Card: React.FC<CardProps> = ({
     switch (padding) {
       case 'none': return '0px';
       case 'sm': return '16px';
-      case 'lg': return '32px';
+      case 'lg': return '28px';
       case 'md':
       default:
-        return '24px';
+        return '20px';
     }
   };
 
   const getBorderColor = () => {
     switch (borderVariant) {
       case 'highlight': return 'var(--primary-border)';
-      case 'subtle': return '#F1F5F9';
+      case 'subtle': return 'var(--border-subtle)';
       case 'default':
       default:
         return 'var(--border)';
@@ -40,29 +40,11 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: 'var(--radius-lg)',
-        border: `1px solid ${getBorderColor()}`,
-        boxShadow: hoverable ? 'var(--shadow-sm)' : 'var(--shadow-xs)',
         padding: getPaddingStyle(),
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+        borderColor: getBorderColor(),
         ...style
       }}
-      className={`guidely-card ${hoverable ? 'hoverable-card' : ''} ${className}`}
-      onMouseEnter={(e) => {
-        if (hoverable) {
-          e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-          e.currentTarget.style.borderColor = 'var(--border-hover)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (hoverable) {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-          e.currentTarget.style.borderColor = getBorderColor();
-        }
-      }}
+      className={`guidely-card ${hoverable ? 'guidely-card-hoverable' : ''} ${className}`}
       {...props}
     >
       {children}

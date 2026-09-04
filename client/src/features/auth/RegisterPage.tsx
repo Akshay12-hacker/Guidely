@@ -72,50 +72,50 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '32px 16px',
+        padding: '36px 16px',
         backgroundColor: 'var(--bg-body)'
       }}
     >
-      <div style={{ width: '100%', maxWidth: '480px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ width: '100%', maxWidth: '440px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {/* Brand Header */}
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div
             onClick={() => onNavigate('landing')}
             style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: 'var(--radius-md)',
+              width: '38px',
+              height: '38px',
+              borderRadius: 'var(--radius-sm)',
               backgroundColor: 'var(--primary)',
               color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              marginBottom: '16px',
-              boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
+              marginBottom: '14px',
+              boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)'
             }}
           >
-            <Compass size={24} />
+            <Compass size={22} />
           </div>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
             Create your Guidly Account
           </h2>
-          <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Join a community of builders and seasoned industry mentors
+          <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Join a community of builders and verified industry mentors
           </p>
         </div>
 
         {/* Register Card */}
-        <Card padding="lg" style={{ boxShadow: 'var(--shadow-lg)' }}>
+        <Card padding="lg" style={{ boxShadow: 'var(--shadow-md)' }}>
           {error && (
             <div
               style={{
                 backgroundColor: 'var(--danger-light)',
                 border: '1px solid var(--danger-border)',
                 borderRadius: 'var(--radius-sm)',
-                padding: '10px 14px',
-                color: 'var(--danger)',
-                fontSize: '0.84rem',
+                padding: '9px 12px',
+                color: 'var(--danger-text)',
+                fontSize: '0.82rem',
                 marginBottom: '16px',
                 fontWeight: 500
               }}
@@ -124,13 +124,13 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {/* Role Switcher */}
             <div>
-              <label style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-main)', display: 'block', marginBottom: '8px' }}>
+              <label style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-main)', display: 'block', marginBottom: '6px' }}>
                 I am joining as a:
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <button
                   type="button"
                   onClick={() => setRole('STUDENT')}
@@ -138,19 +138,19 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px',
-                    padding: '12px',
+                    gap: '6px',
+                    padding: '9px',
                     borderRadius: 'var(--radius-sm)',
-                    border: role === 'STUDENT' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                    border: role === 'STUDENT' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
                     backgroundColor: role === 'STUDENT' ? 'var(--primary-light)' : '#FFFFFF',
-                    color: role === 'STUDENT' ? 'var(--primary)' : 'var(--text-main)',
+                    color: role === 'STUDENT' ? 'var(--primary)' : 'var(--text-secondary)',
                     fontWeight: 700,
-                    fontSize: '0.9rem',
+                    fontSize: '0.84rem',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <GraduationCap size={18} />
+                  <GraduationCap size={16} />
                   Student
                 </button>
                 <button
@@ -160,19 +160,19 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px',
-                    padding: '12px',
+                    gap: '6px',
+                    padding: '9px',
                     borderRadius: 'var(--radius-sm)',
-                    border: role === 'MENTOR' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                    border: role === 'MENTOR' ? '1.5px solid var(--primary)' : '1px solid var(--border)',
                     backgroundColor: role === 'MENTOR' ? 'var(--primary-light)' : '#FFFFFF',
-                    color: role === 'MENTOR' ? 'var(--primary)' : 'var(--text-main)',
+                    color: role === 'MENTOR' ? 'var(--primary)' : 'var(--text-secondary)',
                     fontWeight: 700,
-                    fontSize: '0.9rem',
+                    fontSize: '0.84rem',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease'
                   }}
                 >
-                  <Briefcase size={18} />
+                  <Briefcase size={16} />
                   Mentor
                 </button>
               </div>
@@ -183,7 +183,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
               placeholder="e.g. Aarav Sharma"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              leftIcon={<User size={17} />}
+              leftIcon={<User size={16} />}
               required
             />
 
@@ -193,7 +193,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
               placeholder="you@college.ac.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              leftIcon={<Mail size={17} />}
+              leftIcon={<Mail size={16} />}
               required
             />
 
@@ -203,18 +203,18 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
               placeholder="At least 6 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              leftIcon={<Lock size={17} />}
+              leftIcon={<Lock size={16} />}
               required
             />
 
-            <Button type="submit" size="lg" isLoading={isLoading} style={{ width: '100%', marginTop: '6px' }}>
+            <Button type="submit" size="md" isLoading={isLoading} style={{ width: '100%', marginTop: '4px' }}>
               Create {role === 'STUDENT' ? 'Student' : 'Mentor'} Account
             </Button>
           </form>
 
-          <div style={{ position: 'relative', margin: '20px 0', textAlign: 'center' }}>
+          <div style={{ position: 'relative', margin: '18px 0', textAlign: 'center' }}>
             <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', backgroundColor: 'var(--border)' }} />
-            <span style={{ position: 'relative', backgroundColor: '#FFFFFF', padding: '0 12px', fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+            <span style={{ position: 'relative', backgroundColor: '#FFFFFF', padding: '0 10px', fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Or Sign Up With
             </span>
           </div>
@@ -222,9 +222,9 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
           <Button
             variant="secondary"
             onClick={handleGoogleSignup}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24">
+            <svg width="16" height="16" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
               <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
               <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
@@ -235,7 +235,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
         </Card>
 
         {/* Footer Link */}
-        <div style={{ textAlign: 'center', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+        <div style={{ textAlign: 'center', fontSize: '0.84rem', color: 'var(--text-muted)' }}>
           Already have an account?{' '}
           <button
             onClick={() => onNavigate('login')}

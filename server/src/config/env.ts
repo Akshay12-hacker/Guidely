@@ -68,7 +68,15 @@ export const env = {
   TRUST_PROXY: process.env.TRUST_PROXY === 'true' || process.env.TRUST_PROXY === '1' || process.env.NODE_ENV === 'production',
 
   // HTTP Limits
-  BODY_LIMIT: process.env.BODY_LIMIT || '10mb'
+  BODY_LIMIT: process.env.BODY_LIMIT || '10mb',
+
+  // Cloudinary Media Management
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || 'Guidely',
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '721675214645412',
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || 'guidely-cloudinary-secret-key-2026-production-ready',
+  get isCloudinaryConfigured(): boolean {
+    return Boolean(this.CLOUDINARY_CLOUD_NAME && this.CLOUDINARY_API_KEY && this.CLOUDINARY_API_SECRET);
+  }
 };
 
 export default env;

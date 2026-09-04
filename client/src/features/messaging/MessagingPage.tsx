@@ -4,46 +4,68 @@ import { useAuth } from '../../context/AuthContext.js';
 import { useWebSocket } from '../../context/WebSocketContext.js';
 import { useToast } from '../../context/ToastContext.js';
 import { Conversation, Message } from '../../../../shared/types.js';
-import { Card } from '../../components/ui/Card.js';
 import { Button } from '../../components/ui/Button.js';
 import { Avatar } from '../../components/ui/Avatar.js';
 import { Input } from '../../components/ui/Input.js';
+import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton.js';
 import { EmptyState } from '../../components/ui/EmptyState.js';
+import { WhatsAppMediaViewer } from '../../components/ui/WhatsAppMediaViewer.js';
+import { MediaSaveButton } from '../../components/ui/MediaSaveButton.js';
+import { getOptimizedCloudinaryUrl, getVideoPosterUrl, formatBytes } from '../../utils/cloudinary.js';
 import {
   MessageSquare,
   Send,
-  Paperclip,
   Search,
+  Video,
   Check,
   CheckCheck,
-  Phone,
-  Video,
-  FileText,
-  Clock
+  Paperclip,
+  Play,
+  Loader2,
+  FileText
 } from 'lucide-react';
 
 export const MessagingPage: React.FC = () => {
   const { user } = useAuth();
-  const { onlineUsers, latestMessage, typingState, sendTyping, sendReadReceipt } = useWebSocket();
   const { showToast } = useToast();
+  const { isConnected: _isConnected, sendTyping: _sendTyping, typingState: _typingState } = useWebSocket();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [searchFilter, setSearchFilter] = useState('');
   const [isLoadingConvs, setIsLoadingConvs] = useState(true);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isLoadingMsgs, setIsLoadingMsgs] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // WhatsApp-style Media Lightbox Viewer state
+  const [viewerMedia, setViewerMedia] = useState<{
+    isOpen: boolean;
+    url: string;
+    title?: string;
+    type?: 'image' | 'video' | 'raw';
+    senderName?: string;
+    timestamp?: string;
+    size?: number;
+  }>({
+    isOpen: false,
+    url: ''
+  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const typingTimerRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isStudent = user?.role === 'STUDENT';
 
   const fetchConversations = async () => {
+    setIsLoadingConvs(true);
     try {
       const data = await api.getConversations();
       setConversations(data);
-      if (data.length > 0 && !activeConvId) {
-        setActiveConvId(data[0].id);
+      if (data.length > 0 && !activeConversationId) {
+        setActiveConversationId(data[0].id);
       }
     } catch {
       // fallback
@@ -56,150 +78,157 @@ export const MessagingPage: React.FC = () => {
     fetchConversations();
   }, []);
 
-  // Fetch messages when active conversation changes
   useEffect(() => {
-    if (!activeConvId) return;
+    if (!activeConversationId) return;
 
     const fetchMessages = async () => {
-      setIsLoadingMessages(true);
+      setIsLoadingMsgs(true);
       try {
-        const res = await api.getMessages(activeConvId);
-        setMessages(res.messages);
+        const res = await api.getMessages(activeConversationId);
+        setMessages(res.messages || []);
+        await api.markConversationRead(activeConversationId);
       } catch {
         // fallback
       } finally {
-        setIsLoadingMessages(false);
+        setIsLoadingMsgs(false);
       }
     };
-
     fetchMessages();
-  }, [activeConvId]);
+  }, [activeConversationId]);
 
-  // Listen for incoming WebSocket messages
-  useEffect(() => {
-    if (latestMessage) {
-      if (latestMessage.conversationId === activeConvId) {
-        setMessages(prev => [...prev, latestMessage.message]);
-        if (activeConvId && user) {
-          api.markConversationRead(activeConvId);
-        }
-      }
-      fetchConversations();
-    }
-  }, [latestMessage, activeConvId, user]);
-
-  // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const activeConversation = conversations.find(c => c.id === activeConvId);
-  const partner = user?.role === 'STUDENT' ? activeConversation?.mentor : activeConversation?.student;
-  const partnerId = user?.role === 'STUDENT' ? activeConversation?.mentorId : activeConversation?.studentId;
-  const isPartnerOnline = partnerId ? onlineUsers.has(partnerId) : false;
+  const activeConversation = conversations.find(c => c.id === activeConversationId);
+  const otherParticipant = activeConversation
+    ? isStudent ? activeConversation.mentor : activeConversation.student
+    : undefined;
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !activeConvId) return;
+    if (!textInput.trim() || !activeConversationId) return;
 
-    const text = inputText.trim();
-    setInputText('');
+    const currentText = textInput.trim();
+    setTextInput('');
 
     try {
-      const sentMsg = await api.sendMessage(activeConvId, { text });
-      setMessages(prev => [...prev, sentMsg]);
-      fetchConversations();
+      const newMsg = await api.sendMessage(activeConversationId, { text: currentText });
+      setMessages(prev => [...prev, newMsg]);
+
+      // Update conversations list snippet
+      setConversations(prev => prev.map(c => {
+        if (c.id === activeConversationId) {
+          return {
+            ...c,
+            lastMessageText: currentText,
+            lastMessageAt: new Date().toISOString()
+          };
+        }
+        return c;
+      }));
+    } catch {
+      // fallback
+    }
+  };
+
+  const handleAttachFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeConversationId) return;
+
+    // Validate size (max 50MB for video, 10MB for image)
+    const isVid = file.type.startsWith('video/');
+    const maxSize = isVid ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      showToast('error', 'File Too Large', `Exceeds limit of ${(maxSize / (1024 * 1024)).toFixed(0)}MB for Cloudinary Free Tier.`);
+      return;
+    }
+
+    setIsUploadingMedia(true);
+    setUploadProgress(15);
+
+    try {
+      const uploadRes = await api.uploadMedia(file, 'messages', (pct) => {
+        setUploadProgress(Math.max(15, pct));
+      });
+
+      const messageText = textInput.trim() || (isVid ? 'Shared a video demo' : 'Shared an image attachment');
+      setTextInput('');
+
+      const newMsg = await api.sendMessage(activeConversationId, {
+        text: messageText,
+        attachments: [
+          {
+            name: uploadRes.originalFilename || file.name,
+            url: uploadRes.secureUrl || uploadRes.url,
+            type: uploadRes.resourceType === 'video' ? 'video/mp4' : file.type,
+            size: uploadRes.bytes || file.size
+          }
+        ]
+      });
+
+      setMessages(prev => [...prev, newMsg]);
+      showToast('success', 'Media Sent', 'Uploaded to Cloudinary and shared in chat.');
     } catch (err: any) {
-      showToast('error', 'Send Failed', err.message);
+      showToast('error', 'Upload Failed', err.message || 'Could not upload attachment.');
+    } finally {
+      setIsUploadingMedia(false);
+      setUploadProgress(0);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputText(e.target.value);
-    if (partnerId && activeConvId) {
-      sendTyping(partnerId, activeConvId, true);
-      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-      typingTimerRef.current = setTimeout(() => {
-        sendTyping(partnerId, activeConvId, false);
-      }, 2000);
-    }
-  };
-
-  const isTyping = activeConvId && typingState[activeConvId]?.isTyping;
 
   const filteredConversations = conversations.filter(c => {
-    const p = user?.role === 'STUDENT' ? c.mentor : c.student;
-    return p?.fullName?.toLowerCase().includes(searchFilter.toLowerCase()) ||
-           c.lastMessageText?.toLowerCase().includes(searchFilter.toLowerCase());
+    const other = isStudent ? c.mentor : c.student;
+    if (!searchQuery.trim()) return true;
+    return other?.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.lastMessageText?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   return (
-    <div
-      style={{
-        height: 'calc(100vh - var(--header-height) - 70px)',
-        minHeight: '520px',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 'var(--radius-xl)',
-        border: '1px solid var(--border)',
-        boxShadow: 'var(--shadow-md)',
-        display: 'grid',
-        gridTemplateColumns: '320px 1fr',
-        overflow: 'hidden'
-      }}
-      className="messaging-container animate-fade-in"
-    >
+    <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', height: 'calc(100vh - 140px)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', backgroundColor: '#FFFFFF', boxShadow: 'var(--shadow-sm)' }}>
       {/* Left Sidebar: Conversations List */}
-      <div
-        style={{
-          borderRight: '1px solid var(--border)',
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: '#FFFFFF'
-        }}
-      >
-        {/* Search header */}
+      <div style={{ borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-card)' }}>
         <div style={{ padding: '16px', borderBottom: '1px solid var(--border)' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '12px' }}>
-            Messages
-          </h2>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '12px' }}>Direct Messages</h2>
           <Input
-            placeholder="Search chats..."
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            leftIcon={<Search size={16} />}
+            placeholder="Search conversations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            leftIcon={<Search size={15} />}
           />
         </div>
 
-        {/* List */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {isLoadingConvs ? (
-            <div style={{ padding: '16px', fontSize: '0.86rem', color: 'var(--text-muted)' }}>
-              Loading conversations...
+            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <LoadingSkeleton height="48px" />
+              <LoadingSkeleton height="48px" />
+              <LoadingSkeleton height="48px" />
             </div>
           ) : filteredConversations.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-              No active conversations yet.
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.86rem' }}>
+              No conversations found.
             </div>
           ) : (
             filteredConversations.map(conv => {
-              const p = user?.role === 'STUDENT' ? conv.mentor : conv.student;
-              const pId = user?.role === 'STUDENT' ? conv.mentorId : conv.studentId;
-              const isOnline = pId ? onlineUsers.has(pId) : false;
-              const isActive = conv.id === activeConvId;
-              const unreadCount = user?.role === 'STUDENT' ? conv.unreadStudentCount : conv.unreadMentorCount;
+              const other = isStudent ? conv.mentor : conv.student;
+              const isActive = conv.id === activeConversationId;
+              const unreadCount = isStudent ? conv.unreadStudentCount : conv.unreadMentorCount;
 
               return (
                 <div
                   key={conv.id}
-                  onClick={() => setActiveConvId(conv.id)}
+                  onClick={() => setActiveConversationId(conv.id)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
-                    padding: '14px 16px',
-                    borderBottom: '1px solid #F1F5F9',
-                    backgroundColor: isActive ? 'var(--primary-light)' : 'transparent',
+                    padding: '12px 16px',
                     cursor: 'pointer',
+                    backgroundColor: isActive ? 'var(--primary-light)' : 'transparent',
+                    borderLeft: isActive ? '3px solid var(--primary)' : '3px solid transparent',
+                    borderBottom: '1px solid var(--border)',
                     transition: 'background-color 0.15s ease'
                   }}
                   onMouseEnter={(e) => {
@@ -209,33 +238,32 @@ export const MessagingPage: React.FC = () => {
                     if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  <Avatar name={p?.fullName || 'User'} src={p?.avatarUrl} size="md" isOnline={isOnline} />
+                  <Avatar
+                    name={other?.fullName || 'User'}
+                    src={other?.avatarUrl}
+                    size="md"
+                    isOnline={true}
+                  />
+
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {p?.fullName}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {other?.fullName}
                       </span>
                       {conv.lastMessageAt && (
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                          {new Date(conv.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)' }}>
+                          {new Date(conv.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                         </span>
                       )}
                     </div>
-                    <p style={{ fontSize: '0.8rem', color: unreadCount > 0 ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: unreadCount > 0 ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
-                      {conv.lastMessageText || 'No messages yet'}
+
+                    <p style={{ fontSize: '0.8rem', color: unreadCount > 0 ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: unreadCount > 0 ? 700 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>
+                      {conv.lastMessageText || 'Start conversation...'}
                     </p>
                   </div>
+
                   {unreadCount > 0 && (
-                    <span
-                      style={{
-                        backgroundColor: 'var(--primary)',
-                        color: '#FFFFFF',
-                        borderRadius: 'var(--radius-full)',
-                        padding: '2px 7px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700
-                      }}
-                    >
+                    <span style={{ backgroundColor: 'var(--primary)', color: '#FFFFFF', fontSize: '0.7rem', fontWeight: 700, padding: '2px 6px', borderRadius: '10px' }}>
                       {unreadCount}
                     </span>
                   )}
@@ -246,144 +274,293 @@ export const MessagingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Area: Chat Window */}
-      {activeConversation ? (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          {/* Chat Header */}
-          <div
-            style={{
-              padding: '14px 20px',
-              borderBottom: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: '#FFFFFF'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Avatar name={partner?.fullName || 'User'} src={partner?.avatarUrl} size="md" isOnline={isPartnerOnline} />
-              <div>
-                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                  {partner?.fullName}
-                </h4>
-                <span style={{ fontSize: '0.78rem', color: isPartnerOnline ? 'var(--success)' : 'var(--text-muted)', fontWeight: 600 }}>
-                  {isPartnerOnline ? '● Online now' : '○ Offline'}
-                </span>
+      {/* Right Area: Active Chat Window */}
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-body)' }}>
+        {activeConversation && otherParticipant ? (
+          <>
+            {/* Chat Top Header */}
+            <div
+              style={{
+                padding: '12px 20px',
+                borderBottom: '1px solid var(--border)',
+                backgroundColor: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Avatar
+                  name={otherParticipant.fullName}
+                  src={otherParticipant.avatarUrl}
+                  size="md"
+                  isOnline={true}
+                />
+                <div>
+                  <h3 style={{ fontSize: '0.98rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    {otherParticipant.fullName}
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--success)', fontWeight: 600 }}>
+                    Active • Mentorship Workspace
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <a
+                  href={`https://meet.jit.si/guidely-session-${activeConversation.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Button size="sm" variant="secondary" leftIcon={<Video size={14} />}>
+                    Start Video Call
+                  </Button>
+                </a>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Button size="sm" variant="secondary" leftIcon={<Video size={16} />} onClick={() => showToast('info', 'Video Room', 'Launch via Sessions tab for recording support.')}>
-                Video Call
-              </Button>
-            </div>
-          </div>
+            {/* Messages Scroll Area */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {isLoadingMsgs ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <LoadingSkeleton height="36px" width="40%" />
+                  <LoadingSkeleton height="36px" width="55%" style={{ alignSelf: 'flex-end' }} />
+                </div>
+              ) : messages.length === 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.86rem' }}>
+                  Send a message to start collaborating!
+                </div>
+              ) : (
+                messages.map(msg => {
+                  const isMine = msg.senderId === user?.id;
 
-          {/* Messages Feed */}
-          <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: 'var(--bg-body)' }}>
-            {isLoadingMessages ? (
-              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>Loading chat history...</div>
-            ) : messages.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                Say hello to your {user?.role === 'STUDENT' ? 'mentor' : 'student'} to begin collaborating!
-              </div>
-            ) : (
-              messages.map(msg => {
-                const isMine = msg.senderId === user?.id;
-
-                return (
-                  <div
-                    key={msg.id}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: isMine ? 'flex-end' : 'flex-start',
-                      maxWidth: '75%',
-                      alignSelf: isMine ? 'flex-end' : 'flex-start'
-                    }}
-                  >
-                    {!isMine && (
-                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '3px', marginLeft: '4px', fontWeight: 600 }}>
-                        {msg.senderName || 'Mentor'}
-                      </span>
-                    )}
-
+                  return (
                     <div
+                      key={msg.id}
                       style={{
-                        padding: '10px 14px',
-                        borderRadius: isMine ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
-                        backgroundColor: isMine ? 'var(--primary)' : '#FFFFFF',
-                        color: isMine ? '#FFFFFF' : 'var(--text-main)',
-                        border: isMine ? 'none' : '1px solid var(--border)',
-                        boxShadow: 'var(--shadow-xs)',
-                        fontSize: '0.92rem',
-                        lineHeight: 1.45,
-                        wordBreak: 'break-word'
+                        alignSelf: isMine ? 'flex-end' : 'flex-start',
+                        maxWidth: '72%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: isMine ? 'flex-end' : 'flex-start'
                       }}
                     >
-                      {msg.text}
+                      <div
+                        style={{
+                          backgroundColor: isMine ? 'var(--primary)' : '#FFFFFF',
+                          color: isMine ? '#FFFFFF' : 'var(--text-main)',
+                          padding: '9px 13px',
+                          borderRadius: isMine ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                          border: isMine ? 'none' : '1px solid var(--border)',
+                          boxShadow: 'var(--shadow-xs)',
+                          fontSize: '0.88rem',
+                          lineHeight: 1.45,
+                          wordBreak: 'break-word'
+                        }}
+                      >
+                        {/* WhatsApp-Style Shared Media Attachments */}
+                        {msg.attachments && msg.attachments.length > 0 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: msg.text ? '8px' : 0 }}>
+                            {msg.attachments.map((att, idx) => {
+                              const isImg = att.type?.startsWith('image/') || att.url?.match(/\.(png|jpg|jpeg|webp|gif)($|\?)/i) || (!att.type?.includes('video') && !att.url?.includes('/video/'));
+                              const isVid = att.type?.startsWith('video/') || att.url?.includes('/video/') || att.url?.match(/\.(mp4|webm)($|\?)/i);
+
+                              return (
+                                <div
+                                  key={idx}
+                                  style={{
+                                    position: 'relative',
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    border: isMine ? '1px solid rgba(255,255,255,0.2)' : '1px solid var(--border)',
+                                    backgroundColor: isMine ? 'rgba(0,0,0,0.15)' : '#F8FAFC'
+                                  }}
+                                >
+                                  {isImg ? (
+                                    <div
+                                      onClick={() => setViewerMedia({
+                                        isOpen: true,
+                                        url: att.url,
+                                        title: att.name,
+                                        type: 'image',
+                                        senderName: msg.senderName,
+                                        timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                        size: att.size
+                                      })}
+                                      style={{ cursor: 'pointer', textAlign: 'center' }}
+                                    >
+                                      <img
+                                        src={getOptimizedCloudinaryUrl(att.url, { width: 440, quality: 'auto:good' })}
+                                        alt={att.name}
+                                        loading="lazy"
+                                        decoding="async"
+                                        style={{ maxWidth: '100%', maxHeight: '220px', objectFit: 'cover', display: 'block' }}
+                                      />
+                                    </div>
+                                  ) : isVid ? (
+                                    <div
+                                      onClick={() => setViewerMedia({
+                                        isOpen: true,
+                                        url: att.url,
+                                        title: att.name,
+                                        type: 'video',
+                                        senderName: msg.senderName,
+                                        timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                        size: att.size
+                                      })}
+                                      style={{ position: 'relative', cursor: 'pointer' }}
+                                    >
+                                      <img
+                                        src={getVideoPosterUrl(att.url, 440)}
+                                        alt={att.name}
+                                        loading="lazy"
+                                        style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', display: 'block', backgroundColor: '#000' }}
+                                      />
+                                      <div
+                                        style={{
+                                          position: 'absolute',
+                                          top: '50%',
+                                          left: '50%',
+                                          transform: 'translate(-50%, -50%)',
+                                          width: '42px',
+                                          height: '42px',
+                                          borderRadius: '50%',
+                                          backgroundColor: 'rgba(0,0,0,0.6)',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          color: '#FFFFFF'
+                                        }}
+                                      >
+                                        <Play size={20} fill="#FFFFFF" />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div style={{ padding: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <FileText size={20} />
+                                      <div>
+                                        <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{att.name}</div>
+                                        <div style={{ fontSize: '0.72rem', opacity: 0.8 }}>{formatBytes(att.size)}</div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* WhatsApp-Style Save to Device / Gallery overlay button */}
+                                  <div
+                                    style={{
+                                      position: 'absolute',
+                                      bottom: '6px',
+                                      right: '6px',
+                                      zIndex: 3
+                                    }}
+                                  >
+                                    <MediaSaveButton
+                                      mediaUrl={att.url}
+                                      filename={att.name}
+                                      fileSizeBytes={att.size}
+                                      variant="iconOnly"
+                                      size="sm"
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {msg.text}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        {isMine && (
+                          msg.isRead ? <CheckCheck size={12} color="var(--primary)" /> : <Check size={12} />
+                        )}
+                      </div>
                     </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px', fontSize: '0.7rem', color: 'var(--text-subtle)' }}>
-                      <span>
-                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      {isMine && <CheckCheck size={13} color="var(--primary)" />}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-
-            {/* Typing indicator */}
-            {isTyping && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                <span className="typing-dot">●</span>
-                <span>{partner?.fullName} is typing...</span>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Chat Input Bar */}
-          <form
-            onSubmit={handleSendMessage}
-            style={{
-              padding: '14px 18px',
-              borderTop: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              backgroundColor: '#FFFFFF'
-            }}
-          >
-            <input
-              type="text"
-              placeholder="Type your message here..."
-              value={inputText}
-              onChange={handleInputChange}
+            {/* Input Bar */}
+            <form
+              onSubmit={handleSendMessage}
               style={{
-                flex: 1,
-                padding: '10px 14px',
-                borderRadius: 'var(--radius-full)',
-                border: '1px solid var(--border)',
-                outline: 'none',
-                fontSize: '0.92rem'
+                padding: '12px 16px',
+                backgroundColor: '#FFFFFF',
+                borderTop: '1px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
-            />
-            <Button type="submit" variant="primary" style={{ borderRadius: 'var(--radius-full)', padding: '10px 18px' }} rightIcon={<Send size={15} />}>
-              Send
-            </Button>
-          </form>
-        </div>
-      ) : (
-        <EmptyState
-          icon={<MessageSquare size={36} />}
-          title="No Conversation Selected"
-          description="Select a conversation from the sidebar to chat in real time."
-        />
-      )}
+            >
+              {/* Attachment Picker */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/mp4,video/webm"
+                onChange={handleAttachFile}
+                style={{ display: 'none' }}
+              />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingMedia}
+                title="Attach photo or video to chat"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: isUploadingMedia ? 'not-allowed' : 'pointer',
+                  padding: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {isUploadingMedia ? (
+                  <Loader2 size={18} className="animate-spin" color="var(--primary)" />
+                ) : (
+                  <Paperclip size={18} />
+                )}
+              </button>
+
+              <Input
+                placeholder={isUploadingMedia ? `Uploading to Cloudinary (${uploadProgress}%)...` : `Message ${otherParticipant.fullName.split(' ')[0]}...`}
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                disabled={isUploadingMedia}
+              />
+
+              <Button type="submit" variant="primary" disabled={!textInput.trim() || isUploadingMedia}>
+                <Send size={15} />
+              </Button>
+            </form>
+          </>
+        ) : (
+          <EmptyState
+            icon={<MessageSquare size={32} />}
+            title="Select a Conversation"
+            description="Choose a student or mentor from the list on the left to start messaging."
+            style={{ margin: 'auto' }}
+          />
+        )}
+      </div>
+
+      {/* WhatsApp Fullscreen Media Lightbox Viewer */}
+      <WhatsAppMediaViewer
+        isOpen={viewerMedia.isOpen}
+        onClose={() => setViewerMedia(prev => ({ ...prev, isOpen: false }))}
+        mediaUrl={viewerMedia.url}
+        mediaType={viewerMedia.type}
+        title={viewerMedia.title}
+        senderName={viewerMedia.senderName}
+        timestamp={viewerMedia.timestamp}
+        fileSizeBytes={viewerMedia.size}
+      />
     </div>
   );
 };

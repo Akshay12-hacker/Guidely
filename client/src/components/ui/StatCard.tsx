@@ -21,16 +21,16 @@ export const StatCard: React.FC<StatCardProps> = ({
   isPositive = true
 }) => {
   return (
-    <Card padding="md" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <Card padding="md" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>
           {label}
         </span>
         <div
           style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: 'var(--radius-md)',
+            width: '32px',
+            height: '32px',
+            borderRadius: 'var(--radius-sm)',
             backgroundColor: iconBg,
             color: iconColor,
             display: 'flex',
@@ -41,19 +41,20 @@ export const StatCard: React.FC<StatCardProps> = ({
           {icon}
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-        <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '2px' }}>
+        <span style={{ fontSize: '1.55rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em', lineHeight: 1.1 }}>
           {value}
         </span>
         {changeText && (
           <span
             style={{
-              fontSize: '0.78rem',
+              fontSize: '0.74rem',
               fontWeight: 600,
-              color: isPositive ? 'var(--success)' : 'var(--danger)',
+              color: isPositive ? 'var(--success-text)' : 'var(--danger-text)',
               backgroundColor: isPositive ? 'var(--success-light)' : 'var(--danger-light)',
-              padding: '2px 6px',
-              borderRadius: 'var(--radius-xs)'
+              padding: '1px 6px',
+              borderRadius: 'var(--radius-xs)',
+              lineHeight: 1.4
             }}
           >
             {changeText}

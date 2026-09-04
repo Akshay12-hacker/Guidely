@@ -19,12 +19,15 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
   style,
   ...props
 }, ref) => {
-  const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const generatedId = React.useId();
+  const inputId = id || (label ? `input-${label.toLowerCase().replace(/[^a-z0-9]/g, '-')}` : generatedId);
+  const errorId = `${inputId}-error`;
+  const helperId = `${inputId}-helper`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: '100%' }}>
       {label && (
-        <label htmlFor={inputId} style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text-main)' }}>
+        <label htmlFor={inputId} style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-main)' }}>
           {label}
         </label>
       )}
@@ -37,27 +40,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
         <input
           ref={ref}
           id={inputId}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : helperText ? helperId : undefined}
           style={{
-            width: '100%',
-            padding: leftIcon ? (rightIcon ? '10px 38px 10px 38px' : '10px 14px 10px 38px') : (rightIcon ? '10px 38px 10px 14px' : '10px 14px'),
-            fontSize: '0.92rem',
-            borderRadius: 'var(--radius-sm)',
-            border: error ? '1.5px solid var(--danger)' : '1px solid var(--border)',
-            backgroundColor: '#FFFFFF',
-            color: 'var(--text-main)',
-            outline: 'none',
-            transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+            paddingLeft: leftIcon ? '36px' : '12px',
+            paddingRight: rightIcon ? '36px' : '12px',
             ...style
           }}
-          onFocus={(e) => {
-            if (!error) e.target.style.borderColor = 'var(--primary)';
-            e.target.style.boxShadow = '0 0 0 3px var(--primary-light)';
-          }}
-          onBlur={(e) => {
-            if (!error) e.target.style.borderColor = 'var(--border)';
-            e.target.style.boxShadow = 'none';
-          }}
-          className={className}
+          className={`guidely-input ${error ? 'guidely-input-error' : ''} ${className}`}
           {...props}
         />
         {rightIcon && (
@@ -67,10 +57,16 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(({
         )}
       </div>
       {error ? (
-        <span style={{ fontSize: '0.8rem', color: 'var(--danger)', marginTop: '2px' }}>{error}</span>
+        <span id={errorId} style={{ fontSize: '0.78rem', color: 'var(--danger)', marginTop: '2px', fontWeight: 500 }}>
+          {error}
+        </span>
       ) : helperText ? (
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>{helperText}</span>
+        <span id={helperId} style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+          {helperText}
+        </span>
       ) : null}
     </div>
   );
 });
+
+Input.displayName = 'Input';

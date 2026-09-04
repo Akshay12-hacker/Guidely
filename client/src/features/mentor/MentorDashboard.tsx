@@ -18,9 +18,7 @@ import {
   Calendar,
   MessageSquare,
   ArrowRight,
-  Video,
-  ExternalLink,
-  ShieldCheck
+  Video
 } from 'lucide-react';
 
 interface MentorDashboardProps {
@@ -55,13 +53,13 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({ onNavigate }) 
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        <LoadingSkeleton width="320px" height="36px" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-          <LoadingSkeleton height="100px" />
-          <LoadingSkeleton height="100px" />
-          <LoadingSkeleton height="100px" />
-          <LoadingSkeleton height="100px" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <LoadingSkeleton width="300px" height="32px" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <LoadingSkeleton height="80px" />
+          <LoadingSkeleton height="80px" />
+          <LoadingSkeleton height="80px" />
+          <LoadingSkeleton height="80px" />
         </div>
         <CardSkeleton />
       </div>
@@ -80,78 +78,78 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({ onNavigate }) 
   } = data || {};
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }} className="animate-fade-in">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }} className="animate-fade-in">
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
               {greetingTime()}, {user?.fullName?.split(' ')[0] || 'Mentor'} 👋
             </h1>
             <Badge variant="verified">Verified Mentor</Badge>
           </div>
-          <p style={{ fontSize: '0.94rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {profile?.title || 'Engineer'} @ {profile?.company || 'Guidly'} • Mentoring Portal
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+            {profile?.title || 'Engineer'} {profile?.company ? `@ ${profile.company}` : ''} • Mentoring Workspace
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <Button variant="outline" size="sm" onClick={() => onNavigate('mentor-requests')} leftIcon={<BookOpen size={16} />}>
-            View Requests ({pendingRequests.length})
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button variant="outline" size="sm" onClick={() => onNavigate('mentor-requests')} leftIcon={<BookOpen size={15} />}>
+            Proposals ({pendingRequests.length})
           </Button>
-          <Button variant="primary" size="sm" onClick={() => onNavigate('messages')} leftIcon={<MessageSquare size={16} />}>
-            Open Messages
+          <Button variant="primary" size="sm" onClick={() => onNavigate('messages')} leftIcon={<MessageSquare size={15} />}>
+            Messages
           </Button>
         </div>
       </div>
 
-      {/* KPI Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+      {/* KPI Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
         <StatCard
           label="Active Students"
           value={activeMenteesCount}
-          icon={<Users size={20} />}
+          icon={<Users size={18} />}
           changeText="In Progress"
         />
         <StatCard
           label="Completed Projects"
           value={completedMenteesCount}
-          icon={<CheckCircle2 size={20} />}
+          icon={<CheckCircle2 size={18} />}
           iconBg="var(--success-light)"
-          iconColor="var(--success)"
+          iconColor="var(--success-dark)"
         />
         <StatCard
           label="Hours Mentored"
-          value={`${hoursMentored} hrs`}
-          icon={<Clock size={20} />}
+          value={`${hoursMentored}h`}
+          icon={<Clock size={18} />}
           iconBg="#EFF6FF"
           iconColor="#2563EB"
         />
         <StatCard
           label="Average Rating"
           value={`${averageRating} ⭐`}
-          icon={<Star size={20} />}
+          icon={<Star size={18} />}
           iconBg="#FFFBEB"
-          iconColor="#F59E0B"
+          iconColor="#D97706"
         />
       </div>
 
-      {/* Incoming Requests Triage Queue */}
+      {/* Action Needed Queue */}
       {pendingRequests.length > 0 && (
-        <Card padding="lg" style={{ border: '2px solid var(--primary-border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <Card padding="lg" style={{ border: '1.5px solid var(--primary-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Badge variant="warning">Action Needed</Badge>
-              <h3 style={{ fontSize: '1.18rem', fontWeight: 800, color: 'var(--text-main)' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)' }}>
                 Incoming Mentorship Proposals ({pendingRequests.length})
               </h3>
             </div>
-            <Button size="sm" variant="ghost" onClick={() => onNavigate('mentor-requests')} rightIcon={<ArrowRight size={15} />}>
-              Review All Requests
+            <Button size="sm" variant="ghost" onClick={() => onNavigate('mentor-requests')} rightIcon={<ArrowRight size={14} />}>
+              Review All
             </Button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {pendingRequests.map((req: any) => (
               <div
                 key={req.id}
@@ -159,21 +157,21 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({ onNavigate }) 
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '14px',
-                  borderRadius: 'var(--radius-md)',
+                  padding: '12px 14px',
+                  borderRadius: 'var(--radius-sm)',
                   backgroundColor: 'var(--bg-subtle)',
                   border: '1px solid var(--border)',
                   flexWrap: 'wrap',
                   gap: '12px'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Avatar name={req.student_name} src={req.student_avatar} size="sm" />
                   <div>
-                    <h4 style={{ fontSize: '0.96rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)' }}>
                       {req.project_title}
                     </h4>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                       Student: {req.student_name} ({req.student_college})
                     </p>
                   </div>
@@ -189,57 +187,57 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({ onNavigate }) 
       )}
 
       {/* Main Grid: Active Student Projects & Upcoming Sessions */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
         {/* Active Projects */}
-        <Card padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <Card padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>
               Active Student Projects
             </h3>
-            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               {activeProjects.length} active
             </span>
           </div>
 
           {activeProjects.length === 0 ? (
             <EmptyState
-              icon={<Users size={28} />}
+              icon={<Users size={24} />}
               title="No active projects"
               description="Accept a student proposal to start mentoring."
             />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {activeProjects.map((p: any) => (
                 <div
                   key={p.id}
                   style={{
-                    padding: '14px',
-                    borderRadius: 'var(--radius-md)',
+                    padding: '12px 14px',
+                    borderRadius: 'var(--radius-sm)',
                     backgroundColor: 'var(--bg-subtle)',
                     border: '1px solid var(--border)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '10px'
+                    gap: '8px'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Avatar name={p.student_name} src={p.student_avatar} size="xs" />
-                      <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--text-main)' }}>
                         {p.student_name}
                       </span>
                     </div>
                     <Badge variant="in_progress" size="sm">{p.progress_percentage}%</Badge>
                   </div>
 
-                  <h4 style={{ fontSize: '0.94rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)' }}>
                     {p.title}
                   </h4>
 
                   <ProgressBar value={p.progress_percentage} size="sm" />
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                    <Button size="sm" variant="outline" onClick={() => onNavigate('student-project', { projectId: p.id })} rightIcon={<ArrowRight size={14} />}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+                    <Button size="sm" variant="secondary" onClick={() => onNavigate('student-project', { projectId: p.id })} rightIcon={<ArrowRight size={13} />}>
                       Open Workspace
                     </Button>
                   </div>
@@ -250,10 +248,10 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({ onNavigate }) 
         </Card>
 
         {/* Upcoming Mentoring Sessions */}
-        <Card padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <Card padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>
-              Upcoming Sessions
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>
+              Upcoming Syncs
             </h3>
             <Button size="sm" variant="ghost" onClick={() => onNavigate('mentor-sessions')}>
               View All
@@ -262,38 +260,38 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({ onNavigate }) 
 
           {upcomingSessions.length === 0 ? (
             <EmptyState
-              icon={<Calendar size={28} />}
-              title="No sessions scheduled"
-              description="Upcoming video syncs with students will appear here."
+              icon={<Calendar size={24} />}
+              title="No upcoming syncs"
+              description="Scheduled 1-on-1 video reviews will appear here."
             />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {upcomingSessions.map((s: any) => (
                 <div
                   key={s.id}
                   style={{
-                    padding: '14px',
-                    borderRadius: 'var(--radius-md)',
+                    padding: '12px 14px',
+                    borderRadius: 'var(--radius-sm)',
                     backgroundColor: 'var(--bg-subtle)',
                     border: '1px solid var(--border)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '8px'
+                    gap: '6px'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Badge variant={s.status === 'CONFIRMED' ? 'success' : 'pending'} size="sm">
                       {s.status}
                     </Badge>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                    <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', fontWeight: 600 }}>
                       {new Date(s.scheduled_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
 
-                  <h4 style={{ fontSize: '0.94rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text-main)' }}>
                     {s.title}
                   </h4>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                     Student: {s.student_name}
                   </p>
 
