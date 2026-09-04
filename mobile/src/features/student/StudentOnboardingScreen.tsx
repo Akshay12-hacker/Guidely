@@ -1,6 +1,6 @@
 // Mobile 8-Step Student Onboarding Wizard
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { ProgressBar } from '../../components/common/ProgressBar';
 import { Chip } from '../../components/common/Chip';
 import { Badge } from '../../components/common/Badge';
 import { Icon } from '../../components/icons/Icon';
+import { PRESET_SKILLS, SKILL_CATEGORIES } from '../../constants/skills';
 import { colors } from '../../theme/colors';
 import { spacing, radius, shadows } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
@@ -35,6 +36,11 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [skillSearch, setSkillSearch] = useState('');
+  const [isAddingOther, setIsAddingOther] = useState(false);
+  const [otherSkillInput, setOtherSkillInput] = useState('');
+  const [customSkills, setCustomSkills] = useState<string[]>([]);
+  const [selectedSkillCategory, setSelectedSkillCategory] = useState<string>('All');
   const [profile, setProfile] = useState<Partial<StudentProfile>>({
     college: 'IIT Delhi',
     degree: 'B.Tech Computer Science & Engineering',
@@ -54,6 +60,13 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
         const data = await studentService.getProfile();
         if (data) {
           setProfile(prev => ({ ...prev, ...data }));
+          if (data.currentSkills && data.currentSkills.length > 0) {
+            const presetLower = new Set(PRESET_SKILLS.map(s => s.name.toLowerCase()));
+            const loadedCustom = data.currentSkills.filter(s => !presetLower.has(s.toLowerCase()));
+            if (loadedCustom.length > 0) {
+              setCustomSkills(prev => Array.from(new Set([...prev, ...loadedCustom])));
+            }
+          }
           if (data.onboardingStep && data.onboardingStep > 1) {
             setCurrentStep(Math.min(data.onboardingStep, 8));
           }
@@ -105,6 +118,83 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
     }));
   };
 
+  const removeSkill = (skill: string) => {
+    const list = profile.currentSkills || [];
+    setProfile(prev => ({
+      ...prev,
+      currentSkills: list.filter(s => s !== skill)
+    }));
+  };
+
+  const handleAddCustomSkill = (customName?: string) => {
+    const raw = (customName !== undefined ? customName : otherSkillInput).trim();
+    if (!raw) return;
+
+    const existingPreset = PRESET_SKILLS.find(
+      s => s.name.toLowerCase() === raw.toLowerCase()
+    );
+    const resolvedName = existingPreset ? existingPreset.name : raw;
+
+    const current = profile.currentSkills || [];
+    if (!current.includes(resolvedName)) {
+      setProfile(prev => ({
+        ...prev,
+        currentSkills: [...(prev.currentSkills || []), resolvedName]
+      }));
+      showToast('success', 'Skill Added', `"${resolvedName}" added to your builder profile.`);
+    } else {
+      showToast('info', 'Already Added', `"${resolvedName}" is already in your skills.`);
+    }
+
+    if (!existingPreset) {
+      setCustomSkills(prev => Array.from(new Set([...prev, resolvedName])));
+    }
+
+    setOtherSkillInput('');
+    setSkillSearch('');
+    setIsAddingOther(false);
+  };
+
+  const filteredSkills = useMemo(() => {
+    const query = skillSearch.trim().toLowerCase();
+
+    const customItems = customSkills.map(name => ({
+      name,
+      category: 'Other',
+      isCustom: true
+    }));
+
+    const allAvailable = [...customItems, ...PRESET_SKILLS];
+    const seen = new Set<string>();
+    const unique = allAvailable.filter(item => {
+      const lower = item.name.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+
+    if (query) {
+      return unique.filter(item => item.name.toLowerCase().includes(query));
+    }
+
+    if (selectedSkillCategory === 'All') {
+      return unique;
+    }
+
+    return unique.filter(item => item.category === selectedSkillCategory);
+  }, [skillSearch, selectedSkillCategory, customSkills]);
+
+  const queryTrimmed = skillSearch.trim();
+  const hasExactSkillMatch = useMemo(() => {
+    if (!queryTrimmed) return false;
+    const lower = queryTrimmed.toLowerCase();
+    return (
+      PRESET_SKILLS.some(s => s.name.toLowerCase() === lower) ||
+      customSkills.some(s => s.toLowerCase() === lower) ||
+      (profile.currentSkills || []).some(s => s.toLowerCase() === lower)
+    );
+  }, [queryTrimmed, customSkills, profile.currentSkills]);
+
   const toggleTargetTech = (tech: string) => {
     const list = profile.targetTechnologies || [];
     setProfile(prev => ({
@@ -120,12 +210,6 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
       helpNeededAreas: list.includes(area) ? list.filter(a => a !== area) : [...list, area]
     }));
   };
-
-  const allSkillsList = [
-    'C / C++', 'Java', 'Python', 'Go', 'JavaScript', 'TypeScript',
-    'React', 'Node.js', 'PostgreSQL', 'MongoDB', 'Data Structures & Algorithms',
-    'Linux / Bash', 'Git', 'Docker', 'REST APIs', 'FastAPI'
-  ];
 
   const allTechList = [
     'Go (Golang)', 'PyTorch', 'Rust', 'Kubernetes', 'gRPC', 'WebRTC',
@@ -231,20 +315,179 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
           {/* STEP 3: Current Skills */}
           {currentStep === 3 && (
             <View>
-              <Text style={[typography.h3, styles.stepTitle]}>Current Skills</Text>
+              <Text style={[typography.h3, styles.stepTitle]}>Current Skills & Familiarities</Text>
               <Text style={[typography.body, styles.stepDesc]}>
-                Select technologies you already have some working familiarity with:
+                Select technologies you already have some working familiarity with, search through 75+ skills, or add custom skills:
               </Text>
+
+              {/* Selected Skills Summary */}
+              <View style={styles.selectedSkillsBox}>
+                <View style={styles.selectedHeaderRow}>
+                  <Text style={[typography.captionBold, { color: colors.textSubtle }]}>
+                    SELECTED SKILLS ({profile.currentSkills?.length || 0})
+                  </Text>
+                  {(profile.currentSkills?.length || 0) > 0 && (
+                    <TouchableOpacity onPress={() => setProfile(prev => ({ ...prev, currentSkills: [] }))}>
+                      <Text style={[typography.captionBold, { color: colors.danger }]}>Clear all</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <View style={[styles.chipsWrap, { marginBottom: 0, marginTop: spacing.xs }]}>
+                  {profile.currentSkills && profile.currentSkills.length > 0 ? (
+                    profile.currentSkills.map(skill => (
+                      <Chip
+                        key={skill}
+                        label={`${skill} ✕`}
+                        selected={true}
+                        onPress={() => removeSkill(skill)}
+                        style={{ marginRight: 6, marginBottom: 6 }}
+                      />
+                    ))
+                  ) : (
+                    <Text style={[typography.caption, { color: colors.textMuted, fontStyle: 'italic' }]}>
+                      No skills selected yet. Select from below, search, or add custom skills.
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              {/* Search Bar */}
+              <Input
+                placeholder="Search 75+ skills (e.g. Python, Docker, Rust)..."
+                value={skillSearch}
+                onChangeText={setSkillSearch}
+                leftIcon={<Icon name="search" size={18} color={colors.textMuted} />}
+                rightIcon={
+                  skillSearch ? (
+                    <TouchableOpacity onPress={() => setSkillSearch('')}>
+                      <Icon name="close" size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  ) : undefined
+                }
+              />
+
+              {/* Add Custom Skill Banner when searching */}
+              {queryTrimmed.length > 0 && !hasExactSkillMatch && (
+                <View style={styles.customSkillPrompt}>
+                  <View style={{ flex: 1, marginRight: spacing.sm }}>
+                    <Text style={[typography.captionBold, { color: colors.primary }]}>
+                      Can't find "{queryTrimmed}"?
+                    </Text>
+                    <Text style={[typography.caption, { color: colors.textMuted }]}>
+                      Add it as your custom skill.
+                    </Text>
+                  </View>
+                  <Button
+                    size="sm"
+                    onPress={() => handleAddCustomSkill(queryTrimmed)}
+                    leftIcon={<Icon name="plus" size={14} color={colors.white} />}
+                  >
+                    Add Skill
+                  </Button>
+                </View>
+              )}
+
+              {/* Inline Custom Skill Input */}
+              {isAddingOther && (
+                <View style={styles.otherInputCard}>
+                  <Text style={[typography.captionBold, { color: colors.textMain, marginBottom: spacing.xs }]}>
+                    Add Custom Skill:
+                  </Text>
+                  <Input
+                    placeholder="e.g. Solidity, FPGA, Three.js, Julia..."
+                    value={otherSkillInput}
+                    onChangeText={setOtherSkillInput}
+                    autoFocus
+                  />
+                  <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+                    <Button
+                      size="sm"
+                      onPress={() => handleAddCustomSkill()}
+                      disabled={!otherSkillInput.trim()}
+                      leftIcon={<Icon name="plus" size={14} color={colors.white} />}
+                      style={{ flex: 1 }}
+                    >
+                      Add Skill
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onPress={() => {
+                        setIsAddingOther(false);
+                        setOtherSkillInput('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </View>
+                </View>
+              )}
+
+              {/* Category Filter Chips */}
+              {!skillSearch && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ marginBottom: spacing.md }}
+                  contentContainerStyle={{ gap: spacing.xs }}
+                >
+                  {SKILL_CATEGORIES.map(cat => (
+                    <Chip
+                      key={cat}
+                      label={cat}
+                      selected={selectedSkillCategory === cat}
+                      onPress={() => setSelectedSkillCategory(cat)}
+                    />
+                  ))}
+                </ScrollView>
+              )}
+
+              {/* Matching / Filtered Skills Cloud */}
+              <View style={{ marginBottom: spacing.xs }}>
+                <Text style={[typography.captionBold, { color: colors.textMuted, marginBottom: spacing.xs }]}>
+                  {skillSearch
+                    ? `MATCHING SKILLS (${filteredSkills.length})`
+                    : `${selectedSkillCategory.toUpperCase()} SKILLS (${filteredSkills.length})`}
+                </Text>
+              </View>
+
               <View style={styles.chipsWrap}>
-                {allSkillsList.map(skill => (
+                {filteredSkills.map(item => (
                   <Chip
-                    key={skill}
-                    label={skill}
-                    selected={profile.currentSkills?.includes(skill)}
-                    onPress={() => toggleSkill(skill)}
+                    key={item.name}
+                    label={item.name}
+                    selected={profile.currentSkills?.includes(item.name)}
+                    onPress={() => toggleSkill(item.name)}
+                    style={{ marginRight: 6, marginBottom: 6 }}
                   />
                 ))}
+
+                {/* Other Skill Chip */}
+                <Chip
+                  label="+ Other Skill"
+                  selected={isAddingOther}
+                  onPress={() => setIsAddingOther(prev => !prev)}
+                  style={{
+                    marginRight: 6,
+                    marginBottom: 6,
+                    borderStyle: 'dashed'
+                  }}
+                />
               </View>
+
+              {filteredSkills.length === 0 && (
+                <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
+                  <Text style={[typography.body, { color: colors.textMuted }]}>
+                    No skills matched "{skillSearch}".
+                  </Text>
+                  <TouchableOpacity onPress={() => handleAddCustomSkill(queryTrimmed)} style={{ marginTop: spacing.xs }}>
+                    <Text style={[typography.captionBold, { color: colors.primary }]}>
+                      + Add "{queryTrimmed}" as a custom skill
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           )}
 
@@ -347,6 +590,25 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
 
                 <View style={styles.previewDivider} />
 
+                <Text style={[typography.captionBold, { color: colors.textSubtle }]}>
+                  CURRENT SKILLS & FAMILIARITIES ({profile.currentSkills?.length || 0})
+                </Text>
+                <View style={styles.chipsWrap}>
+                  {profile.currentSkills && profile.currentSkills.length > 0 ? (
+                    profile.currentSkills.map(s => (
+                      <Badge key={s} variant="neutral" size="sm" style={{ marginRight: 4, marginTop: 4 }}>
+                        {s}
+                      </Badge>
+                    ))
+                  ) : (
+                    <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]}>
+                      None selected
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.previewDivider} />
+
                 <Text style={[typography.captionBold, { color: colors.textSubtle }]}>TARGET TECHNOLOGIES</Text>
                 <View style={styles.chipsWrap}>
                   {profile.targetTechnologies?.map(t => (
@@ -436,6 +698,40 @@ const styles = StyleSheet.create({
   chipsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginBottom: spacing.md
+  },
+  selectedSkillsBox: {
+    backgroundColor: colors.surfaceSubtle,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.md
+  },
+  selectedHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs
+  },
+  customSkillPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md
+  },
+  otherInputCard: {
+    backgroundColor: colors.surfaceSubtle,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
     marginBottom: spacing.md
   },
   previewBox: {

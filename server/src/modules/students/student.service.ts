@@ -6,10 +6,18 @@ import {
   MentorshipRequestModel,
   ConversationModel,
   UserModel,
-  MentorProfileModel
+  MentorProfileModel,
+  StudentProfileModel
 } from '../../infrastructure/database/models/index.js';
 import { AppError } from '../../shared/errors/AppError.js';
-import { StudentProfile } from '../../shared/types.js';
+import { StudentProfile, SkillItem, SkillsDirectoryResponse } from '../../shared/types.js';
+import {
+  PRESET_SKILLS,
+  SKILL_CATEGORIES,
+  searchSkillsCatalog,
+  normalizeSkillName,
+  sanitizeSkillsList
+} from '../../constants/skills.js';
 
 export class StudentService {
   constructor(
@@ -29,20 +37,127 @@ export class StudentService {
     const user = await this.authRepo.findById(userId);
     if (!user) throw AppError.notFound('User not found');
 
+    const sanitizedData = { ...data };
+    if (sanitizedData.currentSkills !== undefined) {
+      sanitizedData.currentSkills = sanitizeSkillsList(sanitizedData.currentSkills);
+    }
+    if (sanitizedData.targetTechnologies !== undefined) {
+      sanitizedData.targetTechnologies = sanitizeSkillsList(sanitizedData.targetTechnologies);
+    }
+    if (sanitizedData.helpNeededAreas !== undefined) {
+      sanitizedData.helpNeededAreas = sanitizeSkillsList(sanitizedData.helpNeededAreas);
+    }
+
     return this.studentRepo.upsert({
-      ...data,
+      ...sanitizedData,
       userId
     });
   }
 
   async saveOnboardingStep(userId: string, step: number, stepData: Partial<StudentProfile>): Promise<StudentProfile> {
     const isCompleted = step >= 8;
+    const sanitizedData = { ...stepData };
+    if (sanitizedData.currentSkills !== undefined) {
+      sanitizedData.currentSkills = sanitizeSkillsList(sanitizedData.currentSkills);
+    }
+    if (sanitizedData.targetTechnologies !== undefined) {
+      sanitizedData.targetTechnologies = sanitizeSkillsList(sanitizedData.targetTechnologies);
+    }
+    if (sanitizedData.helpNeededAreas !== undefined) {
+      sanitizedData.helpNeededAreas = sanitizeSkillsList(sanitizedData.helpNeededAreas);
+    }
+
     return this.studentRepo.upsert({
-      ...stepData,
+      ...sanitizedData,
       userId,
       onboardingStep: step,
       isCompleted
     });
+  }
+
+  /**
+   * Returns available skills directory with search filtering and custom skills discovery
+   */
+  async getAvailableSkills(query?: string, category?: string): Promise<SkillsDirectoryResponse> {
+    const presetMatches = searchSkillsCatalog(query, category);
+
+    // Retrieve any distinct custom skills added across student profiles in DB
+    let customMatches: SkillItem[] = [];
+    try {
+      const distinctSkills: string[] = await StudentProfileModel.distinct('currentSkills');
+      const presetLower = new Set(PRESET_SKILLS.map(s => s.name.toLowerCase()));
+
+      const customStrings = distinctSkills.filter(s => typeof s === 'string' && !presetLower.has(s.toLowerCase()));
+
+      customMatches = customStrings.map(name => ({
+        name,
+        category: 'Other',
+        isCustom: true
+      }));
+
+      if (category && category !== 'All') {
+        if (category.toLowerCase() === 'other') {
+          // keep all custom
+        } else {
+          customMatches = [];
+        }
+      }
+
+      if (query && query.trim()) {
+        const q = query.trim().toLowerCase();
+        customMatches = customMatches.filter(s => s.name.toLowerCase().includes(q));
+      }
+    } catch {
+      // fallback to preset skills if database distinct query fails
+    }
+
+    const allSkills = [...customMatches, ...presetMatches];
+    const seen = new Set<string>();
+    const unique = allSkills.filter(item => {
+      const lower = item.name.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+
+    return {
+      skills: unique,
+      categories: Array.from(SKILL_CATEGORIES),
+      total: unique.length
+    };
+  }
+
+  /**
+   * Add a custom skill to the student's profile directly
+   */
+  async addCustomSkill(userId: string, rawSkill: string): Promise<{ profile: StudentProfile; addedSkill: string }> {
+    if (!rawSkill || typeof rawSkill !== 'string' || !rawSkill.trim()) {
+      throw AppError.badRequest('Skill name is required and cannot be empty');
+    }
+
+    const cleaned = normalizeSkillName(rawSkill);
+    if (cleaned.length > 60) {
+      throw AppError.badRequest('Skill name exceeds maximum length of 60 characters');
+    }
+
+    const profile = await this.getProfile(userId);
+    const existing = profile.currentSkills || [];
+    const lower = cleaned.toLowerCase();
+
+    let updatedSkills = existing;
+    if (!existing.some(s => s.toLowerCase() === lower)) {
+      updatedSkills = sanitizeSkillsList([...existing, cleaned]);
+    }
+
+    const updated = await this.studentRepo.upsert({
+      userId,
+      currentSkills: updatedSkills
+    });
+
+    return {
+      profile: updated,
+      addedSkill: cleaned
+    };
   }
 
   async getDashboardData(userId: string) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../../context/AuthContext.js';
 import { useToast } from '../../context/ToastContext.js';
@@ -13,6 +13,7 @@ import { ProgressBar } from '../../components/ui/ProgressBar.js';
 import { Badge } from '../../components/ui/Badge.js';
 import { Avatar } from '../../components/ui/Avatar.js';
 import { ProfilePhotoModal } from '../../components/ui/ProfilePhotoModal.js';
+import { PRESET_SKILLS, SKILL_CATEGORIES } from '../../constants/skills.js';
 import {
   User,
   GraduationCap,
@@ -26,7 +27,10 @@ import {
   ArrowLeft,
   Sparkles,
   Save,
-  Camera
+  Camera,
+  Search,
+  Plus,
+  X
 } from 'lucide-react';
 
 interface StudentOnboardingProps {
@@ -40,6 +44,11 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [skillSearch, setSkillSearch] = useState('');
+  const [selectedSkillCategory, setSelectedSkillCategory] = useState<string>('All');
+  const [isAddingOtherSkill, setIsAddingOtherSkill] = useState(false);
+  const [otherSkillInput, setOtherSkillInput] = useState('');
+  const [customSkills, setCustomSkills] = useState<string[]>([]);
   const [profile, setProfile] = useState<Partial<StudentProfile>>({
     college: 'IIT Delhi',
     degree: 'B.Tech Computer Science and Engineering',
@@ -59,6 +68,13 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
         const data = await api.getStudentProfile();
         if (data) {
           setProfile(prev => ({ ...prev, ...data }));
+          if (data.currentSkills && data.currentSkills.length > 0) {
+            const presetLower = new Set(PRESET_SKILLS.map(s => s.name.toLowerCase()));
+            const loadedCustom = data.currentSkills.filter(s => !presetLower.has(s.toLowerCase()));
+            if (loadedCustom.length > 0) {
+              setCustomSkills(prev => Array.from(new Set([...prev, ...loadedCustom])));
+            }
+          }
           if (data.onboardingStep && data.onboardingStep > 1) {
             setCurrentStep(Math.min(data.onboardingStep, 8));
           }
@@ -121,6 +137,86 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
       currentSkills: list.includes(skill) ? list.filter(s => s !== skill) : [...list, skill]
     }));
   };
+
+  const removeSkill = (skill: string) => {
+    const list = profile.currentSkills || [];
+    setProfile(prev => ({
+      ...prev,
+      currentSkills: list.filter(s => s !== skill)
+    }));
+  };
+
+  const handleAddCustomSkill = (customName?: string) => {
+    const raw = (customName !== undefined ? customName : otherSkillInput).trim();
+    if (!raw) return;
+
+    // Check if it matches an existing preset skill case-insensitively
+    const existingPreset = PRESET_SKILLS.find(
+      s => s.name.toLowerCase() === raw.toLowerCase()
+    );
+    const resolvedName = existingPreset ? existingPreset.name : raw;
+
+    const current = profile.currentSkills || [];
+    if (!current.includes(resolvedName)) {
+      setProfile(prev => ({
+        ...prev,
+        currentSkills: [...(prev.currentSkills || []), resolvedName]
+      }));
+      showToast('success', 'Skill Added', `"${resolvedName}" added to your builder profile.`);
+    } else {
+      showToast('info', 'Already Added', `"${resolvedName}" is already in your skills.`);
+    }
+
+    if (!existingPreset) {
+      setCustomSkills(prev => Array.from(new Set([...prev, resolvedName])));
+    }
+
+    setOtherSkillInput('');
+    setSkillSearch('');
+    setIsAddingOtherSkill(false);
+  };
+
+  const filteredSkills = useMemo(() => {
+    const query = skillSearch.trim().toLowerCase();
+
+    // Map custom skills to items
+    const customItems = customSkills.map(name => ({
+      name,
+      category: 'Other',
+      isCustom: true
+    }));
+
+    // Preset skills
+    const allAvailable = [...customItems, ...PRESET_SKILLS];
+    const seen = new Set<string>();
+    const unique = allAvailable.filter(item => {
+      const lower = item.name.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      return true;
+    });
+
+    if (query) {
+      return unique.filter(item => item.name.toLowerCase().includes(query));
+    }
+
+    if (selectedSkillCategory === 'All') {
+      return unique;
+    }
+
+    return unique.filter(item => item.category === selectedSkillCategory);
+  }, [skillSearch, selectedSkillCategory, customSkills]);
+
+  const queryTrimmed = skillSearch.trim();
+  const hasExactSkillMatch = useMemo(() => {
+    if (!queryTrimmed) return false;
+    const lower = queryTrimmed.toLowerCase();
+    return (
+      PRESET_SKILLS.some(s => s.name.toLowerCase() === lower) ||
+      customSkills.some(s => s.toLowerCase() === lower) ||
+      (profile.currentSkills || []).some(s => s.toLowerCase() === lower)
+    );
+  }, [queryTrimmed, customSkills, profile.currentSkills]);
 
   const toggleTargetTech = (tech: string) => {
     const list = profile.targetTechnologies || [];
@@ -283,39 +379,368 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
 
         {/* Step 3: Current Skills */}
         {currentStep === 3 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} className="animate-fade-in">
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Current Skills & Familiarities</h3>
-            <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-              Select technologies you already have some experience with.
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {[
-                'C / C++', 'Java', 'Python', 'Go', 'JavaScript', 'TypeScript',
-                'React', 'Node.js', 'PostgreSQL', 'MongoDB', 'Data Structures & Algorithms',
-                'Linux / Bash', 'Git', 'Docker', 'REST APIs', 'FastAPI'
-              ].map(skill => {
-                const isSelected = profile.currentSkills?.includes(skill);
-                return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }} className="animate-fade-in">
+            <div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '4px' }}>
+                Current Skills & Familiarities
+              </h3>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                Select technologies you already have some working experience with. Search through our extensive directory, filter by category, or use the "+ Other" option to add your custom skills.
+              </p>
+            </div>
+
+            {/* Selected Skills Chips Bar */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              padding: '12px 14px',
+              backgroundColor: 'var(--bg-subtle)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-subtle)', letterSpacing: '0.04em' }}>
+                  Selected Skills ({profile.currentSkills?.length || 0})
+                </span>
+                {(profile.currentSkills?.length || 0) > 0 && (
                   <button
-                    key={skill}
                     type="button"
-                    onClick={() => toggleSkill(skill)}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: 'var(--radius-full)',
-                      border: isSelected ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                      backgroundColor: isSelected ? 'var(--primary-light)' : '#FFFFFF',
-                      color: isSelected ? 'var(--primary)' : 'var(--text-main)',
-                      fontSize: '0.86rem',
-                      fontWeight: isSelected ? 700 : 500,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
+                    onClick={() => setProfile(prev => ({ ...prev, currentSkills: [] }))}
+                    style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer' }}
                   >
-                    {skill} {isSelected && '✓'}
+                    Clear all
                   </button>
-                );
-              })}
+                )}
+              </div>
+
+              {profile.currentSkills && profile.currentSkills.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {profile.currentSkills.map(skill => (
+                    <span
+                      key={skill}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        backgroundColor: 'var(--primary-light)',
+                        color: 'var(--primary)',
+                        border: '1px solid var(--primary-border)',
+                        borderRadius: 'var(--radius-full)',
+                        fontSize: '0.82rem',
+                        fontWeight: 600
+                      }}
+                    >
+                      <span>{skill}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeSkill(skill)}
+                        title={`Remove ${skill}`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(79, 70, 229, 0.15)',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'var(--primary)',
+                          padding: 0
+                        }}
+                      >
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                  No skills selected yet. Select from the options below, search, or add custom skills.
+                </span>
+              )}
+            </div>
+
+            {/* Search Input & Action Bar */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+                    <Search size={16} />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search 75+ skills (e.g. Python, Docker, Next.js, Rust, Solidity)..."
+                    value={skillSearch}
+                    onChange={(e) => setSkillSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (queryTrimmed) {
+                          if (filteredSkills.length === 1) {
+                            toggleSkill(filteredSkills[0].name);
+                            setSkillSearch('');
+                          } else if (!hasExactSkillMatch) {
+                            handleAddCustomSkill(queryTrimmed);
+                          } else if (filteredSkills.length > 0) {
+                            toggleSkill(filteredSkills[0].name);
+                            setSkillSearch('');
+                          }
+                        }
+                      }
+                    }}
+                    className="guidely-input"
+                    style={{
+                      width: '100%',
+                      paddingLeft: '38px',
+                      paddingRight: skillSearch ? '36px' : '14px',
+                      paddingTop: '9px',
+                      paddingBottom: '9px',
+                      fontSize: '0.88rem'
+                    }}
+                  />
+                  {skillSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setSkillSearch('')}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: 0
+                      }}
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
+                </div>
+
+                <Button
+                  variant={isAddingOtherSkill ? 'secondary' : 'outline'}
+                  size="sm"
+                  type="button"
+                  onClick={() => setIsAddingOtherSkill(prev => !prev)}
+                  leftIcon={<Plus size={15} />}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  {isAddingOtherSkill ? 'Close Other' : '+ Other'}
+                </Button>
+              </div>
+
+              {/* Banner when searched skill is not in catalog */}
+              {queryTrimmed && !hasExactSkillMatch && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 14px',
+                  backgroundColor: 'var(--primary-light)',
+                  border: '1.5px dashed var(--primary)',
+                  borderRadius: 'var(--radius-md)',
+                  gap: '12px'
+                }}>
+                  <div>
+                    <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--primary)', display: 'block' }}>
+                      Can't find "{queryTrimmed}" in the directory?
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                      Add it directly to your builder profile as a custom skill.
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    type="button"
+                    onClick={() => handleAddCustomSkill(queryTrimmed)}
+                    leftIcon={<Plus size={14} />}
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
+                    Add "{queryTrimmed}"
+                  </Button>
+                </div>
+              )}
+
+              {/* Inline Custom Skill Form (when "+ Other" is toggled) */}
+              {isAddingOtherSkill && (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  padding: '14px 16px',
+                  backgroundColor: 'var(--bg-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.86rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                      Add Custom Skill or Technology
+                    </span>
+                    <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                      Enter any specialized tool, framework, or language
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="e.g. Solidity, Three.js, FPGA, Julia, ROS..."
+                      value={otherSkillInput}
+                      onChange={(e) => setOtherSkillInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCustomSkill();
+                        } else if (e.key === 'Escape') {
+                          setIsAddingOtherSkill(false);
+                          setOtherSkillInput('');
+                        }
+                      }}
+                      autoFocus
+                      className="guidely-input"
+                      style={{ flex: 1, padding: '8px 12px', fontSize: '0.88rem' }}
+                    />
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      type="button"
+                      onClick={() => handleAddCustomSkill()}
+                      disabled={!otherSkillInput.trim()}
+                      leftIcon={<Plus size={14} />}
+                    >
+                      Add Skill
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      type="button"
+                      onClick={() => {
+                        setIsAddingOtherSkill(false);
+                        setOtherSkillInput('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Category Pills (when not actively searching) */}
+              {!skillSearch && (
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                  {SKILL_CATEGORIES.map(cat => {
+                    const isCatSelected = selectedSkillCategory === cat;
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setSelectedSkillCategory(cat)}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 'var(--radius-full)',
+                          border: isCatSelected ? '1.5px solid var(--primary)' : '1px solid var(--border)',
+                          backgroundColor: isCatSelected ? 'var(--primary-light)' : '#FFFFFF',
+                          color: isCatSelected ? 'var(--primary)' : 'var(--text-muted)',
+                          fontSize: '0.78rem',
+                          fontWeight: isCatSelected ? 700 : 500,
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Skills Catalog Cloud */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                  {skillSearch
+                    ? `Matching Skills (${filteredSkills.length})`
+                    : `${selectedSkillCategory} Skills (${filteredSkills.length})`}
+                </span>
+                {filteredSkills.length > 0 && (
+                  <span style={{ fontSize: '0.76rem', color: 'var(--text-subtle)' }}>
+                    Click any skill to select / deselect
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '280px', overflowY: 'auto', padding: '4px' }}>
+                {filteredSkills.map(item => {
+                  const isSelected = profile.currentSkills?.includes(item.name);
+                  return (
+                    <button
+                      key={item.name}
+                      type="button"
+                      onClick={() => toggleSkill(item.name)}
+                      style={{
+                        padding: '7px 13px',
+                        borderRadius: 'var(--radius-full)',
+                        border: isSelected ? '1.5px solid var(--primary)' : '1px solid var(--border)',
+                        backgroundColor: isSelected ? 'var(--primary-light)' : '#FFFFFF',
+                        color: isSelected ? 'var(--primary)' : 'var(--text-main)',
+                        fontSize: '0.84rem',
+                        fontWeight: isSelected ? 700 : 500,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isSelected ? 'var(--shadow-xs)' : 'none'
+                      }}
+                    >
+                      <span>{item.name}</span>
+                      {isSelected && <span style={{ color: 'var(--primary)', fontWeight: 800 }}>✓</span>}
+                    </button>
+                  );
+                })}
+
+                {/* Always-available "+ Other" button in the chips list */}
+                <button
+                  type="button"
+                  onClick={() => setIsAddingOtherSkill(true)}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: 'var(--radius-full)',
+                    border: '1.5px dashed var(--primary)',
+                    backgroundColor: '#FFFFFF',
+                    color: 'var(--primary)',
+                    fontSize: '0.84rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Plus size={14} /> Other Skill
+                </button>
+              </div>
+
+              {filteredSkills.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--text-muted)' }}>
+                  <p style={{ fontSize: '0.88rem', fontWeight: 600 }}>
+                    No skills matched "{skillSearch}"
+                  </p>
+                  <p style={{ fontSize: '0.8rem', marginTop: '4px' }}>
+                    Click "+ Other" or the banner above to add "{skillSearch}" as your custom skill!
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -475,6 +900,19 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
               <div>
                 <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-subtle)' }}>Project Vision</span>
                 <p style={{ fontSize: '0.92rem', color: 'var(--text-main)', marginTop: '2px', fontWeight: 500 }}>{profile.projectIdea}</p>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-subtle)' }}>
+                  Current Skills & Familiarities ({profile.currentSkills?.length || 0})
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                  {profile.currentSkills && profile.currentSkills.length > 0 ? (
+                    profile.currentSkills.map(s => <Badge key={s} variant="neutral" size="sm">{s}</Badge>)
+                  ) : (
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No skills selected</span>
+                  )}
+                </div>
               </div>
 
               <div>

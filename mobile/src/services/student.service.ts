@@ -16,6 +16,17 @@ export const studentService = {
     return apiClient.post<StudentProfile>('/students/onboarding/step', { step, data });
   },
 
+  async getAvailableSkills(query?: string, category?: string): Promise<{ skills: any[]; categories: string[]; total: number }> {
+    const params: any = {};
+    if (query) params.q = query;
+    if (category && category !== 'All') params.category = category;
+    return apiClient.get<{ skills: any[]; categories: string[]; total: number }>('/students/skills', { params });
+  },
+
+  async addCustomSkill(skill: string): Promise<{ profile: StudentProfile; addedSkill: string }> {
+    return apiClient.post<{ profile: StudentProfile; addedSkill: string }>('/students/skills/custom', { skill });
+  },
+
   async getDashboardData(): Promise<{
     profile: StudentProfile | null;
     profileCompletionPercentage: number;

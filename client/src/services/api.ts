@@ -288,6 +288,35 @@ class ApiClient {
     return this.updateStudentProfile({ ...data, onboardingStep: step });
   }
 
+  async getAvailableSkills(query?: string, category?: string): Promise<{ skills: Array<{ name: string; category: string; isCustom?: boolean }>; categories: string[]; total: number }> {
+    try {
+      const params = new URLSearchParams();
+      if (query) params.append('q', query);
+      if (category && category !== 'All') params.append('category', category);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      return await this.request<{ skills: Array<{ name: string; category: string; isCustom?: boolean }>; categories: string[]; total: number }>(`/students/skills${qs}`);
+    } catch {
+      return { skills: [], categories: [], total: 0 };
+    }
+  }
+
+  async addCustomSkill(skill: string): Promise<{ profile: StudentProfile; addedSkill: string }> {
+    try {
+      return await this.request<{ profile: StudentProfile; addedSkill: string }>('/students/skills/custom', {
+        method: 'POST',
+        body: JSON.stringify({ skill })
+      });
+    } catch {
+      const uid = this.getCurrentMockUserId();
+      const prof = dynamicStudentProfiles[uid] || dynamicStudentProfiles['usr_student_akshay'];
+      const current = prof?.currentSkills || [];
+      if (!current.includes(skill)) {
+        prof.currentSkills = [...current, skill];
+      }
+      return { profile: prof, addedSkill: skill };
+    }
+  }
+
   async getStudentDashboard(): Promise<any> {
     try {
       return await this.request<any>('/students/dashboard');

@@ -420,3 +420,16 @@ export interface UploadSignatureResponse {
   cloudName: string;
   folder: string;
 }
+
+export interface SkillItem {
+  name: string;
+  category: string;
+  isCustom?: boolean;
+}
+
+export interface SkillsDirectoryResponse {
+  skills: SkillItem[];
+  categories: string[];
+  total: number;
+}
+
