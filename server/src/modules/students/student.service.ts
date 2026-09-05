@@ -10,7 +10,8 @@ import {
   StudentProfileModel
 } from '../../infrastructure/database/models/index.js';
 import { AppError } from '../../shared/errors/AppError.js';
-import { StudentProfile, SkillItem, SkillsDirectoryResponse, StudentOnboardingOptions } from '../../shared/types.js';
+import { StudentProfile, SkillItem, SkillsDirectoryResponse, StudentOnboardingOptions, RecommendedMentor, MentorRecommendationCriteria } from '../../shared/types.js';
+import { scoreAndRankMentors, MentorWithUser } from './mentor-matching.js';
 import {
   PRESET_SKILLS,
   SKILL_CATEGORIES,
@@ -283,35 +284,24 @@ export class StudentService {
       };
     });
 
-    const recommendedMentorDocs = await MentorProfileModel.find({ isCompleted: true })
-      .sort({ rating: -1, studentsHelpedCount: -1 })
-      .limit(4)
-      .lean();
-
-    const rUserIds = recommendedMentorDocs.map(m => m.userId);
+    const allMentorDocs = await MentorProfileModel.find({ isCompleted: true }).lean();
+    const rUserIds = allMentorDocs.map(m => m.userId);
     const rUsers = await UserModel.find({ _id: { $in: rUserIds }, status: 'ACTIVE' }).lean();
     const rUserMap = new Map(rUsers.map(u => [u._id, u]));
 
-    const formattedMentors = recommendedMentorDocs
+    const mentorsWithUsers: MentorWithUser[] = allMentorDocs
       .filter(m => rUserMap.has(m.userId))
-      .map(m => {
-        const u = rUserMap.get(m.userId)!;
-        return {
-          id: u._id,
-          full_name: u.fullName,
-          avatar_url: u.avatarUrl,
-          headline: u.headline,
-          title: m.title,
-          company: m.company,
-          years_experience: m.yearsExperience,
-          skills: m.skills,
-          technologies: m.technologies,
-          rating: m.rating,
-          reviews_count: m.reviewsCount,
-          students_helped_count: m.studentsHelpedCount,
-          availability_schedule: m.availabilitySchedule
-        };
-      });
+      .map(m => ({
+        profile: m as any,
+        user: rUserMap.get(m.userId)! as any
+      }));
+
+    const formattedMentors = scoreAndRankMentors(mentorsWithUsers, {
+      targetTechnologies: profile?.targetTechnologies || [],
+      helpNeededAreas: profile?.helpNeededAreas || [],
+      projectIdea: profile?.projectIdea || activeProject?.title || activeProject?.description || '',
+      currentSkills: profile?.currentSkills || []
+    }, 4);
 
     return {
       user,
@@ -323,6 +313,42 @@ export class StudentService {
       recentConversations,
       recommendedMentors: formattedMentors
     };
+  }
+
+  async getRecommendedMentors(userId?: string, criteria: MentorRecommendationCriteria = {}): Promise<RecommendedMentor[]> {
+    let studentProfile: StudentProfile | null = null;
+    if (userId) {
+      studentProfile = await this.studentRepo.findByUserId(userId);
+    }
+
+    const mergedCriteria: MentorRecommendationCriteria = {
+      targetTechnologies: criteria.targetTechnologies && criteria.targetTechnologies.length > 0
+        ? criteria.targetTechnologies
+        : studentProfile?.targetTechnologies || [],
+      helpNeededAreas: criteria.helpNeededAreas && criteria.helpNeededAreas.length > 0
+        ? criteria.helpNeededAreas
+        : studentProfile?.helpNeededAreas || [],
+      projectIdea: criteria.projectIdea || studentProfile?.projectIdea || '',
+      currentSkills: criteria.currentSkills && criteria.currentSkills.length > 0
+        ? criteria.currentSkills
+        : studentProfile?.currentSkills || [],
+      query: criteria.query || '',
+      preferences: criteria.preferences || ''
+    };
+
+    const allMentorDocs = await MentorProfileModel.find({ isCompleted: true }).lean();
+    const rUserIds = allMentorDocs.map(m => m.userId);
+    const rUsers = await UserModel.find({ _id: { $in: rUserIds }, status: 'ACTIVE' }).lean();
+    const rUserMap = new Map(rUsers.map(u => [u._id, u]));
+
+    const mentorsWithUsers: MentorWithUser[] = allMentorDocs
+      .filter(m => rUserMap.has(m.userId))
+      .map(m => ({
+        profile: m as any,
+        user: rUserMap.get(m.userId)! as any
+      }));
+
+    return scoreAndRankMentors(mentorsWithUsers, mergedCriteria, 8);
   }
 
   getOnboardingOptions(): StudentOnboardingOptions {

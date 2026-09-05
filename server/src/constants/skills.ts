@@ -141,8 +141,10 @@ export function searchSkillsCatalog(query?: string, category?: string): SkillIte
  * Standard Target Technologies for Student Onboarding & Projects
  * Includes "No idea (Help Me Decide)" and high-demand modern technologies.
  */
+export const NO_IDEA_TECH = 'No idea (Help Me Decide)';
+
 export const TARGET_TECHNOLOGIES = [
-  'No idea (Help Me Decide)',
+  NO_IDEA_TECH,
   'AI Agents & LangChain',
   'LLMs & Fine-Tuning',
   'Go (Golang)',
@@ -170,8 +172,10 @@ export const TARGET_TECHNOLOGIES = [
  * Standard Guidance Areas for Student Onboarding & Mentorship Requests
  * Includes "No idea (Need Guidance to Figure Out)" and modern engineering mentorship topics.
  */
+export const NO_IDEA_HELP = 'No idea (Need Guidance to Figure Out)';
+
 export const HELP_NEEDED_AREAS = [
-  'No idea (Need Guidance to Figure Out)',
+  NO_IDEA_HELP,
   'Architecture & System Design',
   'Project Ideation & 0-to-1 Scoping',
   'Tech Stack & Framework Selection',

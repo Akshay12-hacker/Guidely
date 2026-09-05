@@ -9,6 +9,7 @@ import { Icon, IconName } from '../icons/Icon';
 
 export type BadgeVariant =
   | 'primary'
+  | 'secondary'
   | 'success'
   | 'warning'
   | 'danger'
@@ -42,6 +43,8 @@ export const Badge: React.FC<BadgeProps> = ({
     switch (variant) {
       case 'primary':
         return { bg: colors.primaryLight, color: colors.primaryDark, border: colors.primaryBorder };
+      case 'secondary':
+        return { bg: colors.secondaryLight, color: colors.textMain, border: colors.border };
       case 'success':
       case 'accepted':
       case 'completed':

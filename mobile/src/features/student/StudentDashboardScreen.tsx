@@ -24,6 +24,7 @@ import { colors } from '../../theme/colors';
 import { spacing, radius, shadows } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { formatDateTime } from '../../utils/formatters';
+import { MentorMatchChatModal } from './MentorMatchChatModal';
 
 export interface StudentDashboardScreenProps {
   onNavigate: (route: string, params?: any) => void;
@@ -34,6 +35,7 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({ 
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isChatModalVisible, setIsChatModalVisible] = useState(false);
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -315,6 +317,26 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({ 
 
       {/* RECOMMENDED MENTORS */}
       <View style={styles.recommendedSection}>
+        {/* AI Mentor Advisor Banner */}
+        <TouchableOpacity
+          style={styles.advisorBanner}
+          onPress={() => setIsChatModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.advisorIconSlot}>
+            <Icon name="sparkles" size={16} color={colors.white} />
+          </View>
+          <View style={{ flex: 1, marginLeft: spacing.sm }}>
+            <Text style={[typography.bodyBold, { color: colors.textMain, fontSize: 13 }]}>
+              AI Mentor Match Advisor
+            </Text>
+            <Text style={[typography.caption, { color: colors.textMuted, fontSize: 11 }]}>
+              Explain what you want to build and find your verified mentor
+            </Text>
+          </View>
+          <Icon name="chevron-right" size={16} color={colors.primary} />
+        </TouchableOpacity>
+
         <View style={styles.recommendedHeader}>
           <Text style={[typography.h3, styles.sectionTitle]}>
             Recommended Mentors
@@ -332,11 +354,18 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({ 
               style={styles.mentorCard}
               onPress={() => onNavigate('mentor-profile', { mentorId: m.id })}
             >
+              {m.matchScore && (
+                <View style={{ marginBottom: spacing.xs }}>
+                  <Badge variant={m.matchScore >= 80 ? 'success' : 'primary'} size="sm">
+                    {m.matchScore}% Match
+                  </Badge>
+                </View>
+              )}
               <View style={styles.mentorCardTop}>
-                <Avatar name={m.full_name} src={m.avatar_url} size="md" isVerified isOnline />
+                <Avatar name={m.full_name || m.fullName} src={m.avatar_url || m.avatarUrl} size="md" isVerified isOnline />
                 <View style={{ marginLeft: spacing.sm, flex: 1 }}>
                   <Text style={[typography.bodyBold, { fontSize: 13.5 }]} numberOfLines={1}>
-                    {m.full_name}
+                    {m.full_name || m.fullName}
                   </Text>
                   <Text style={[typography.caption, { color: colors.primary, fontWeight: '600' }]} numberOfLines={1}>
                     {m.title}
@@ -367,6 +396,17 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({ 
           ))}
         </ScrollView>
       </View>
+
+      <MentorMatchChatModal
+        visible={isChatModalVisible}
+        onClose={() => setIsChatModalVisible(false)}
+        onSelectMentor={(id) => onNavigate('mentor-profile', { mentorId: id })}
+        initialCriteria={{
+          projectIdea: profile?.projectIdea || activeProject?.title,
+          targetTechnologies: profile?.targetTechnologies,
+          helpNeededAreas: profile?.helpNeededAreas
+        }}
+      />
     </ScrollView>
   );
 };
@@ -472,6 +512,25 @@ const styles = StyleSheet.create({
   },
   recommendedSection: {
     marginTop: spacing.sm
+  },
+  advisorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.sm
+  },
+  advisorIconSlot: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   recommendedHeader: {
     flexDirection: 'row',

@@ -1,7 +1,5 @@
-// Student Service
-
 import { apiClient } from '../api/client';
-import { StudentProfile } from '../types';
+import { StudentProfile, RecommendedMentor, MentorRecommendationCriteria } from '../types';
 
 export const studentService = {
   async getProfile(): Promise<StudentProfile | null> {
@@ -37,8 +35,12 @@ export const studentService = {
     activeProject: any;
     nextSession: any;
     pendingRequests: any[];
-    recommendedMentors: any[];
+    recommendedMentors: RecommendedMentor[];
   }> {
     return apiClient.get<any>('/students/dashboard');
+  },
+
+  async recommendMentors(criteria: MentorRecommendationCriteria = {}): Promise<RecommendedMentor[]> {
+    return apiClient.post<RecommendedMentor[]>('/students/recommend-mentors', criteria);
   }
 };

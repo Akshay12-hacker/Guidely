@@ -18,9 +18,11 @@ import {
   Clock,
   Video,
   ExternalLink,
-  Camera
+  Camera,
+  Bot
 } from 'lucide-react';
 import { ProfilePhotoModal } from '../../components/ui/ProfilePhotoModal.js';
+import { MentorMatchChatbot } from './MentorMatchChatbot.js';
 
 interface StudentDashboardProps {
   onNavigate: (route: string, params?: any) => void;
@@ -31,6 +33,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -350,61 +353,159 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
 
       {/* Recommended Mentors */}
       <div>
+        {/* AI Mentor Advisor Banner */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 20px',
+            backgroundColor: 'var(--primary-light)',
+            border: '1.5px solid var(--primary-border)',
+            borderRadius: 'var(--radius-lg)',
+            marginBottom: '16px',
+            boxShadow: 'var(--shadow-sm)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                backgroundColor: 'var(--primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#FFFFFF',
+                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)'
+              }}
+            >
+              <Bot size={22} />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                Not sure which mentor fits your project?
+              </h4>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                Chat with our AI Mentor Advisor. Explain what you want to build and get tailored human mentor recommendations.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => setIsChatbotOpen(true)}
+            leftIcon={<Sparkles size={14} />}
+          >
+            Talk with Advisor
+          </Button>
+        </div>
+
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-main)' }}>
               Recommended Mentors For You
             </h3>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-              Engineers matching your target technologies
+              Engineers matched to your project vision, target technologies & guidance needs
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => onNavigate('find-mentor')} rightIcon={<ArrowRight size={14} />}>
-            Explore All
-          </Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsChatbotOpen(true)}
+              leftIcon={<Bot size={14} />}
+            >
+              AI Match Chatbot
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onNavigate('find-mentor')} rightIcon={<ArrowRight size={14} />}>
+              Explore All
+            </Button>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-          {recommendedMentors.map((mentor: any) => (
-            <Card key={mentor.id} hoverable padding="md" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <Avatar name={mentor.full_name} src={mentor.avatar_url} size="md" isVerified={true} isOnline={true} />
-                  <div>
-                    <h4 style={{ fontSize: '0.94rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                      {mentor.full_name}
-                    </h4>
-                    <p style={{ fontSize: '0.76rem', color: 'var(--primary)', fontWeight: 600 }}>
-                      {mentor.title} @ {mentor.company}
+          {recommendedMentors.map((mentor: any) => {
+            const matchScore = mentor.matchScore || 90;
+            const matchColor = matchScore >= 85 ? '#10B981' : matchScore >= 70 ? '#6366F1' : '#F59E0B';
+            return (
+              <Card key={mentor.id} hoverable padding="md" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Avatar name={mentor.full_name || mentor.fullName} src={mentor.avatar_url || mentor.avatarUrl} size="md" isVerified={true} isOnline={true} />
+                      <div>
+                        <h4 style={{ fontSize: '0.94rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                          {mentor.full_name || mentor.fullName}
+                        </h4>
+                        <p style={{ fontSize: '0.76rem', color: 'var(--primary)', fontWeight: 600 }}>
+                          {mentor.title} @ {mentor.company}
+                        </p>
+                      </div>
+                    </div>
+                    {mentor.matchScore && (
+                      <span
+                        style={{
+                          backgroundColor: `${matchColor}15`,
+                          color: matchColor,
+                          border: `1px solid ${matchColor}40`,
+                          padding: '2px 7px',
+                          borderRadius: '999px',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {mentor.matchScore}% Match
+                      </span>
+                    )}
+                  </div>
+
+                  {mentor.matchReasons && mentor.matchReasons.length > 0 && (
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px', lineHeight: 1.3 }}>
+                      ✓ {mentor.matchReasons[0]}
                     </p>
+                  )}
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '10px' }}>
+                    {(mentor.technologies || []).slice(0, 3).map((t: string) => (
+                      <span key={t} style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: 'var(--radius-xs)', fontSize: '0.72rem', fontWeight: 600 }}>
+                        {t}
+                      </span>
+                    ))}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '10px' }}>
-                  {(mentor.technologies || []).slice(0, 3).map((t: string) => (
-                    <span key={t} style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: 'var(--radius-xs)', fontSize: '0.72rem', fontWeight: 600 }}>
-                      {t}
-                    </span>
-                  ))}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                    ⭐ {mentor.rating ? mentor.rating.toFixed(1) : '5.0'}
+                  </span>
+                  <Button size="sm" variant="secondary" onClick={() => onNavigate('find-mentor', { mentorId: mentor.id })}>
+                    Request
+                  </Button>
                 </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  ⭐ {mentor.rating ? mentor.rating.toFixed(1) : '5.0'}
-                </span>
-                <Button size="sm" variant="secondary" onClick={() => onNavigate('find-mentor', { mentorId: mentor.id })}>
-                  Request
-                </Button>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       </div>
 
       <ProfilePhotoModal
         isOpen={isPhotoModalOpen}
         onClose={() => setIsPhotoModalOpen(false)}
+      />
+
+      <MentorMatchChatbot
+        isOpen={isChatbotOpen}
+        onClose={() => setIsChatbotOpen(false)}
+        onNavigate={onNavigate}
+        initialCriteria={{
+          projectIdea: data?.profile?.projectIdea || data?.activeProject?.title,
+          targetTechnologies: data?.profile?.targetTechnologies,
+          helpNeededAreas: data?.profile?.helpNeededAreas
+        }}
       />
     </div>
   );

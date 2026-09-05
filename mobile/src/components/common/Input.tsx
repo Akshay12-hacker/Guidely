@@ -20,6 +20,7 @@ export interface InputProps extends TextInputProps {
   error?: string;
   helperText?: string;
   leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
   isPassword?: boolean;
   containerStyle?: ViewStyle;
 }
@@ -29,6 +30,7 @@ export const Input: React.FC<InputProps> = ({
   error,
   helperText,
   leftIcon,
+  rightIcon,
   isPassword = false,
   containerStyle,
   style,
@@ -69,6 +71,7 @@ export const Input: React.FC<InputProps> = ({
           onBlur={() => setIsFocused(false)}
           {...props}
         />
+        {rightIcon && <View style={styles.rightIconSlot}>{rightIcon}</View>}
         {isPassword && (
           <TouchableOpacity
             style={styles.eyeSlot}
@@ -116,6 +119,11 @@ const styles = StyleSheet.create({
   },
   leftIconSlot: {
     marginRight: spacing.sm
+  },
+  rightIconSlot: {
+    marginLeft: spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   eyeSlot: {
     padding: spacing.xs

@@ -20,7 +20,9 @@ import {
   MentorFilters,
   CloudinaryUploadResult,
   UploadSignatureResponse,
-  StudentOnboardingOptions
+  StudentOnboardingOptions,
+  RecommendedMentor,
+  MentorRecommendationCriteria
 } from '../../../shared/types.js';
 import { TARGET_TECHNOLOGIES, HELP_NEEDED_AREAS, SKILL_CATEGORIES } from '../constants/skills.js';
 
@@ -331,6 +333,134 @@ class ApiClient {
     }
   }
 
+  rankMockMentors(criteria: MentorRecommendationCriteria = {}): RecommendedMentor[] {
+    const targetTech = (criteria.targetTechnologies || []).map(t => t.toLowerCase());
+    const helpAreas = (criteria.helpNeededAreas || []).map(h => h.toLowerCase());
+    const projectWords = (criteria.projectIdea || criteria.query || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 2);
+    const prefs = (criteria.preferences || '').toLowerCase();
+
+    const scored = Object.values(dynamicMentorProfiles).map(m => {
+      const user = dynamicUsers[m.userId] || {
+        id: m.userId,
+        fullName: m.title,
+        avatarUrl: undefined,
+        headline: m.company,
+        role: 'MENTOR' as const,
+        status: 'ACTIVE' as const,
+        email: `${m.userId}@guidely.app`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      let score = 50;
+      const matchReasons: string[] = [];
+      const matchedTechnologies: string[] = [];
+      const matchedTopics: string[] = [];
+
+      const mentorAllTech = [...(m.technologies || []), ...(m.skills || [])];
+      const mentorTopics = m.mentoringTopics || [];
+      const mentorText = `${m.bio} ${m.title} ${m.company}`.toLowerCase();
+
+      if (targetTech.length > 0) {
+        targetTech.forEach(tt => {
+          if (tt.includes('no idea')) return;
+          const found = mentorAllTech.find(mt => {
+            const lmt = mt.toLowerCase();
+            return lmt.includes(tt) || tt.includes(lmt);
+          });
+          if (found && !matchedTechnologies.includes(found)) {
+            matchedTechnologies.push(found);
+            score += 10;
+          }
+        });
+        if (matchedTechnologies.length > 0) {
+          matchReasons.push(`Expertise in your target stack: ${matchedTechnologies.slice(0, 3).join(', ')}`);
+        }
+      }
+
+      if (helpAreas.length > 0) {
+        helpAreas.forEach(ha => {
+          if (ha.includes('no idea')) return;
+          const found = mentorTopics.find(mt => {
+            const lmt = mt.toLowerCase();
+            return lmt.includes(ha) || ha.includes(lmt);
+          });
+          if (found && !matchedTopics.includes(found)) {
+            matchedTopics.push(found);
+            score += 8;
+          }
+        });
+        if (matchedTopics.length > 0) {
+          matchReasons.push(`Direct guidance in: ${matchedTopics.slice(0, 2).join(', ')}`);
+        }
+      }
+
+      if (projectWords.length > 0) {
+        let hits = 0;
+        projectWords.forEach(pw => {
+          if (mentorText.includes(pw) || mentorAllTech.some(t => t.toLowerCase().includes(pw))) {
+            hits++;
+            score += 3;
+          }
+        });
+        if (hits >= 2) {
+          matchReasons.push(`Specialized domain experience aligned with your project`);
+        }
+      }
+
+      if (prefs && mentorText.includes(prefs)) {
+        score += 8;
+        matchReasons.push(`Matches your preference for ${m.company}`);
+      }
+
+      score += Math.max(0, ((m.rating || 5.0) - 4.5) * 8);
+      score += Math.min(6, (m.yearsExperience || 0) * 0.6);
+
+      if (matchReasons.length === 0) {
+        matchReasons.push(`${m.yearsExperience}+ years engineering experience at ${m.company}`);
+      }
+
+      const finalScore = Math.min(99, Math.max(60, Math.round(score)));
+
+      return {
+        id: user.id || m.userId,
+        userId: m.userId,
+        full_name: user.fullName,
+        fullName: user.fullName,
+        avatar_url: user.avatarUrl,
+        avatarUrl: user.avatarUrl,
+        headline: user.headline,
+        title: m.title,
+        company: m.company,
+        college: m.college,
+        years_experience: m.yearsExperience,
+        yearsExperience: m.yearsExperience,
+        skills: m.skills || [],
+        technologies: m.technologies || [],
+        mentoringTopics: m.mentoringTopics || [],
+        rating: m.rating || 5.0,
+        reviews_count: m.reviewsCount || 0,
+        reviewsCount: m.reviewsCount || 0,
+        students_helped_count: m.studentsHelpedCount || 0,
+        studentsHelpedCount: m.studentsHelpedCount || 0,
+        availability_schedule: m.availabilitySchedule || '',
+        availabilitySchedule: m.availabilitySchedule || '',
+        matchScore: finalScore,
+        matchReasons,
+        matchedTechnologies,
+        matchedTopics,
+        user
+      };
+    });
+
+    scored.sort((a, b) => b.matchScore - a.matchScore);
+    return scored;
+  }
+
   async getStudentDashboard(): Promise<any> {
     try {
       return await this.request<any>('/students/dashboard');
@@ -340,10 +470,12 @@ class ApiClient {
       const activeProject = Object.values(dynamicProjects).find(p => p.studentId === uid) || dynamicProjects['proj_guidely_pbl'];
       const nextSession = dynamicSessions.find(s => s.studentId === uid && s.status === 'CONFIRMED') || dynamicSessions[0];
       const pendingRequests = dynamicRequests.filter(r => r.studentId === uid);
-      const recommendedMentors = Object.values(dynamicMentorProfiles).map(m => ({
-        ...m,
-        user: dynamicUsers[m.userId]
-      }));
+      const recommendedMentors = this.rankMockMentors({
+        targetTechnologies: profile?.targetTechnologies,
+        helpNeededAreas: profile?.helpNeededAreas,
+        projectIdea: profile?.projectIdea || activeProject?.title || activeProject?.description,
+        currentSkills: profile?.currentSkills
+      }).slice(0, 4);
 
       return {
         profile,
@@ -353,6 +485,27 @@ class ApiClient {
         pendingRequests,
         recommendedMentors
       };
+    }
+  }
+
+  async recommendMentors(criteria: MentorRecommendationCriteria = {}): Promise<RecommendedMentor[]> {
+    try {
+      return await this.request<RecommendedMentor[]>('/students/recommend-mentors', {
+        method: 'POST',
+        body: JSON.stringify(criteria)
+      });
+    } catch {
+      const uid = this.getCurrentMockUserId();
+      const profile = dynamicStudentProfiles[uid] || dynamicStudentProfiles['usr_student_akshay'];
+      const mergedCriteria: MentorRecommendationCriteria = {
+        targetTechnologies: criteria.targetTechnologies?.length ? criteria.targetTechnologies : profile?.targetTechnologies,
+        helpNeededAreas: criteria.helpNeededAreas?.length ? criteria.helpNeededAreas : profile?.helpNeededAreas,
+        projectIdea: criteria.projectIdea || profile?.projectIdea || '',
+        currentSkills: criteria.currentSkills?.length ? criteria.currentSkills : profile?.currentSkills,
+        query: criteria.query || '',
+        preferences: criteria.preferences || ''
+      };
+      return this.rankMockMentors(mergedCriteria);
     }
   }
 

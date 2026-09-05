@@ -24,6 +24,8 @@ export function createStudentRouter(): Router {
   router.post('/onboarding/step/:step', studentController.saveOnboardingStep);
   router.post('/onboarding/step', studentController.saveOnboardingStep);
   router.get('/dashboard', requireStudent, studentController.getDashboard);
+  router.post('/recommend-mentors', studentController.recommendMentors);
+  router.post('/recommendations', studentController.recommendMentors);
 
   return router;
 }

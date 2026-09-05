@@ -17,8 +17,11 @@ import {
   Star,
   Building,
   GraduationCap,
-  ArrowUpDown
+  ArrowUpDown,
+  Bot,
+  Sparkles
 } from 'lucide-react';
+import { MentorMatchChatbot } from '../student/MentorMatchChatbot.js';
 
 interface MentorDiscoveryProps {
   onNavigate: (route: string, params?: any) => void;
@@ -36,6 +39,7 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
 
   const [selectedMentorForRequest, setSelectedMentorForRequest] = useState<(MentorProfile & { user: User }) | null>(null);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
   const fetchMentors = async () => {
     setIsLoading(true);
@@ -87,16 +91,28 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} className="animate-fade-in">
       {/* Header */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-          <Badge variant="verified">Verified Industry Mentors</Badge>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <Badge variant="verified">Verified Industry Mentors</Badge>
+          </div>
+          <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
+            Discover Mentors & Engineering Leads
+          </h1>
+          <p style={{ fontSize: '0.92rem', color: 'var(--text-muted)' }}>
+            Connect 1-on-1 with verified software engineers, architects, and research scientists.
+          </p>
         </div>
-        <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
-          Discover Mentors & Engineering Leads
-        </h1>
-        <p style={{ fontSize: '0.92rem', color: 'var(--text-muted)' }}>
-          Connect 1-on-1 with verified software engineers, architects, and research scientists.
-        </p>
+
+        <Button
+          variant="primary"
+          size="md"
+          onClick={() => setIsChatbotOpen(true)}
+          leftIcon={<Bot size={18} />}
+          style={{ boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)' }}
+        >
+          Match with AI Mentor Advisor
+        </Button>
       </div>
 
       {/* Search & Sort Bar */}
@@ -349,6 +365,12 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
         onClose={() => setIsRequestModalOpen(false)}
         mentor={selectedMentorForRequest}
         onSuccess={() => onNavigate('student-requests')}
+      />
+
+      <MentorMatchChatbot
+        isOpen={isChatbotOpen}
+        onClose={() => setIsChatbotOpen(false)}
+        onNavigate={onNavigate}
       />
     </div>
   );

@@ -14,13 +14,24 @@ interface MentorshipRequestModalProps {
   onClose: () => void;
   mentor: (MentorProfile & { user: User }) | null;
   onSuccess?: () => void;
+  initialValues?: {
+    projectTitle?: string;
+    projectDescription?: string;
+    currentKnowledge?: string;
+    techKnown?: string[];
+    helpNeeded?: string[];
+    expectedOutcome?: string;
+    preferredTimes?: string;
+    additionalMessage?: string;
+  };
 }
 
 export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
   isOpen,
   onClose,
   mentor,
-  onSuccess
+  onSuccess,
+  initialValues
 }) => {
   const { showToast } = useToast();
 
@@ -37,6 +48,19 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
   const [preferredTimes, setPreferredTimes] = useState('Weekends 10 AM - 2 PM IST & Tuesday/Thursday evenings');
   const [additionalMessage, setAdditionalMessage] = useState('Excited to learn systems architecture and best practices from your experience!');
   const [isLoading, setIsLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen && initialValues) {
+      if (initialValues.projectTitle) setProjectTitle(initialValues.projectTitle);
+      if (initialValues.projectDescription) setProjectDescription(initialValues.projectDescription);
+      if (initialValues.currentKnowledge) setCurrentKnowledge(initialValues.currentKnowledge);
+      if (initialValues.techKnown && initialValues.techKnown.length > 0) setTechKnown(initialValues.techKnown);
+      if (initialValues.helpNeeded && initialValues.helpNeeded.length > 0) setHelpNeeded(initialValues.helpNeeded);
+      if (initialValues.expectedOutcome) setExpectedOutcome(initialValues.expectedOutcome);
+      if (initialValues.preferredTimes) setPreferredTimes(initialValues.preferredTimes);
+      if (initialValues.additionalMessage) setAdditionalMessage(initialValues.additionalMessage);
+    }
+  }, [isOpen, initialValues]);
 
   if (!mentor) return null;
 

@@ -72,4 +72,16 @@ export class StudentController {
       next(err);
     }
   };
+
+  recommendMentors = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?.userId;
+      const criteria = req.body || {};
+      const data = await this.studentService.getRecommendedMentors(userId, criteria);
+      res.status(200).json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  };
 }
+
