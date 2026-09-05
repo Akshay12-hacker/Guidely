@@ -35,36 +35,6 @@ import {
   MENTOR_PRESET_TOPICS
 } from '../constants/skills.js';
 
-import {
-  MOCK_USERS,
-  MOCK_STUDENT_PROFILES,
-  MOCK_MENTOR_PROFILES,
-  MOCK_PROJECTS,
-  MOCK_PROJECT_WORKSPACES,
-  MOCK_REQUESTS,
-  MOCK_SESSIONS,
-  MOCK_CONVERSATIONS,
-  MOCK_MESSAGES,
-  MOCK_REVIEWS,
-  MOCK_NOTIFICATIONS,
-  MOCK_ADMIN_ANALYTICS,
-  MOCK_REPORTS
-} from './mockData.js';
-
-// In-memory state containers that allow full live interaction during demo
-let dynamicUsers = { ...MOCK_USERS };
-let dynamicStudentProfiles = { ...MOCK_STUDENT_PROFILES };
-let dynamicMentorProfiles = { ...MOCK_MENTOR_PROFILES };
-let dynamicProjects = { ...MOCK_PROJECTS };
-let dynamicWorkspaces = { ...MOCK_PROJECT_WORKSPACES };
-let dynamicRequests = [...MOCK_REQUESTS];
-let dynamicSessions = [...MOCK_SESSIONS];
-let dynamicConversations = [...MOCK_CONVERSATIONS];
-let dynamicMessages = { ...MOCK_MESSAGES };
-let dynamicReviews = [...MOCK_REVIEWS];
-let dynamicNotifications = [...MOCK_NOTIFICATIONS];
-let dynamicReports = [...MOCK_REPORTS];
-
 class ApiClient {
   private baseUrl = (
     import.meta.env.VITE_API_BASE_URL ||
@@ -75,16 +45,6 @@ class ApiClient {
 
   private getToken(): string | null {
     return localStorage.getItem('guidely_token');
-  }
-
-  private getCurrentMockUserId(): string {
-    const token = this.getToken();
-    if (token && token.startsWith('mock_token_')) {
-      const id = token.replace('mock_token_', '');
-      if (dynamicUsers[id]) return id;
-    }
-    // Default to Akshay (Student Lead)
-    return 'usr_student_akshay';
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -101,22 +61,26 @@ class ApiClient {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${cleanEndpoint}`;
 
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers
-      });
+    const response = await fetch(url, {
+      ...options,
+      headers
+    });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.data !== undefined ? data.data : data;
-    } catch (err) {
-      // If backend is not available, we throw so callers fallback to mock logic
-      throw err;
+    if (!response.ok) {
+      let errMessage = `HTTP ${response.status}`;
+      try {
+        const errData = await response.json();
+        if (errData?.message) {
+          errMessage = errData.message;
+        } else if (errData?.error) {
+          errMessage = errData.error;
+        }
+      } catch (_) {}
+      throw new Error(errMessage);
     }
+
+    const data = await response.json();
+    return data.data !== undefined ? data.data : data;
   }
 
   private uploadWithProgress<T>(
@@ -173,174 +137,76 @@ class ApiClient {
 
   // --- Auth ---
   async login(credentials: { email: string; password?: string }): Promise<AuthResponse> {
-    try {
-      return await this.request<AuthResponse>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(credentials)
-      });
-    } catch {
-      // Mock Fallback
-      const email = credentials.email.toLowerCase();
-      const user = Object.values(dynamicUsers).find(u => u.email.toLowerCase() === email) || dynamicUsers['usr_student_akshay'];
-      const token = `mock_token_${user.id}`;
-      const profile = user.role === 'STUDENT' ? dynamicStudentProfiles[user.id] : dynamicMentorProfiles[user.id];
-      return { user, token, profile };
-    }
+    return await this.request<AuthResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials)
+    });
   }
 
   async register(data: { email: string; password: string; fullName: string; role: 'STUDENT' | 'MENTOR' }): Promise<AuthResponse> {
-    try {
-      return await this.request<AuthResponse>('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
-    } catch {
-      const id = `usr_${data.role.toLowerCase()}_${Date.now()}`;
-      const newUser: User = {
-        id,
-        email: data.email,
-        fullName: data.fullName,
-        role: data.role,
-        status: 'ACTIVE',
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.fullName)}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      dynamicUsers[id] = newUser;
-      if (data.role === 'MENTOR') {
-        dynamicMentorProfiles[id] = {
-          userId: id,
-          title: 'Software Engineer',
-          company: '',
-          college: '',
-          yearsExperience: 0,
-          bio: '',
-          skills: [],
-          technologies: [],
-          mentoringTopics: [],
-          experienceHighlights: [],
-          projectsExperience: '',
-          availabilitySchedule: 'Flexible',
-          hourlyRate: 0,
-          isVerified: false,
-          verificationStatus: 'PENDING',
-          rating: 5.0,
-          reviewsCount: 0,
-          studentsHelpedCount: 0,
-          onboardingStep: 1,
-          isCompleted: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-      } else {
-        dynamicStudentProfiles[id] = {
-          userId: id,
-          college: '',
-          degree: '',
-          graduationYear: new Date().getFullYear() + 2,
-          currentSkills: [],
-          projectIdea: '',
-          targetTechnologies: [],
-          helpNeededAreas: [],
-          availability: '',
-          onboardingStep: 1,
-          isCompleted: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-      }
-      const token = `mock_token_${id}`;
-      return { user: newUser, token };
-    }
+    return await this.request<AuthResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
-  async googleAuth(data: { email: string; fullName: string; role?: 'STUDENT' | 'MENTOR'; avatarUrl?: string }): Promise<AuthResponse> {
-    try {
-      return await this.request<AuthResponse>('/auth/google', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
-    } catch {
-      const email = data.email.toLowerCase();
-      let user = Object.values(dynamicUsers).find(u => u.email.toLowerCase() === email);
-      if (!user) {
-        const id = `usr_${(data.role || 'STUDENT').toLowerCase()}_${Date.now()}`;
-        user = {
-          id,
-          email: data.email,
-          fullName: data.fullName,
-          role: data.role || 'STUDENT',
-          status: 'ACTIVE',
-          avatarUrl: data.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.fullName)}`,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        dynamicUsers[id] = user;
-      }
-      const token = `mock_token_${user.id}`;
-      return { user, token };
-    }
+  async googleAuth(data: {
+    idToken?: string;
+    credential?: string;
+    code?: string;
+    role?: 'STUDENT' | 'MENTOR';
+    email?: string;
+    fullName?: string;
+    avatarUrl?: string;
+  }): Promise<AuthResponse> {
+    return await this.request<AuthResponse>('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
   async getCurrentUser(): Promise<User> {
-    try {
-      return await this.request<User>('/auth/me');
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      return dynamicUsers[uid] || dynamicUsers['usr_student_akshay'];
-    }
+    return await this.request<User>('/auth/me');
   }
 
-  async forgotPassword(email: string): Promise<{ message: string; demoResetToken: string }> {
-    return { message: 'Reset token generated for demo presentation', demoResetToken: 'demo-reset-token-2026' };
+  async forgotPassword(email: string): Promise<{ message: string; resetToken: string; demoResetToken?: string }> {
+    return await this.request<{ message: string; resetToken: string; demoResetToken?: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
   }
 
   async resetPassword(token: string, password: string): Promise<{ message: string }> {
-    return { message: 'Password reset successfully!' };
+    return await this.request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password })
+    });
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.request<void>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
   }
 
   // --- Student ---
   async getStudentProfile(): Promise<StudentProfile> {
-    try {
-      return await this.request<StudentProfile>('/students/profile');
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      return dynamicStudentProfiles[uid] || dynamicStudentProfiles['usr_student_akshay'];
-    }
+    return await this.request<StudentProfile>('/students/profile');
   }
 
   async updateStudentProfile(data: Partial<StudentProfile>): Promise<StudentProfile> {
-    try {
-      return await this.request<StudentProfile>('/students/profile', {
-        method: 'PUT',
-        body: JSON.stringify(data)
-      });
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      if (!dynamicStudentProfiles[uid]) {
-        dynamicStudentProfiles[uid] = {
-          userId: uid,
-          college: 'SAGE University Bhopal',
-          degree: 'B.Tech CSE',
-          graduationYear: 2026,
-          currentSkills: [],
-          projectIdea: '',
-          targetTechnologies: [],
-          helpNeededAreas: [],
-          availability: '',
-          onboardingStep: 6,
-          isCompleted: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-      }
-      dynamicStudentProfiles[uid] = { ...dynamicStudentProfiles[uid], ...data, updatedAt: new Date().toISOString() };
-      return dynamicStudentProfiles[uid];
-    }
+    return await this.request<StudentProfile>('/students/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
   }
 
   async saveStudentOnboardingStep(step: number, data: Partial<StudentProfile>): Promise<StudentProfile> {
-    return this.updateStudentProfile({ ...data, onboardingStep: step });
+    return await this.request<StudentProfile>(`/students/onboarding/step/${step}`, {
+      method: 'POST',
+      body: JSON.stringify({ data })
+    });
   }
 
   async getStudentOnboardingOptions(): Promise<StudentOnboardingOptions> {
@@ -368,275 +234,44 @@ class ApiClient {
   }
 
   async addCustomSkill(skill: string): Promise<{ profile: StudentProfile; addedSkill: string }> {
-    try {
-      return await this.request<{ profile: StudentProfile; addedSkill: string }>('/students/skills/custom', {
-        method: 'POST',
-        body: JSON.stringify({ skill })
-      });
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      const prof = dynamicStudentProfiles[uid] || dynamicStudentProfiles['usr_student_akshay'];
-      const current = prof?.currentSkills || [];
-      if (!current.includes(skill)) {
-        prof.currentSkills = [...current, skill];
-      }
-      return { profile: prof, addedSkill: skill };
-    }
-  }
-
-  rankMockMentors(criteria: MentorRecommendationCriteria = {}): RecommendedMentor[] {
-    const targetTech = (criteria.targetTechnologies || []).map(t => t.toLowerCase());
-    const helpAreas = (criteria.helpNeededAreas || []).map(h => h.toLowerCase());
-    const projectWords = (criteria.projectIdea || criteria.query || '')
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .split(/\s+/)
-      .filter(w => w.length > 2);
-    const prefs = (criteria.preferences || '').toLowerCase();
-
-    const scored = Object.values(dynamicMentorProfiles).map(m => {
-      const user = dynamicUsers[m.userId] || {
-        id: m.userId,
-        fullName: m.title,
-        avatarUrl: undefined,
-        headline: m.company,
-        role: 'MENTOR' as const,
-        status: 'ACTIVE' as const,
-        email: `${m.userId}@guidely.app`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      let score = 50;
-      const matchReasons: string[] = [];
-      const matchedTechnologies: string[] = [];
-      const matchedTopics: string[] = [];
-
-      const mentorAllTech = [...(m.technologies || []), ...(m.skills || [])];
-      const mentorTopics = m.mentoringTopics || [];
-      const mentorText = `${m.bio} ${m.title} ${m.company}`.toLowerCase();
-
-      if (targetTech.length > 0) {
-        targetTech.forEach(tt => {
-          if (tt.includes('no idea')) return;
-          const found = mentorAllTech.find(mt => {
-            const lmt = mt.toLowerCase();
-            return lmt.includes(tt) || tt.includes(lmt);
-          });
-          if (found && !matchedTechnologies.includes(found)) {
-            matchedTechnologies.push(found);
-            score += 10;
-          }
-        });
-        if (matchedTechnologies.length > 0) {
-          matchReasons.push(`Expertise in your target stack: ${matchedTechnologies.slice(0, 3).join(', ')}`);
-        }
-      }
-
-      if (helpAreas.length > 0) {
-        helpAreas.forEach(ha => {
-          if (ha.includes('no idea')) return;
-          const found = mentorTopics.find(mt => {
-            const lmt = mt.toLowerCase();
-            return lmt.includes(ha) || ha.includes(lmt);
-          });
-          if (found && !matchedTopics.includes(found)) {
-            matchedTopics.push(found);
-            score += 8;
-          }
-        });
-        if (matchedTopics.length > 0) {
-          matchReasons.push(`Direct guidance in: ${matchedTopics.slice(0, 2).join(', ')}`);
-        }
-      }
-
-      if (projectWords.length > 0) {
-        let hits = 0;
-        projectWords.forEach(pw => {
-          if (mentorText.includes(pw) || mentorAllTech.some(t => t.toLowerCase().includes(pw))) {
-            hits++;
-            score += 3;
-          }
-        });
-        if (hits >= 2) {
-          matchReasons.push(`Specialized domain experience aligned with your project`);
-        }
-      }
-
-      if (prefs && mentorText.includes(prefs)) {
-        score += 8;
-        matchReasons.push(`Matches your preference for ${m.company}`);
-      }
-
-      score += Math.max(0, ((m.rating || 5.0) - 4.5) * 8);
-      score += Math.min(6, (m.yearsExperience || 0) * 0.6);
-
-      if (matchReasons.length === 0) {
-        matchReasons.push(`${m.yearsExperience}+ years engineering experience at ${m.company}`);
-      }
-
-      const finalScore = Math.min(99, Math.max(60, Math.round(score)));
-
-      return {
-        id: user.id || m.userId,
-        userId: m.userId,
-        full_name: user.fullName,
-        fullName: user.fullName,
-        avatar_url: user.avatarUrl,
-        avatarUrl: user.avatarUrl,
-        headline: user.headline,
-        title: m.title,
-        company: m.company,
-        college: m.college,
-        years_experience: m.yearsExperience,
-        yearsExperience: m.yearsExperience,
-        skills: m.skills || [],
-        technologies: m.technologies || [],
-        mentoringTopics: m.mentoringTopics || [],
-        experienceHighlights: m.experienceHighlights || [],
-        projectsExperience: m.projectsExperience || '',
-        rating: m.rating || 5.0,
-        reviews_count: m.reviewsCount || 0,
-        reviewsCount: m.reviewsCount || 0,
-        students_helped_count: m.studentsHelpedCount || 0,
-        studentsHelpedCount: m.studentsHelpedCount || 0,
-        availability_schedule: m.availabilitySchedule || '',
-        availabilitySchedule: m.availabilitySchedule || '',
-        matchScore: finalScore,
-        matchReasons,
-        matchedTechnologies,
-        matchedTopics,
-        user
-      };
+    return await this.request<{ profile: StudentProfile; addedSkill: string }>('/students/skills/custom', {
+      method: 'POST',
+      body: JSON.stringify({ skill })
     });
-
-    scored.sort((a, b) => b.matchScore - a.matchScore);
-    return scored;
-  }
-
-  async getStudentDashboard(): Promise<any> {
-    try {
-      return await this.request<any>('/students/dashboard');
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      const profile = dynamicStudentProfiles[uid] || dynamicStudentProfiles['usr_student_akshay'];
-      const activeProject = Object.values(dynamicProjects).find(p => p.studentId === uid) || dynamicProjects['proj_guidely_pbl'];
-      const nextSession = dynamicSessions.find(s => s.studentId === uid && s.status === 'CONFIRMED') || dynamicSessions[0];
-      const pendingRequests = dynamicRequests.filter(r => r.studentId === uid);
-      const recommendedMentors = this.rankMockMentors({
-        targetTechnologies: profile?.targetTechnologies,
-        helpNeededAreas: profile?.helpNeededAreas,
-        projectIdea: profile?.projectIdea || activeProject?.title || activeProject?.description,
-        currentSkills: profile?.currentSkills
-      }).slice(0, 4);
-
-      return {
-        profile,
-        profileCompletionPercentage: 100,
-        activeProject,
-        nextSession,
-        pendingRequests,
-        recommendedMentors
-      };
-    }
   }
 
   async recommendMentors(criteria: MentorRecommendationCriteria = {}): Promise<RecommendedMentor[]> {
-    try {
-      return await this.request<RecommendedMentor[]>('/students/recommend-mentors', {
-        method: 'POST',
-        body: JSON.stringify(criteria)
-      });
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      const profile = dynamicStudentProfiles[uid] || dynamicStudentProfiles['usr_student_akshay'];
-      const mergedCriteria: MentorRecommendationCriteria = {
-        targetTechnologies: criteria.targetTechnologies?.length ? criteria.targetTechnologies : profile?.targetTechnologies,
-        helpNeededAreas: criteria.helpNeededAreas?.length ? criteria.helpNeededAreas : profile?.helpNeededAreas,
-        projectIdea: criteria.projectIdea || profile?.projectIdea || '',
-        currentSkills: criteria.currentSkills?.length ? criteria.currentSkills : profile?.currentSkills,
-        query: criteria.query || '',
-        preferences: criteria.preferences || ''
-      };
-      return this.rankMockMentors(mergedCriteria);
-    }
+    return await this.request<RecommendedMentor[]>('/students/recommend-mentors', {
+      method: 'POST',
+      body: JSON.stringify(criteria)
+    });
+  }
+
+  rankMockMentors(_criteria: MentorRecommendationCriteria = {}): RecommendedMentor[] {
+    return [];
+  }
+
+  async getStudentDashboard(): Promise<any> {
+    return await this.request<any>('/students/dashboard');
   }
 
   // --- Mentor ---
   async getMentorProfile(): Promise<MentorProfile> {
-    try {
-      return await this.request<MentorProfile>('/mentors/profile');
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      if (!dynamicMentorProfiles[uid]) {
-        dynamicMentorProfiles[uid] = {
-          userId: uid,
-          title: 'Software Engineer',
-          company: '',
-          college: '',
-          yearsExperience: 0,
-          bio: '',
-          skills: [],
-          technologies: [],
-          mentoringTopics: [],
-          experienceHighlights: [],
-          projectsExperience: '',
-          availabilitySchedule: 'Flexible',
-          hourlyRate: 0,
-          isVerified: false,
-          verificationStatus: 'PENDING',
-          rating: 5.0,
-          reviewsCount: 0,
-          studentsHelpedCount: 0,
-          onboardingStep: 1,
-          isCompleted: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return dynamicMentorProfiles[uid];
-    }
+    return await this.request<MentorProfile>('/mentors/profile');
   }
 
   async updateMentorProfile(data: Partial<MentorProfile>): Promise<MentorProfile> {
-    try {
-      return await this.request<MentorProfile>('/mentors/profile', {
-        method: 'PUT',
-        body: JSON.stringify(data)
-      });
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      if (!dynamicMentorProfiles[uid]) {
-        dynamicMentorProfiles[uid] = {
-          userId: uid,
-          title: 'Faculty Mentor',
-          company: 'School of Computer Technology',
-          college: 'SAGE University Bhopal',
-          yearsExperience: 5,
-          bio: '',
-          skills: [],
-          technologies: [],
-          mentoringTopics: [],
-          availabilitySchedule: '',
-          hourlyRate: 0,
-          isVerified: true,
-          verificationStatus: 'APPROVED',
-          rating: 5.0,
-          reviewsCount: 1,
-          studentsHelpedCount: 1,
-          onboardingStep: 9,
-          isCompleted: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-      }
-      dynamicMentorProfiles[uid] = { ...dynamicMentorProfiles[uid], ...data, updatedAt: new Date().toISOString() };
-      return dynamicMentorProfiles[uid];
-    }
+    return await this.request<MentorProfile>('/mentors/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
   }
 
   async saveMentorOnboardingStep(step: number, data: Partial<MentorProfile>): Promise<MentorProfile> {
-    return this.updateMentorProfile({ ...data, onboardingStep: step });
+    return await this.request<MentorProfile>(`/mentors/onboarding/step/${step}`, {
+      method: 'POST',
+      body: JSON.stringify({ data })
+    });
   }
 
   async getMentorOnboardingOptions(): Promise<MentorOnboardingOptions> {
@@ -652,221 +287,38 @@ class ApiClient {
     }
   }
 
-  async discoverMentors(filters: MentorFilters): Promise<(MentorProfile & { user: User })[]> {
-    try {
-      const params = new URLSearchParams();
-      if (filters.search) params.append('search', filters.search);
-      if (filters.minExperience) params.append('minExperience', filters.minExperience.toString());
-      if (filters.minRating) params.append('minRating', filters.minRating.toString());
-      if (filters.company) params.append('company', filters.company);
-      if (filters.availability) params.append('availability', filters.availability);
-      if (filters.sortBy) params.append('sortBy', filters.sortBy);
-      if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
-      if (filters.technologies?.length) params.append('technologies', filters.technologies.join(','));
-      if (filters.skills?.length) params.append('skills', filters.skills.join(','));
-      if (filters.topics?.length) params.append('topics', filters.topics.join(','));
+  async getMentorsList(filters: MentorFilters = {}): Promise<{ mentors: Array<MentorProfile & { user: User }>; total: number }> {
+    const params = new URLSearchParams();
+    if (filters.search) params.append('search', filters.search);
+    if (filters.minExperience) params.append('minExperience', filters.minExperience.toString());
+    if (filters.minRating) params.append('minRating', filters.minRating.toString());
+    if (filters.company) params.append('company', filters.company);
+    if (filters.availability) params.append('availability', filters.availability);
+    if (filters.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
+    if (filters.technologies && filters.technologies.length > 0) params.append('technologies', filters.technologies.join(','));
+    if (filters.skills && filters.skills.length > 0) params.append('skills', filters.skills.join(','));
+    if (filters.topics && filters.topics.length > 0) params.append('topics', filters.topics.join(','));
 
-      return await this.request<(MentorProfile & { user: User })[]>(`/mentors/discover?${params.toString()}`);
-    } catch {
-      let list = Object.values(dynamicMentorProfiles).map(m => ({
-        ...m,
-        user: dynamicUsers[m.userId]
-      })).filter(m => !!m.user);
-
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        list = list.filter(m =>
-          m.user.fullName.toLowerCase().includes(q) ||
-          m.title.toLowerCase().includes(q) ||
-          m.company.toLowerCase().includes(q) ||
-          m.skills.some(s => s.toLowerCase().includes(q)) ||
-          m.technologies.some(t => t.toLowerCase().includes(q)) ||
-          (m.mentoringTopics && m.mentoringTopics.some(top => top.toLowerCase().includes(q))) ||
-          (m.experienceHighlights && m.experienceHighlights.some(eh => eh.toLowerCase().includes(q))) ||
-          (m.projectsExperience && m.projectsExperience.toLowerCase().includes(q))
-        );
-      }
-
-      if (filters.minExperience) {
-        list = list.filter(m => m.yearsExperience >= filters.minExperience!);
-      }
-
-      if (filters.minRating) {
-        list = list.filter(m => m.rating >= filters.minRating!);
-      }
-
-      if (filters.company) {
-        const comp = filters.company.toLowerCase();
-        list = list.filter(m => m.company.toLowerCase().includes(comp));
-      }
-
-      if (filters.availability) {
-        const avail = filters.availability.toLowerCase();
-        list = list.filter(m => m.availabilitySchedule?.toLowerCase().includes(avail));
-      }
-
-      if (filters.technologies && filters.technologies.length > 0) {
-        list = list.filter(m =>
-          filters.technologies!.some(t => m.technologies.map(x => x.toLowerCase()).includes(t.toLowerCase()))
-        );
-      }
-
-      if (filters.skills && filters.skills.length > 0) {
-        list = list.filter(m =>
-          filters.skills!.some(s => m.skills.map(x => x.toLowerCase()).includes(s.toLowerCase()))
-        );
-      }
-
-      if (filters.topics && filters.topics.length > 0) {
-        list = list.filter(m =>
-          filters.topics!.some(t => (m.mentoringTopics || []).map(x => x.toLowerCase()).includes(t.toLowerCase()))
-        );
-      }
-
-      if (filters.sortBy === 'experience') {
-        list.sort((a, b) => (filters.sortOrder === 'asc' ? a.yearsExperience - b.yearsExperience : b.yearsExperience - a.yearsExperience));
-      } else if (filters.sortBy === 'students') {
-        list.sort((a, b) => (filters.sortOrder === 'asc' ? a.studentsHelpedCount - b.studentsHelpedCount : b.studentsHelpedCount - a.studentsHelpedCount));
-      } else {
-        list.sort((a, b) => (filters.sortOrder === 'asc' ? a.rating - b.rating : b.rating - a.rating));
-      }
-
-      return list;
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await this.request<any>(`/mentors/discover${qs}`);
+    if (Array.isArray(res)) {
+      return { mentors: res, total: res.length };
     }
+    return res || { mentors: [], total: 0 };
   }
 
-  async getMentorDetail(id: string): Promise<{ mentor: MentorProfile & { user: User }; reviews: any[]; studentsHelped: any[] }> {
-    try {
-      return await this.request<any>(`/mentors/detail/${id}`);
-    } catch {
-      const profile = dynamicMentorProfiles[id] || dynamicMentorProfiles['usr_mentor_nitin'];
-      const user = dynamicUsers[id] || dynamicUsers['usr_mentor_nitin'];
-      const reviews = dynamicReviews.filter(r => r.mentorId === id);
-      const studentsHelped = [
-        { name: 'Akshay Ramkishor Rahangdale', project: 'Guidely: E-learning & Collaborative Mentorship Platform', avatar: MOCK_USERS['usr_student_akshay'].avatarUrl },
-        { name: 'Abhimanyu Kumar Sahu', project: 'AI-Powered Cyber Threat Intelligence Detector', avatar: MOCK_USERS['usr_student_abhimanyu'].avatarUrl },
-        { name: 'Sapna Jaiswal', project: 'Automated Chest X-Ray Diagnosis with ViT', avatar: MOCK_USERS['usr_student_sapna'].avatarUrl }
-      ];
+  async discoverMentors(filters: MentorFilters = {}): Promise<Array<MentorProfile & { user: User }>> {
+    const res = await this.getMentorsList(filters);
+    return res.mentors || (Array.isArray(res) ? res : []);
+  }
 
-      return {
-        mentor: { ...profile, user },
-        reviews,
-        studentsHelped
-      };
-    }
+  async getMentorDetail(id: string): Promise<{ mentor: MentorProfile & { user: User }; reviews: Review[]; studentsHelped: any[] }> {
+    return await this.request<{ mentor: MentorProfile & { user: User }; reviews: Review[]; studentsHelped: any[] }>(`/mentors/detail/${id}`);
   }
 
   async getMentorDashboard(): Promise<any> {
-    try {
-      return await this.request<any>('/mentors/dashboard');
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      let profile = dynamicMentorProfiles[uid];
-      if (!profile) {
-        profile = {
-          userId: uid,
-          title: 'Software Engineer',
-          company: '',
-          college: '',
-          yearsExperience: 0,
-          bio: '',
-          skills: [],
-          technologies: [],
-          mentoringTopics: [],
-          experienceHighlights: [],
-          projectsExperience: '',
-          availabilitySchedule: 'Flexible',
-          hourlyRate: 0,
-          isVerified: false,
-          verificationStatus: 'PENDING',
-          rating: 5.0,
-          reviewsCount: 0,
-          studentsHelpedCount: 0,
-          onboardingStep: 1,
-          isCompleted: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        dynamicMentorProfiles[uid] = profile;
-      }
-
-      const activeProjects = Object.values(dynamicProjects)
-        .filter(p => p.mentorId === uid && p.status !== 'COMPLETED')
-        .map(p => {
-          const student = dynamicUsers[p.studentId];
-          const prof = dynamicStudentProfiles[p.studentId];
-          return {
-            ...p,
-            id: p.id,
-            student_name: student?.fullName || 'Student',
-            student_avatar: student?.avatarUrl,
-            student_college: prof?.college || '',
-            student_degree: prof?.degree || '',
-            student_grad_year: prof?.graduationYear,
-            progressPercentage: p.progressPercentage || 0,
-            progress_percentage: p.progressPercentage || 0
-          };
-        });
-
-      const upcomingSessions = dynamicSessions
-        .filter(s => s.mentorId === uid && (s.status === 'CONFIRMED' || s.status === 'REQUESTED'))
-        .map(s => {
-          const student = dynamicUsers[s.studentId];
-          const prof = dynamicStudentProfiles[s.studentId];
-          const proj = dynamicProjects[s.projectId];
-          return {
-            ...s,
-            id: s.id,
-            student_name: student?.fullName || 'Student',
-            student_avatar: student?.avatarUrl,
-            student_college: prof?.college || '',
-            project_title: proj?.title || ''
-          };
-        });
-
-      const incomingRequests = dynamicRequests
-        .filter(r => r.mentorId === uid && (r.status === 'PENDING' || r.status === 'INFO_REQUESTED' || r.status === 'INFO_PROVIDED'))
-        .map(r => {
-          const student = dynamicUsers[r.studentId];
-          const prof = dynamicStudentProfiles[r.studentId];
-          return {
-            ...r,
-            id: r.id,
-            student_name: student?.fullName || 'Student',
-            student_avatar: student?.avatarUrl,
-            student_college: prof?.college || '',
-            student_degree: prof?.degree || '',
-            student_grad_year: prof?.graduationYear
-          };
-        });
-
-      const completedSessions = dynamicSessions.filter(s => s.mentorId === uid && s.status === 'COMPLETED').length;
-      const completedProjects = Object.values(dynamicProjects).filter(p => p.mentorId === uid && p.status === 'COMPLETED').length;
-      const totalReviews = dynamicReviews.filter(r => r.mentorId === uid).length;
-      const effectiveRating = (totalReviews > 0 || (profile.reviewsCount && profile.reviewsCount > 0)) ? profile.rating : 0;
-
-      return {
-        user: dynamicUsers[uid],
-        profile,
-        incomingRequests,
-        pendingRequests: incomingRequests,
-        activeProjects,
-        activeMentees: activeProjects,
-        upcomingSessions,
-        recentConversations: [],
-        stats: {
-          activeStudents: activeProjects.length,
-          completedSessions,
-          completedProjects,
-          averageRating: effectiveRating,
-          totalReviews: totalReviews || profile.reviewsCount || 0
-        },
-        activeMenteesCount: activeProjects.length,
-        completedMenteesCount: completedProjects,
-        hoursMentored: completedSessions,
-        averageRating: effectiveRating
-      };
-    }
+    return await this.request<any>('/mentors/dashboard');
   }
 
   async getMentorActiveStudents(): Promise<{
@@ -918,105 +370,37 @@ class ApiClient {
     preferredTimes: string;
     additionalMessage?: string;
   }): Promise<MentorshipRequest> {
-    try {
-      return await this.request<MentorshipRequest>('/mentorship/request', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      const student = dynamicUsers[uid] || dynamicUsers['usr_student_akshay'];
-      const mentor = dynamicUsers[data.mentorId] || dynamicUsers['usr_mentor_nitin'];
-
-      const newReq: MentorshipRequest = {
-        id: `req_${Date.now()}`,
-        studentId: uid,
-        mentorId: data.mentorId,
-        projectTitle: data.projectTitle,
-        projectDescription: data.projectDescription,
-        currentKnowledge: data.currentKnowledge,
-        techKnown: data.techKnown,
-        helpNeeded: data.helpNeeded,
-        expectedOutcome: data.expectedOutcome,
-        preferredTimes: data.preferredTimes,
-        additionalMessage: data.additionalMessage,
-        status: 'PENDING',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        student: {
-          id: student.id,
-          fullName: student.fullName,
-          avatarUrl: student.avatarUrl,
-          college: 'SAGE University Bhopal'
-        },
-        mentor: {
-          id: mentor.id,
-          fullName: mentor.fullName,
-          avatarUrl: mentor.avatarUrl
-        }
-      };
-
-      dynamicRequests.unshift(newReq);
-      return newReq;
-    }
+    return await this.request<MentorshipRequest>('/mentorship/request', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
   async getStudentRequests(): Promise<MentorshipRequest[]> {
-    try {
-      return await this.request<MentorshipRequest[]>('/mentorship/student-requests');
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      return dynamicRequests.filter(r => r.studentId === uid || uid === 'usr_student_akshay');
-    }
+    return await this.request<MentorshipRequest[]>('/mentorship/student-requests');
   }
 
   async getMentorRequests(): Promise<MentorshipRequest[]> {
-    try {
-      return await this.request<MentorshipRequest[]>('/mentorship/mentor-requests');
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      return dynamicRequests.filter(r => r.mentorId === uid);
-    }
+    return await this.request<MentorshipRequest[]>('/mentorship/mentor-requests');
   }
 
   async respondToRequest(requestId: string, action: 'ACCEPT' | 'REJECT' | 'REQUEST_INFO', notes?: string): Promise<MentorshipRequest> {
-    try {
-      return await this.request<MentorshipRequest>(`/mentorship/request/${requestId}/respond`, {
-        method: 'POST',
-        body: JSON.stringify({ action, notes })
-      });
-    } catch {
-      const req = dynamicRequests.find(r => r.id === requestId);
-      if (req) {
-        req.status = action === 'ACCEPT' ? 'ACCEPTED' : action === 'REJECT' ? 'REJECTED' : 'INFO_REQUESTED';
-        req.mentorNotes = notes;
-        req.updatedAt = new Date().toISOString();
-        return req;
-      }
-      throw new Error('Request not found');
-    }
+    return await this.request<MentorshipRequest>(`/mentorship/request/${requestId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({ action, notes })
+    });
   }
 
   async provideAdditionalRequestInfo(requestId: string, additionalMessage: string): Promise<MentorshipRequest> {
-    const req = dynamicRequests.find(r => r.id === requestId);
-    if (req) {
-      req.status = 'INFO_PROVIDED';
-      req.additionalMessage = additionalMessage;
-      req.updatedAt = new Date().toISOString();
-      return req;
-    }
-    throw new Error('Request not found');
+    return await this.request<MentorshipRequest>(`/mentorship/request/${requestId}/info`, {
+      method: 'POST',
+      body: JSON.stringify({ additionalMessage })
+    });
   }
 
   // --- Project Workspace ---
   async getMyProjects(): Promise<Project[]> {
-    try {
-      return await this.request<Project[]>('/projects/my-projects');
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      const studentProjects = Object.values(dynamicProjects).filter(p => p.studentId === uid);
-      return studentProjects.length > 0 ? studentProjects : [dynamicProjects['proj_guidely_pbl']];
-    }
+    return await this.request<Project[]>('/projects/my-projects');
   }
 
   async getProjectWorkspace(projectId: string): Promise<{
@@ -1027,82 +411,56 @@ class ApiClient {
     resources: ProjectResource[];
     notes: ProjectNote[];
   }> {
-    try {
-      return await this.request<any>(`/projects/${projectId}`);
-    } catch {
-      const project = dynamicProjects[projectId] || dynamicProjects['proj_guidely_pbl'];
-      const workspace = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-      return {
-        project,
-        ...workspace
-      };
-    }
+    return await this.request<any>(`/projects/${projectId}`);
   }
 
   async updateProject(projectId: string, data: Partial<Project>): Promise<Project> {
-    if (dynamicProjects[projectId]) {
-      dynamicProjects[projectId] = { ...dynamicProjects[projectId], ...data, updatedAt: new Date().toISOString() };
-      return dynamicProjects[projectId];
-    }
-    return dynamicProjects['proj_guidely_pbl'];
+    return await this.request<Project>(`/projects/${projectId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
   }
 
   // Goals
   async addGoal(projectId: string, data: { title: string; description?: string; targetDate?: string }): Promise<ProjectGoal> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    const newGoal: ProjectGoal = {
-      id: `goal_${Date.now()}`,
-      projectId,
-      title: data.title,
-      description: data.description,
-      isCompleted: false,
-      targetDate: data.targetDate,
-      orderIndex: ws.goals.length + 1,
-      createdAt: new Date().toISOString()
-    };
-    ws.goals.push(newGoal);
-    return newGoal;
+    return await this.request<ProjectGoal>(`/projects/${projectId}/goals`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
   async updateGoal(projectId: string, goalId: string, data: Partial<ProjectGoal>): Promise<ProjectGoal> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    const g = ws.goals.find(x => x.id === goalId);
-    if (g) Object.assign(g, data);
-    return g || ws.goals[0];
+    return await this.request<ProjectGoal>(`/projects/${projectId}/goals/${goalId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
   }
 
   async deleteGoal(projectId: string, goalId: string): Promise<void> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    ws.goals = ws.goals.filter(x => x.id !== goalId);
+    await this.request<void>(`/projects/${projectId}/goals/${goalId}`, {
+      method: 'DELETE'
+    });
   }
 
   // Milestones
   async addMilestone(projectId: string, data: { title: string; description?: string; dueDate?: string }): Promise<ProjectMilestone> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    const newMs: ProjectMilestone = {
-      id: `ms_${Date.now()}`,
-      projectId,
-      title: data.title,
-      description: data.description,
-      status: 'PENDING',
-      dueDate: data.dueDate,
-      orderIndex: ws.milestones.length + 1,
-      createdAt: new Date().toISOString()
-    };
-    ws.milestones.push(newMs);
-    return newMs;
+    return await this.request<ProjectMilestone>(`/projects/${projectId}/milestones`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
   async updateMilestone(projectId: string, milestoneId: string, data: Partial<ProjectMilestone>): Promise<ProjectMilestone> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    const ms = ws.milestones.find(x => x.id === milestoneId);
-    if (ms) Object.assign(ms, data);
-    return ms || ws.milestones[0];
+    return await this.request<ProjectMilestone>(`/projects/${projectId}/milestones/${milestoneId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
   }
 
   async deleteMilestone(projectId: string, milestoneId: string): Promise<void> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    ws.milestones = ws.milestones.filter(x => x.id !== milestoneId);
+    await this.request<void>(`/projects/${projectId}/milestones/${milestoneId}`, {
+      method: 'DELETE'
+    });
   }
 
   // Tasks
@@ -1114,103 +472,58 @@ class ApiClient {
     priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
     dueDate?: string;
   }): Promise<ProjectTask> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    const newTask: ProjectTask = {
-      id: `task_${Date.now()}`,
-      projectId,
-      milestoneId: data.milestoneId,
-      title: data.title,
-      description: data.description,
-      assigneeRole: data.assigneeRole,
-      status: 'TODO',
-      priority: data.priority,
-      dueDate: data.dueDate,
-      orderIndex: ws.tasks.length + 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    ws.tasks.push(newTask);
-    this.recalculateProjectProgress(projectId);
-    return newTask;
+    return await this.request<ProjectTask>(`/projects/${projectId}/tasks`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
   async updateTask(projectId: string, taskId: string, data: Partial<ProjectTask>): Promise<ProjectTask> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    const t = ws.tasks.find(x => x.id === taskId);
-    if (t) {
-      Object.assign(t, data, { updatedAt: new Date().toISOString() });
-      this.recalculateProjectProgress(projectId);
-      return t;
-    }
-    return ws.tasks[0];
+    return await this.request<ProjectTask>(`/projects/${projectId}/tasks/${taskId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
   }
 
   async deleteTask(projectId: string, taskId: string): Promise<void> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    ws.tasks = ws.tasks.filter(x => x.id !== taskId);
-    this.recalculateProjectProgress(projectId);
-  }
-
-  private recalculateProjectProgress(projectId: string) {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    const proj = dynamicProjects[projectId] || dynamicProjects['proj_guidely_pbl'];
-    if (ws.tasks.length > 0) {
-      const done = ws.tasks.filter(t => t.status === 'DONE').length;
-      proj.progressPercentage = Math.round((done / ws.tasks.length) * 100);
-    }
+    await this.request<void>(`/projects/${projectId}/tasks/${taskId}`, {
+      method: 'DELETE'
+    });
   }
 
   // Resources
   async addResource(projectId: string, data: { title: string; url: string; type: any }): Promise<ProjectResource> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    const newRes: ProjectResource = {
-      id: `res_${Date.now()}`,
-      projectId,
-      title: data.title,
-      url: data.url,
-      type: data.type,
-      addedByRole: 'STUDENT',
-      addedByName: 'Akshay Ramkishor Rahangdale',
-      createdAt: new Date().toISOString()
-    };
-    ws.resources.push(newRes);
-    return newRes;
+    return await this.request<ProjectResource>(`/projects/${projectId}/resources`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
   async deleteResource(projectId: string, resourceId: string): Promise<void> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    ws.resources = ws.resources.filter(x => x.id !== resourceId);
+    await this.request<void>(`/projects/${projectId}/resources/${resourceId}`, {
+      method: 'DELETE'
+    });
   }
 
   // Notes
   async addNote(projectId: string, data: { title: string; content: string; isPrivateToMentor: boolean }): Promise<ProjectNote> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    const newNote: ProjectNote = {
-      id: `note_${Date.now()}`,
-      projectId,
-      authorId: this.getCurrentMockUserId(),
-      authorName: 'Prof. Nitin Choudhary',
-      authorRole: 'MENTOR',
-      title: data.title,
-      content: data.content,
-      isPrivateToMentor: data.isPrivateToMentor,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    ws.notes.push(newNote);
-    return newNote;
+    return await this.request<ProjectNote>(`/projects/${projectId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
   async updateNote(projectId: string, noteId: string, data: Partial<ProjectNote>): Promise<ProjectNote> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    const n = ws.notes.find(x => x.id === noteId);
-    if (n) Object.assign(n, data, { updatedAt: new Date().toISOString() });
-    return n || ws.notes[0];
+    return await this.request<ProjectNote>(`/projects/${projectId}/notes/${noteId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
   }
 
   async deleteNote(projectId: string, noteId: string): Promise<void> {
-    const ws = dynamicWorkspaces[projectId] || dynamicWorkspaces['proj_guidely_pbl'];
-    ws.notes = ws.notes.filter(x => x.id !== noteId);
+    await this.request<void>(`/projects/${projectId}/notes/${noteId}`, {
+      method: 'DELETE'
+    });
   }
 
   // --- Sessions ---
@@ -1222,359 +535,179 @@ class ApiClient {
     scheduledAt: string;
     durationMinutes?: number;
   }): Promise<MentorshipSession> {
-    const uid = this.getCurrentMockUserId();
-    const student = dynamicUsers[uid] || dynamicUsers['usr_student_akshay'];
-    const mentor = dynamicUsers[data.mentorId] || dynamicUsers['usr_mentor_nitin'];
-
-    const newSess: MentorshipSession = {
-      id: `sess_${Date.now()}`,
-      studentId: uid,
-      mentorId: data.mentorId,
-      projectId: data.projectId || 'proj_guidely_pbl',
-      title: data.title,
-      agenda: data.agenda,
-      scheduledAt: data.scheduledAt,
-      durationMinutes: data.durationMinutes || 45,
-      status: 'CONFIRMED',
-      meetingUrl: `https://meet.jit.si/guidely-session-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      student: { id: student.id, fullName: student.fullName, avatarUrl: student.avatarUrl, college: 'SAGE University Bhopal' },
-      mentor: { id: mentor.id, fullName: mentor.fullName, avatarUrl: mentor.avatarUrl, title: 'Assistant Professor', company: 'School of Computer Technology' }
-    };
-    dynamicSessions.unshift(newSess);
-    return newSess;
+    return await this.request<MentorshipSession>('/sessions/request', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
   async getMySessions(): Promise<MentorshipSession[]> {
-    try {
-      return await this.request<MentorshipSession[]>('/sessions/my-sessions');
-    } catch {
-      const uid = this.getCurrentMockUserId();
-      return dynamicSessions.filter(s => s.studentId === uid || s.mentorId === uid || uid === 'usr_student_akshay');
-    }
+    return await this.request<MentorshipSession[]>('/sessions/my-sessions');
   }
 
   async confirmSession(sessionId: string, meetingUrl?: string): Promise<MentorshipSession> {
-    const s = dynamicSessions.find(x => x.id === sessionId);
-    if (s) {
-      s.status = 'CONFIRMED';
-      if (meetingUrl) s.meetingUrl = meetingUrl;
-      return s;
-    }
-    throw new Error('Session not found');
+    return await this.request<MentorshipSession>(`/sessions/${sessionId}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ meetingUrl })
+    });
   }
 
   async rescheduleSession(sessionId: string, scheduledAt: string): Promise<MentorshipSession> {
-    const s = dynamicSessions.find(x => x.id === sessionId);
-    if (s) {
-      s.status = 'RESCHEDULED';
-      s.scheduledAt = scheduledAt;
-      return s;
-    }
-    throw new Error('Session not found');
+    return await this.request<MentorshipSession>(`/sessions/${sessionId}/reschedule`, {
+      method: 'POST',
+      body: JSON.stringify({ scheduledAt })
+    });
   }
 
   async cancelSession(sessionId: string, reason?: string): Promise<MentorshipSession> {
-    const s = dynamicSessions.find(x => x.id === sessionId);
-    if (s) {
-      s.status = 'CANCELLED';
-      s.sessionNotes = reason;
-      return s;
-    }
-    throw new Error('Session not found');
+    return await this.request<MentorshipSession>(`/sessions/${sessionId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
   }
 
   async completeSession(sessionId: string, sessionNotes: string): Promise<MentorshipSession> {
-    const s = dynamicSessions.find(x => x.id === sessionId);
-    if (s) {
-      s.status = 'COMPLETED';
-      s.sessionNotes = sessionNotes;
-      return s;
-    }
-    throw new Error('Session not found');
+    return await this.request<MentorshipSession>(`/sessions/${sessionId}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ sessionNotes })
+    });
   }
 
   async submitSessionFeedback(sessionId: string, feedback: string, rating: number): Promise<MentorshipSession> {
-    const s = dynamicSessions.find(x => x.id === sessionId);
-    if (s) {
-      s.studentFeedback = feedback;
-      s.studentRating = rating;
-      return s;
-    }
-    throw new Error('Session not found');
+    return await this.request<MentorshipSession>(`/sessions/${sessionId}/feedback`, {
+      method: 'POST',
+      body: JSON.stringify({ feedback, rating })
+    });
   }
 
   // --- Messaging ---
   async getConversations(): Promise<Conversation[]> {
-    try {
-      return await this.request<Conversation[]>('/messaging/conversations');
-    } catch {
-      return dynamicConversations;
-    }
+    return await this.request<Conversation[]>('/messaging/conversations');
   }
 
   async getOrCreateConversation(studentId: string, mentorId: string): Promise<Conversation> {
-    let conv = dynamicConversations.find(c => c.studentId === studentId && c.mentorId === mentorId);
-    if (!conv) {
-      conv = {
-        id: `conv_${Date.now()}`,
-        studentId,
-        mentorId,
-        unreadStudentCount: 0,
-        unreadMentorCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        student: { id: studentId, fullName: dynamicUsers[studentId]?.fullName || 'Student', avatarUrl: dynamicUsers[studentId]?.avatarUrl },
-        mentor: { id: mentorId, fullName: dynamicUsers[mentorId]?.fullName || 'Mentor', avatarUrl: dynamicUsers[mentorId]?.avatarUrl }
-      };
-      dynamicConversations.push(conv);
-    }
-    return conv;
+    return await this.request<Conversation>('/messaging/conversations/get-or-create', {
+      method: 'POST',
+      body: JSON.stringify({ studentId, mentorId })
+    });
   }
 
   async getMessages(conversationId: string): Promise<{ conversation: Conversation; messages: Message[] }> {
-    try {
-      return await this.request<any>(`/messaging/conversations/${conversationId}/messages`);
-    } catch {
-      const conv = dynamicConversations.find(c => c.id === conversationId) || dynamicConversations[0];
-      const msgs = dynamicMessages[conversationId] || dynamicMessages['conv_akshay_nitin'] || [];
-      return { conversation: conv, messages: msgs };
-    }
+    return await this.request<any>(`/messaging/conversations/${conversationId}/messages`);
   }
 
   async sendMessage(conversationId: string, data: { text: string; attachments?: any[] }): Promise<Message> {
-    const uid = this.getCurrentMockUserId();
-    const sender = dynamicUsers[uid] || dynamicUsers['usr_student_akshay'];
-
-    const newMsg: Message = {
-      id: `msg_${Date.now()}`,
-      conversationId,
-      senderId: uid,
-      senderRole: sender.role,
-      senderName: sender.fullName,
-      text: data.text,
-      attachments: data.attachments,
-      isRead: false,
-      createdAt: new Date().toISOString()
-    };
-
-    if (!dynamicMessages[conversationId]) {
-      dynamicMessages[conversationId] = [];
-    }
-    dynamicMessages[conversationId].push(newMsg);
-
-    const conv = dynamicConversations.find(c => c.id === conversationId);
-    if (conv) {
-      conv.lastMessageId = newMsg.id;
-      conv.lastMessageText = newMsg.text;
-      conv.lastMessageAt = newMsg.createdAt;
-    }
-
-    return newMsg;
+    return await this.request<Message>(`/messaging/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
   async markConversationRead(conversationId: string): Promise<void> {
-    const msgs = dynamicMessages[conversationId];
-    if (msgs) {
-      msgs.forEach(m => { m.isRead = true; });
-    }
+    await this.request<void>(`/messaging/conversations/${conversationId}/read`, {
+      method: 'POST'
+    });
   }
 
   // --- Notifications ---
   async getNotifications(): Promise<{ notifications: Notification[]; unreadCount: number }> {
-    try {
-      return await this.request<any>('/notifications');
-    } catch {
-      const unreadCount = dynamicNotifications.filter(n => !n.isRead).length;
-      return { notifications: dynamicNotifications, unreadCount };
+    const res = await this.request<any>('/notifications');
+    if (Array.isArray(res)) {
+      const unreadCount = res.filter((n: Notification) => !n.isRead).length;
+      return { notifications: res, unreadCount };
     }
+    return res || { notifications: [], unreadCount: 0 };
   }
 
   async markNotificationRead(id: string): Promise<void> {
-    const n = dynamicNotifications.find(x => x.id === id);
-    if (n) n.isRead = true;
+    await this.request<void>(`/notifications/${id}/read`, {
+      method: 'POST'
+    });
   }
 
   async markAllNotificationsRead(): Promise<void> {
-    dynamicNotifications.forEach(n => { n.isRead = true; });
+    await this.request<void>('/notifications/read-all', {
+      method: 'POST'
+    });
   }
 
   // --- Reviews ---
   async getMentorReviews(mentorId: string): Promise<Review[]> {
-    try {
-      return await this.request<Review[]>(`/reviews/mentor/${mentorId}`);
-    } catch {
-      return dynamicReviews.filter(r => r.mentorId === mentorId);
-    }
+    return await this.request<Review[]>(`/reviews/mentor/${mentorId}`);
   }
 
   async submitReview(data: { mentorId: string; projectId?: string; rating: number; comment: string }): Promise<Review> {
-    const uid = this.getCurrentMockUserId();
-    const student = dynamicUsers[uid] || dynamicUsers['usr_student_akshay'];
-
-    const newRev: Review = {
-      id: `rev_${Date.now()}`,
-      studentId: uid,
-      mentorId: data.mentorId,
-      projectId: data.projectId || 'proj_guidely_pbl',
-      rating: data.rating,
-      comment: data.comment,
-      isVerifiedMentorship: true,
-      isApproved: true,
-      createdAt: new Date().toISOString(),
-      student: { id: student.id, fullName: student.fullName, avatarUrl: student.avatarUrl, college: 'SAGE University Bhopal' }
-    };
-    dynamicReviews.unshift(newRev);
-    return newRev;
+    return await this.request<Review>('/reviews/submit', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
   // --- Admin ---
   async getAdminOverview(): Promise<AdminAnalytics> {
-    try {
-      return await this.request<AdminAnalytics>('/admin/overview');
-    } catch {
-      return MOCK_ADMIN_ANALYTICS;
-    }
+    return await this.request<AdminAnalytics>('/admin/overview');
   }
 
   async getAdminUsers(filters: { search?: string; role?: string; status?: string; page?: number; limit?: number }): Promise<{ users: User[]; total: number; page: number; totalPages: number }> {
-    try {
-      const params = new URLSearchParams();
-      if (filters.search) params.append('search', filters.search);
-      if (filters.role) params.append('role', filters.role);
-      if (filters.status) params.append('status', filters.status);
-      if (filters.page) params.append('page', filters.page.toString());
-      if (filters.limit) params.append('limit', filters.limit.toString());
+    const params = new URLSearchParams();
+    if (filters.search) params.append('search', filters.search);
+    if (filters.role) params.append('role', filters.role);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
 
-      return await this.request<any>(`/admin/users?${params.toString()}`);
-    } catch {
-      let list = Object.values(dynamicUsers);
-      if (filters.role) list = list.filter(u => u.role === filters.role);
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        list = list.filter(u => u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
-      }
-      return {
-        users: list,
-        total: list.length,
-        page: 1,
-        totalPages: 1
-      };
-    }
+    return await this.request<any>(`/admin/users?${params.toString()}`);
   }
 
   async toggleUserStatus(userId: string, status: 'ACTIVE' | 'SUSPENDED'): Promise<User> {
-    const u = dynamicUsers[userId];
-    if (u) {
-      u.status = status;
-      return u;
-    }
-    throw new Error('User not found');
+    return await this.request<User>(`/admin/users/${userId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
   }
 
   async getPendingVerifications(): Promise<(MentorProfile & { user: User })[]> {
-    try {
-      const res = await this.request<any>('/admin/verifications');
-      if (Array.isArray(res) && res.length > 0) return res;
-      throw new Error('Check dynamic verifications');
-    } catch {
-      const pending: (MentorProfile & { user: User })[] = [];
-      for (const [uid, prof] of Object.entries(dynamicMentorProfiles)) {
-        if (!prof.isVerified || prof.verificationStatus === 'PENDING') {
-          const u = dynamicUsers[uid] || {
-            id: uid,
-            email: `${uid}@guidely.dev`,
-            role: 'MENTOR' as const,
-            fullName: (prof as any).fullName || 'Mentor Applicant',
-            status: 'ACTIVE' as const,
-            createdAt: prof.createdAt || new Date().toISOString(),
-            updatedAt: prof.updatedAt || new Date().toISOString()
-          };
-          pending.push({
-            ...prof,
-            user: u
-          });
-        }
-      }
-      return pending;
-    }
+    return await this.request<(MentorProfile & { user: User })[]>('/admin/verifications');
   }
 
   async verifyMentor(userId: string, status: 'APPROVED' | 'REJECTED', notes?: string): Promise<MentorProfile> {
-    try {
-      const res = await this.request<MentorProfile>(`/admin/verifications/${userId}`, {
-        method: 'POST',
-        body: JSON.stringify({ status, notes })
-      });
-      if (dynamicMentorProfiles[userId]) {
-        dynamicMentorProfiles[userId].isVerified = status === 'APPROVED';
-        dynamicMentorProfiles[userId].verificationStatus = status;
-        dynamicMentorProfiles[userId].verificationNotes = notes;
-      }
-      return res;
-    } catch {
-      const prof = dynamicMentorProfiles[userId];
-      if (prof) {
-        prof.isVerified = status === 'APPROVED';
-        prof.verificationStatus = status;
-        prof.verificationNotes = notes;
-        return prof;
-      }
-      throw new Error('Mentor not found');
-    }
+    return await this.request<MentorProfile>(`/admin/verifications/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ status, notes })
+    });
   }
 
   async getAdminProjects(): Promise<any[]> {
-    try {
-      return await this.request<any[]>('/admin/projects');
-    } catch {
-      return Object.values(dynamicProjects);
-    }
+    return await this.request<any[]>('/admin/projects');
   }
 
   async getAdminReports(): Promise<Report[]> {
-    try {
-      return await this.request<Report[]>('/admin/reports');
-    } catch {
-      return dynamicReports;
-    }
+    return await this.request<Report[]>('/admin/reports');
   }
 
-  async createReport(data: { reportedUserId?: string; reportType: string; reason: string; details: string }): Promise<any> {
-    const newRep: Report = {
-      id: `rep_${Date.now()}`,
-      reporterId: this.getCurrentMockUserId(),
-      reportedUserId: data.reportedUserId,
-      reportType: data.reportType as any,
-      reason: data.reason,
-      details: data.details,
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    dynamicReports.unshift(newRep);
-    return newRep;
+  async createReport(data: { reportedUserId?: string; reportType: string; reason: string; details: string }): Promise<Report> {
+    return await this.request<Report>('/admin/reports/create', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 
   async resolveReport(reportId: string, status: 'RESOLVED' | 'DISMISSED', adminNotes?: string): Promise<Report> {
-    const rep = dynamicReports.find(r => r.id === reportId);
-    if (rep) {
-      rep.status = status;
-      rep.adminNotes = adminNotes;
-      rep.updatedAt = new Date().toISOString();
-      return rep;
-    }
-    throw new Error('Report not found');
+    return await this.request<Report>(`/admin/reports/${reportId}/resolve`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, adminNotes })
+    });
   }
 
   async getReviewsForModeration(): Promise<Review[]> {
-    return dynamicReviews;
+    return await this.request<Review[]>('/admin/reviews');
   }
 
   async moderateReview(reviewId: string, isApproved: boolean): Promise<void> {
-    const r = dynamicReviews.find(x => x.id === reviewId);
-    if (r) r.isApproved = isApproved;
+    await this.request<void>(`/admin/reviews/${reviewId}/moderate`, {
+      method: 'PUT',
+      body: JSON.stringify({ isApproved })
+    });
   }
 
   // --- Cloudinary Media & Upload ---
@@ -1584,71 +717,13 @@ class ApiClient {
   ): Promise<{ url: string; secureUrl: string; publicId: string; user: User }> {
     const formData = new FormData();
     formData.append('file', file);
-
-    const token = this.getToken();
-    const isMock = token?.startsWith('mock_token_');
-
-    if (isMock) {
-      if (onProgress) {
-        for (let p = 15; p <= 100; p += 35) {
-          onProgress(p);
-        }
-      }
-      const previewUrl = URL.createObjectURL(file);
-      const uid = this.getCurrentMockUserId();
-      const mockPublicId = `guidely/profiles/profile_${uid}_${Date.now()}`;
-      if (dynamicUsers[uid]) {
-        dynamicUsers[uid].avatarUrl = previewUrl;
-        dynamicUsers[uid].avatarPublicId = mockPublicId;
-      }
-      return {
-        url: previewUrl,
-        secureUrl: previewUrl,
-        publicId: mockPublicId,
-        user: dynamicUsers[uid] || ({
-          id: uid,
-          fullName: 'Demo User',
-          email: 'user@guidely.dev',
-          role: 'STUDENT',
-          status: 'ACTIVE',
-          avatarUrl: previewUrl,
-          avatarPublicId: mockPublicId,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        } as User)
-      };
-    }
-
-    // Real server upload: Throw real errors on failure so the frontend never receives a fake success
-    const res = await this.uploadWithProgress<any>('/upload/profile-photo', formData, onProgress);
-    const uid = this.getCurrentMockUserId();
-    if (dynamicUsers[uid]) {
-      dynamicUsers[uid].avatarUrl = res.secureUrl || res.url;
-      dynamicUsers[uid].avatarPublicId = res.publicId;
-    }
-    return res;
+    return await this.uploadWithProgress<any>('/upload/profile-photo', formData, onProgress);
   }
 
   async deleteProfilePhoto(): Promise<{ user: User }> {
-    const token = this.getToken();
-    if (token?.startsWith('mock_token_')) {
-      const uid = this.getCurrentMockUserId();
-      if (dynamicUsers[uid]) {
-        dynamicUsers[uid].avatarUrl = undefined;
-        dynamicUsers[uid].avatarPublicId = undefined;
-      }
-      return { user: dynamicUsers[uid] };
-    }
-
-    const res = await this.request<any>('/upload/profile-photo', {
+    return await this.request<any>('/upload/profile-photo', {
       method: 'DELETE'
     });
-    const uid = this.getCurrentMockUserId();
-    if (dynamicUsers[uid]) {
-      dynamicUsers[uid].avatarUrl = undefined;
-      dynamicUsers[uid].avatarPublicId = undefined;
-    }
-    return res;
   }
 
   async uploadMedia(
@@ -1663,39 +738,14 @@ class ApiClient {
     if (projectId) {
       formData.append('projectId', projectId);
     }
-
-    try {
-      return await this.uploadWithProgress<CloudinaryUploadResult>('/upload/media', formData, onProgress);
-    } catch {
-      if (onProgress) {
-        for (let p = 20; p <= 100; p += 40) {
-          onProgress(p);
-        }
-      }
-      const previewUrl = URL.createObjectURL(file);
-      const isVideo = file.type.startsWith('video/');
-      return {
-        url: previewUrl,
-        secureUrl: previewUrl,
-        publicId: `guidely/${folder}/${Date.now()}`,
-        resourceType: isVideo ? 'video' : file.type.startsWith('image/') ? 'image' : 'raw',
-        format: file.name.split('.').pop() || 'bin',
-        bytes: file.size,
-        originalFilename: file.name,
-        createdAt: new Date().toISOString()
-      };
-    }
+    return await this.uploadWithProgress<CloudinaryUploadResult>('/upload/media', formData, onProgress);
   }
 
   async deleteMedia(publicId: string, resourceType: 'image' | 'video' | 'raw' = 'image'): Promise<{ success: boolean }> {
-    try {
-      return await this.request<any>('/upload/media', {
-        method: 'DELETE',
-        body: JSON.stringify({ publicId, resourceType })
-      });
-    } catch {
-      return { success: true };
-    }
+    return await this.request<any>('/upload/media', {
+      method: 'DELETE',
+      body: JSON.stringify({ publicId, resourceType })
+    });
   }
 
   async getUploadSignature(folder: string = 'guidely/general'): Promise<UploadSignatureResponse> {
@@ -1706,15 +756,7 @@ class ApiClient {
   }
 
   async getUploadStatus(): Promise<{ isConfigured: boolean; cloudName: string; apiKeyPrefix: string }> {
-    try {
-      return await this.request<any>('/upload/status');
-    } catch {
-      return {
-        isConfigured: true,
-        cloudName: 'Guidely',
-        apiKeyPrefix: '***5412'
-      };
-    }
+    return await this.request<any>('/upload/status');
   }
 }
 

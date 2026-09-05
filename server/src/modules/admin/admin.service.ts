@@ -120,4 +120,8 @@ export class AdminService {
   async moderateReview(reviewId: string, isApproved: boolean) {
     return this.adminRepo.moderateReview(reviewId, isApproved);
   }
+
+  async getProjects() {
+    return this.adminRepo.getProjects();
+  }
 }

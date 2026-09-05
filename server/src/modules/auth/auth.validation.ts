@@ -12,12 +12,19 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required')
 });
 
-export const googleAuthSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  fullName: z.string().min(2),
-  role: z.enum(['STUDENT', 'MENTOR']).optional(),
-  avatarUrl: z.string().optional()
-});
+export const googleAuthSchema = z
+  .object({
+    idToken: z.string().optional(),
+    credential: z.string().optional(),
+    code: z.string().optional(),
+    role: z.enum(['STUDENT', 'MENTOR']).optional(),
+    email: z.string().email('Invalid email address').optional(),
+    fullName: z.string().min(1).optional(),
+    avatarUrl: z.string().optional()
+  })
+  .refine((data) => Boolean(data.idToken || data.credential || data.code || data.email), {
+    message: 'A Google ID token, credential, or valid user email is required'
+  });
 
 export const forgotPasswordSchema = z.object({
   email: z.string().email('Invalid email address')

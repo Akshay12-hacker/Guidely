@@ -128,4 +128,13 @@ export class AdminController {
       next(err);
     }
   };
+
+  getProjects = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const projects = await this.adminService.getProjects();
+      res.status(200).json({ success: true, data: projects });
+    } catch (err) {
+      next(err);
+    }
+  };
 }

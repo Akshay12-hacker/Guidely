@@ -14,7 +14,7 @@ interface ForgotPasswordModalProps {
 export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClose }) => {
   const { showToast } = useToast();
   const [email, setEmail] = useState('');
-  const [demoToken, setDemoToken] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [step, setStep] = useState<'REQUEST' | 'RESET' | 'DONE'>('REQUEST');
   const [isLoading, setIsLoading] = useState(false);
@@ -25,9 +25,9 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
     setIsLoading(true);
     try {
       const res = await api.forgotPassword(email);
-      setDemoToken(res.demoResetToken);
+      setResetToken((res as any).resetToken || res.demoResetToken || '');
       setStep('RESET');
-      showToast('success', 'Reset Token Generated', 'Use the token to set a new password below.');
+      showToast('success', 'Reset Link Prepared', 'Enter the reset token and your new password.');
     } catch (err: any) {
       showToast('error', 'Request Failed', err.message);
     } finally {
@@ -37,10 +37,10 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!demoToken || !newPassword) return;
+    if (!resetToken || !newPassword) return;
     setIsLoading(true);
     try {
-      await api.resetPassword(demoToken, newPassword);
+      await api.resetPassword(resetToken, newPassword);
       setStep('DONE');
       showToast('success', 'Password Reset Successful!', 'You can now sign in with your new password.');
     } catch (err: any) {
@@ -77,12 +77,12 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
       {step === 'RESET' && (
         <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ backgroundColor: 'var(--info-light)', border: '1px solid var(--info-border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', fontSize: '0.8rem', color: 'var(--info-text)' }}>
-            Reset token generated for verification:
+            Enter the password reset authorization token:
           </div>
           <Input
             label="Reset Token"
-            value={demoToken}
-            onChange={(e) => setDemoToken(e.target.value)}
+            value={resetToken}
+            onChange={(e) => setResetToken(e.target.value)}
             leftIcon={<KeyRound size={16} />}
             required
           />

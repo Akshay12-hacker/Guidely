@@ -4,15 +4,16 @@ import { useToast } from '../../context/ToastContext.js';
 import { Button } from '../../components/ui/Button.js';
 import { Input } from '../../components/ui/Input.js';
 import { Card } from '../../components/ui/Card.js';
-import { Compass, Mail, Lock, Sparkles } from 'lucide-react';
+import { Compass, Mail, Lock } from 'lucide-react';
 import { ForgotPasswordModal } from './ForgotPasswordModal.js';
+import { GoogleAuthButton } from '../../components/ui/GoogleAuthButton.js';
 
 interface LoginPageProps {
   onNavigate: (route: string) => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
-  const { login, googleLogin, quickLoginAs } = useAuth();
+  const { login, googleLogin } = useAuth();
   const { showToast } = useToast();
 
   const [email, setEmail] = useState('');
@@ -40,24 +41,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
     }
   };
 
-  const handleGoogleSimulatedLogin = async () => {
-    if (!email) {
-      setError('Please enter your email above to continue with Google sign in.');
-      showToast('warning', 'Missing Email', 'Please enter your email address above.');
-      return;
-    }
+  const handleGoogleSuccess = async (credential: string) => {
+    setError('');
     setIsLoading(true);
     try {
-      if (email.toLowerCase().includes('admin')) {
-        await quickLoginAs('admin@guidely.dev');
+      const res = await googleLogin(credential);
+      if (res?.user?.role === 'ADMIN') {
+        onNavigate('admin');
+      } else if (res?.profile && res.profile.isCompleted === false) {
+        onNavigate(res.user.role === 'MENTOR' ? 'mentor-onboarding' : 'student-onboarding');
       } else {
-        const namePart = email.split('@')[0].replace(/[\._]/g, ' ');
-        const name = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-        await googleLogin(email.trim(), name, 'STUDENT');
+        onNavigate('dashboard');
       }
-      onNavigate('dashboard');
     } catch (err: any) {
-      showToast('error', 'Google Login Failed', err.message);
+      setError(err.message || 'Google sign in failed');
+      showToast('error', 'Google Sign In Failed', err.message);
     } finally {
       setIsLoading(false);
     }
@@ -175,71 +173,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
             </span>
           </div>
 
-          <Button
-            variant="secondary"
-            onClick={handleGoogleSimulatedLogin}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
-              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
-              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-            </svg>
-            Sign in with Google
-          </Button>
-
-          {/* Quick Demo Logins inside card */}
-          <div
-            style={{
-              marginTop: '18px',
-              backgroundColor: 'var(--bg-subtle)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '10px 12px',
-              border: '1px solid var(--border)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
-              <Sparkles size={12} color="var(--primary)" />
-              <span>Instant Test Identities</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
-              <Button size="sm" variant="secondary" onClick={() => quickLoginAs('akshay@guidely.dev')}>
-                Student
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => quickLoginAs('priya.sundaram@gmail.com')}>
-                Mentor
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => quickLoginAs('admin@guidely.dev')}
-                style={{ borderColor: '#F43F5E', color: '#E11D48', fontWeight: 700 }}
-              >
-                Admin 🛡️
-              </Button>
-            </div>
-            <div
-              style={{
-                marginTop: '8px',
-                fontSize: '0.74rem',
-                backgroundColor: '#FFF1F2',
-                padding: '6px 10px',
-                borderRadius: 'var(--radius-xs)',
-                border: '1px solid #FECDD3',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '4px'
-              }}
-            >
-              <span style={{ color: '#9F1239', fontWeight: 700 }}>Admin Login:</span>
-              <span style={{ color: '#BE123C', fontFamily: 'monospace' }}>admin@guidely.dev</span>
-              <span style={{ color: '#9F1239' }}>/</span>
-              <span style={{ color: '#BE123C', fontFamily: 'monospace' }}>password123</span>
-            </div>
-          </div>
+          <GoogleAuthButton
+            onSuccess={handleGoogleSuccess}
+            text="signin_with"
+            isLoading={isLoading}
+          />
         </Card>
 
         {/* Footer Link */}

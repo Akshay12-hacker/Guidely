@@ -33,6 +33,7 @@ export interface IUser {
   avatarPublicId?: string;
   bio?: string;
   headline?: string;
+  googleId?: string;
   status: UserStatus;
   createdAt?: string;
   updatedAt?: string;
@@ -49,6 +50,7 @@ const UserSchema = new Schema<IUser>(
     avatarPublicId: { type: String },
     bio: { type: String },
     headline: { type: String },
+    googleId: { type: String, sparse: true, index: true },
     status: { type: String, enum: ['ACTIVE', 'SUSPENDED', 'PENDING_VERIFICATION'], default: 'ACTIVE' }
   },
   {

@@ -17,6 +17,7 @@ export function createMentorRouter(): Router {
   router.get('/discover', mentorController.discover);
   router.get('/', mentorController.discover);
   router.get('/detail/:id', mentorController.getMentorDetail);
+  router.get('/profile/:id', mentorController.getMentorDetail);
   router.get('/:id', mentorController.getMentorDetail);
 
   // Authenticated mentor routes

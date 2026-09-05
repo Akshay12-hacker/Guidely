@@ -4,7 +4,6 @@ import { ToastProvider, useToast } from './context/ToastContext.js';
 import { WebSocketProvider } from './context/WebSocketContext.js';
 
 // Layout
-import { QuickRoleSwitcher } from './components/ui/QuickRoleSwitcher.js';
 import { Navbar } from './components/layout/Navbar.js';
 import { Sidebar } from './components/layout/Sidebar.js';
 import { Footer } from './components/layout/Footer.js';
@@ -156,9 +155,6 @@ const MainApp: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--bg-body)' }}>
-      {/* 1-Click Role Switcher Demo Bar */}
-      <QuickRoleSwitcher />
-
       {/* Main Top Navbar */}
       <Navbar
         currentRoute={currentRoute}

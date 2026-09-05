@@ -29,7 +29,7 @@ interface MentorProfilePageProps {
 
 export const MentorProfilePage: React.FC<MentorProfilePageProps> = ({ mentorId, onNavigate }) => {
   const { user } = useAuth();
-  const targetId = mentorId || user?.id || 'usr_mentor_priya';
+  const targetId = mentorId || user?.id || '';
 
   const [detail, setDetail] = useState<{
     mentor: MentorProfile & { user: User };
@@ -41,6 +41,10 @@ export const MentorProfilePage: React.FC<MentorProfilePageProps> = ({ mentorId, 
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
   useEffect(() => {
+    if (!targetId) {
+      setIsLoading(false);
+      return;
+    }
     const fetchDetail = async () => {
       setIsLoading(true);
       try {

@@ -25,6 +25,7 @@ export function createAdminRouter(): Router {
   router.put('/reports/:id/resolve', requireAdmin, controller.resolveReport);
   router.get('/reviews', requireAdmin, controller.getReviewsForModeration);
   router.put('/reviews/:id/moderate', requireAdmin, controller.moderateReview);
+  router.get('/projects', requireAdmin, controller.getProjects);
 
   return router;
 }

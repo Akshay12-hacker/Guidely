@@ -77,6 +77,14 @@ export const env = {
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN || 'http://localhost:5173',
   CORS_ORIGIN: process.env.CORS_ORIGIN || process.env.CLIENT_ORIGIN || 'http://localhost:5173',
 
+  // Google OAuth 2.0 (Identity Services)
+  GOOGLE_CLIENT_ID: (process.env.GOOGLE_CLIENT_ID || '').trim().replace(/^["']|["']$/g, ''),
+  GOOGLE_CLIENT_SECRET: (process.env.GOOGLE_CLIENT_SECRET || '').trim().replace(/^["']|["']$/g, ''),
+  GOOGLE_CALLBACK_URL: (process.env.GOOGLE_CALLBACK_URL || '').trim().replace(/^["']|["']$/g, ''),
+  get isGoogleAuthConfigured(): boolean {
+    return Boolean(this.GOOGLE_CLIENT_ID);
+  },
+
   // Seeding
   SEED_DEMO_DATA: process.env.SEED_DEMO_DATA === 'true',
 

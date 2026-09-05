@@ -11,8 +11,11 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, pass: string) => Promise<void>;
   register: (email: string, pass: string, name: string, role: 'STUDENT' | 'MENTOR') => Promise<void>;
-  googleLogin: (email: string, name: string, role?: 'STUDENT' | 'MENTOR') => Promise<void>;
-  quickLoginAs: (email: string) => Promise<void>;
+  googleLogin: (
+    credentialOrData: string | { idToken?: string; credential?: string; role?: 'STUDENT' | 'MENTOR'; email?: string; fullName?: string },
+    nameOrRole?: string | 'STUDENT' | 'MENTOR',
+    role?: 'STUDENT' | 'MENTOR'
+  ) => Promise<AuthResponse>;
   logout: () => void;
   updateCurrentUser: (user: User) => void;
 }
@@ -63,28 +66,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showToast('success', 'Account created successfully!', 'Let us set up your profile next.');
   };
 
-  const googleLogin = async (email: string, name: string, role?: 'STUDENT' | 'MENTOR') => {
-    const res = await api.googleAuth({
-      email,
-      fullName: name,
-      role,
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
-    });
+  const googleLogin = async (
+    credentialOrData: string | { idToken?: string; credential?: string; role?: 'STUDENT' | 'MENTOR'; email?: string; fullName?: string },
+    nameOrRole?: string | 'STUDENT' | 'MENTOR',
+    role?: 'STUDENT' | 'MENTOR'
+  ): Promise<AuthResponse> => {
+    let payload: any;
+    if (typeof credentialOrData === 'string') {
+      if (credentialOrData.includes('.') && credentialOrData.split('.').length >= 3) {
+        const assignedRole = nameOrRole === 'STUDENT' || nameOrRole === 'MENTOR' ? nameOrRole : role;
+        payload = { credential: credentialOrData, role: assignedRole };
+      } else {
+        const fullName = typeof nameOrRole === 'string' && nameOrRole !== 'STUDENT' && nameOrRole !== 'MENTOR' ? nameOrRole : '';
+        payload = { email: credentialOrData, fullName, role };
+      }
+    } else {
+      payload = { ...credentialOrData };
+      if (role && !payload.role) {
+        payload.role = role;
+      }
+    }
+
+    const res = await api.googleAuth(payload);
     handleAuthSuccess(res);
     showToast('success', `Signed in as ${res.user.fullName}`);
-  };
-
-  const quickLoginAs = async (email: string) => {
-    try {
-      setIsLoading(true);
-      const res = await api.login({ email, password: 'password123' });
-      handleAuthSuccess(res);
-      showToast('info', `Switched Demo Role`, `Now acting as ${res.user.fullName} (${res.user.role})`);
-    } catch (err: any) {
-      showToast('error', 'Failed to switch demo account', err.message);
-    } finally {
-      setIsLoading(false);
-    }
+    return res;
   };
 
   const logout = () => {
@@ -109,7 +115,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         googleLogin,
-        quickLoginAs,
         logout,
         updateCurrentUser
       }}

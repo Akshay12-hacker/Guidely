@@ -76,8 +76,12 @@ export const SessionsPage: React.FC<SessionsPageProps> = ({ onNavigate }) => {
 
     setIsSubmitting(true);
     try {
-      // For demo session creation, use mentor ID or default to Nitin
-      const mentorId = user?.role === 'MENTOR' ? user.id : (sessions[0]?.mentorId || 'usr_mentor_nitin');
+      const mentorId = user?.role === 'MENTOR' ? user.id : (sessions.find(s => s.mentorId)?.mentorId || '');
+      if (!mentorId) {
+        showToast('warning', 'No Active Mentor', 'Please connect with a mentor before scheduling a session.');
+        setIsSubmitting(false);
+        return;
+      }
       await api.requestSession({
         mentorId,
         title: sessionTitle,

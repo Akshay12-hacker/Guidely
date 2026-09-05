@@ -26,6 +26,7 @@ export interface IAdminRepository {
   resolveReport(reportId: string, status: 'RESOLVED' | 'DISMISSED', adminNotes?: string): Promise<Report | null>;
   getReviewsForModeration(): Promise<Review[]>;
   moderateReview(reviewId: string, isApproved: boolean): Promise<boolean>;
+  getProjects(): Promise<any[]>;
 }
 
 export class MongoAdminRepository implements IAdminRepository {
@@ -355,6 +356,14 @@ export class MongoAdminRepository implements IAdminRepository {
       await ReviewModel.findByIdAndDelete(reviewId);
     }
     return true;
+  }
+
+  async getProjects(): Promise<any[]> {
+    const projects = await ProjectModel.find().lean();
+    return projects.map((p: any) => ({
+      ...p,
+      id: p._id?.toString() || p.id
+    }));
   }
 }
 

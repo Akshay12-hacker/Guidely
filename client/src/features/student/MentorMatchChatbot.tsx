@@ -130,9 +130,7 @@ export const MentorMatchChatbot: React.FC<MentorMatchChatbotProps> = ({
       const results = await api.recommendMentors(criteria);
       setRecommendedMentors(results);
     } catch {
-      // fallback to mock matching
-      const results = api.rankMockMentors(criteria);
-      setRecommendedMentors(results);
+      setRecommendedMentors([]);
     } finally {
       setIsLoading(false);
     }
