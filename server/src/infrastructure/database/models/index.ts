@@ -117,6 +117,8 @@ export interface IMentorProfile {
   skills: string[];
   technologies: string[];
   mentoringTopics: string[];
+  experienceHighlights?: string[];
+  projectsExperience?: string;
   availabilitySchedule: string;
   availabilityDetails?: any;
   hourlyRate: number;
@@ -146,6 +148,8 @@ const MentorProfileSchema = new Schema<IMentorProfile>(
     skills: { type: [String], default: [] },
     technologies: { type: [String], default: [] },
     mentoringTopics: { type: [String], default: [] },
+    experienceHighlights: { type: [String], default: [] },
+    projectsExperience: { type: String, default: '' },
     availabilitySchedule: { type: String, default: '' },
     availabilityDetails: { type: Schema.Types.Mixed, default: null },
     hourlyRate: { type: Number, default: 0 },

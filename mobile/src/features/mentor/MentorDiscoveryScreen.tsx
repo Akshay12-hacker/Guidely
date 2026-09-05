@@ -39,7 +39,7 @@ export const MentorDiscoveryScreen: React.FC<MentorDiscoveryScreenProps> = ({ on
   const [refreshing, setRefreshing] = useState(false);
 
   // Proposal modal state
-  const [selectedMentorForProposal, setSelectedMentorForProposal] = useState<{ id: string; name: string } | null>(null);
+  const [selectedMentorForProposal, setSelectedMentorForProposal] = useState<any>(null);
 
   const fetchMentors = useCallback(async () => {
     try {
@@ -227,7 +227,7 @@ export const MentorDiscoveryScreen: React.FC<MentorDiscoveryScreenProps> = ({ on
                     <Button
                       size="sm"
                       variant="primary"
-                      onPress={() => setSelectedMentorForProposal({ id: m.userId, name: m.user?.fullName || 'Mentor' })}
+                      onPress={() => setSelectedMentorForProposal(m)}
                       rightIcon={<Icon name="send" size={12} color={colors.white} />}
                     >
                       Request
@@ -245,9 +245,16 @@ export const MentorDiscoveryScreen: React.FC<MentorDiscoveryScreenProps> = ({ on
         <MentorshipRequestModal
           visible={!!selectedMentorForProposal}
           onClose={() => setSelectedMentorForProposal(null)}
-          mentorId={selectedMentorForProposal.id}
-          mentorName={selectedMentorForProposal.name}
+          mentorId={selectedMentorForProposal.userId || selectedMentorForProposal.id}
+          mentorName={selectedMentorForProposal.user?.fullName || selectedMentorForProposal.name}
+          mentorTitle={selectedMentorForProposal.title}
+          mentorCompany={selectedMentorForProposal.company}
+          mentorAvatar={selectedMentorForProposal.user?.avatarUrl}
+          mentorRating={selectedMentorForProposal.rating}
+          mentorReviewsCount={selectedMentorForProposal.reviewsCount}
+          mentorTechnologies={selectedMentorForProposal.technologies}
           onRequestSubmitted={() => {
+            setSelectedMentorForProposal(null);
             onNavigate('requests');
           }}
         />

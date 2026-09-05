@@ -35,6 +35,10 @@ export const MentorOnboardingScreen: React.FC<MentorOnboardingScreenProps> = ({ 
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [customSkillInput, setCustomSkillInput] = useState('');
+  const [customTechInput, setCustomTechInput] = useState('');
+  const [customTopicInput, setCustomTopicInput] = useState('');
+
   const [profile, setProfile] = useState<Partial<MentorProfile>>({
     title: 'Staff Software Engineer',
     company: 'Google',
@@ -43,6 +47,8 @@ export const MentorOnboardingScreen: React.FC<MentorOnboardingScreenProps> = ({ 
     bio: 'Distributed systems architect with 8+ years building high-throughput services at Google. Passionate about helping students build real-world systems.',
     skills: ['Go', 'Distributed Systems', 'Kubernetes', 'gRPC', 'PostgreSQL'],
     technologies: ['Go (Golang)', 'Kubernetes', 'gRPC', 'Docker', 'PostgreSQL'],
+    experienceHighlights: ['High-Throughput Production Systems (10k+ QPS)', 'Open Source Maintainer / Core Contributor'],
+    projectsExperience: 'Architected distributed stream processing engine handling 10k RPS at Google; Contributor to open-source RPC libraries.',
     mentoringTopics: ['Architecture & System Design', '1-on-1 Code Reviews', 'Concurrency & Deadlocks'],
     availabilitySchedule: 'Weekdays post 6:30 PM IST & Saturday mornings',
     hourlyRate: 0,
@@ -107,12 +113,60 @@ export const MentorOnboardingScreen: React.FC<MentorOnboardingScreenProps> = ({ 
     }));
   };
 
+  const removeSkill = (s: string) => {
+    setProfile(prev => ({
+      ...prev,
+      skills: (prev.skills || []).filter(x => x !== s)
+    }));
+  };
+
+  const handleAddSkill = () => {
+    const clean = customSkillInput.trim();
+    if (!clean) return;
+    const list = profile.skills || [];
+    if (list.some(s => s.toLowerCase() === clean.toLowerCase())) {
+      showToast('info', 'Already Added', `"${clean}" is already in your skills.`);
+      setCustomSkillInput('');
+      return;
+    }
+    setProfile(prev => ({
+      ...prev,
+      skills: [...(prev.skills || []), clean]
+    }));
+    setCustomSkillInput('');
+    showToast('success', 'Skill Added', `"${clean}" added to your domains.`);
+  };
+
   const toggleTech = (t: string) => {
     const list = profile.technologies || [];
     setProfile(prev => ({
       ...prev,
       technologies: list.includes(t) ? list.filter(x => x !== t) : [...list, t]
     }));
+  };
+
+  const removeTech = (t: string) => {
+    setProfile(prev => ({
+      ...prev,
+      technologies: (prev.technologies || []).filter(x => x !== t)
+    }));
+  };
+
+  const handleAddTech = () => {
+    const clean = customTechInput.trim();
+    if (!clean) return;
+    const list = profile.technologies || [];
+    if (list.some(t => t.toLowerCase() === clean.toLowerCase())) {
+      showToast('info', 'Already Added', `"${clean}" is already in your tech stack.`);
+      setCustomTechInput('');
+      return;
+    }
+    setProfile(prev => ({
+      ...prev,
+      technologies: [...(prev.technologies || []), clean]
+    }));
+    setCustomTechInput('');
+    showToast('success', 'Technology Added', `"${clean}" added.`);
   };
 
   const toggleTopic = (tp: string) => {
@@ -123,9 +177,66 @@ export const MentorOnboardingScreen: React.FC<MentorOnboardingScreenProps> = ({ 
     }));
   };
 
-  const allSkills = ['Distributed Systems', 'Machine Learning', 'Cloud Architecture', 'Frontend Systems', 'Smart Contracts', 'Security & Cryptography', 'DevOps & SRE', 'Database Internals'];
-  const allTech = ['Go (Golang)', 'PyTorch', 'Rust', 'Kubernetes', 'gRPC', 'WebRTC', 'React', 'TypeScript', 'PostgreSQL', 'Docker'];
-  const allTopics = ['Architecture & System Design', '1-on-1 Code Reviews & Best Practices', 'Concurrency & Deadlock Prevention', 'Benchmarking & Load Testing', 'Resume & Interview Prep'];
+  const removeTopic = (tp: string) => {
+    setProfile(prev => ({
+      ...prev,
+      mentoringTopics: (prev.mentoringTopics || []).filter(x => x !== tp)
+    }));
+  };
+
+  const handleAddTopic = () => {
+    const clean = customTopicInput.trim();
+    if (!clean) return;
+    const list = profile.mentoringTopics || [];
+    if (list.some(tp => tp.toLowerCase() === clean.toLowerCase())) {
+      showToast('info', 'Already Added', `"${clean}" is already in your mentoring topics.`);
+      setCustomTopicInput('');
+      return;
+    }
+    setProfile(prev => ({
+      ...prev,
+      mentoringTopics: [...(prev.mentoringTopics || []), clean]
+    }));
+    setCustomTopicInput('');
+    showToast('success', 'Topic Added', `"${clean}" added.`);
+  };
+
+  const allSkills = [
+    'Distributed Systems',
+    'Machine Learning',
+    'Cloud Architecture',
+    'Frontend Systems',
+    'Smart Contracts',
+    'Security & Cryptography',
+    'DevOps & SRE',
+    'Database Internals',
+    'Generative AI & LLMs',
+    'Mobile Architecture'
+  ];
+  const allTech = [
+    'Go (Golang)',
+    'PyTorch',
+    'Rust',
+    'Kubernetes',
+    'gRPC',
+    'WebRTC',
+    'React',
+    'TypeScript',
+    'PostgreSQL',
+    'Docker',
+    'Flutter',
+    'Python',
+    'FastAPI',
+    'AWS'
+  ];
+  const allTopics = [
+    'Architecture & System Design',
+    '1-on-1 Code Reviews & Best Practices',
+    'Concurrency & Deadlock Prevention',
+    'Benchmarking & Load Testing',
+    'Resume & Interview Prep',
+    'Capstone Milestone Planning'
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -192,7 +303,7 @@ export const MentorOnboardingScreen: React.FC<MentorOnboardingScreenProps> = ({ 
                 Years of Engineering Experience:
               </Text>
               <View style={styles.chipsWrap}>
-                {[2, 4, 6, 8, 10, 15].map(exp => (
+                {[1, 2, 3, 4, 5, 8, 10, 15, 20].map(exp => (
                   <Chip
                     key={exp}
                     label={`${exp}+ years`}
@@ -204,15 +315,26 @@ export const MentorOnboardingScreen: React.FC<MentorOnboardingScreenProps> = ({ 
             </View>
           )}
 
-          {/* STEP 3: Bio */}
+          {/* STEP 3: Bio & Notable Experience */}
           {currentStep === 3 && (
             <View>
-              <Text style={[typography.h3, styles.stepTitle]}>About & Mentoring Philosophy</Text>
+              <Text style={[typography.h3, styles.stepTitle]}>About & Experience Highlights</Text>
+              <Text style={[typography.caption, { color: colors.textMuted, marginBottom: spacing.sm }]}>
+                Share your engineering background and standout production accomplishments.
+              </Text>
               <TextArea
-                label="Professional Bio"
-                rows={5}
+                label="Professional Bio & Philosophy"
+                rows={4}
                 value={profile.bio || ''}
                 onChangeText={t => setProfile(prev => ({ ...prev, bio: t }))}
+              />
+              <TextArea
+                label="Notable Systems, Architecture & Projects"
+                placeholder="e.g. Architected distributed stream processing engine handling 10k RPS at Google; Contributor to open-source RPC libraries..."
+                rows={3}
+                value={profile.projectsExperience || ''}
+                onChangeText={t => setProfile(prev => ({ ...prev, projectsExperience: t }))}
+                style={{ marginTop: spacing.sm }}
               />
             </View>
           )}
@@ -221,15 +343,60 @@ export const MentorOnboardingScreen: React.FC<MentorOnboardingScreenProps> = ({ 
           {currentStep === 4 && (
             <View>
               <Text style={[typography.h3, styles.stepTitle]}>Core Engineering Domains</Text>
-              <View style={styles.chipsWrap}>
-                {allSkills.map(s => (
-                  <Chip
-                    key={s}
-                    label={s}
-                    selected={profile.skills?.includes(s)}
-                    onPress={() => toggleSkill(s)}
+              <Text style={[typography.caption, { color: colors.textMuted, marginBottom: spacing.sm }]}>
+                Select or add your domain specializations and technical skills.
+              </Text>
+
+              {/* Add Custom Skill */}
+              <View style={styles.customAddRow}>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    placeholder="Add custom skill (e.g. LLM Agents, Web3)..."
+                    value={customSkillInput}
+                    onChangeText={setCustomSkillInput}
+                    containerStyle={{ marginBottom: 0 }}
                   />
-                ))}
+                </View>
+                <Button size="sm" variant="outline" onPress={handleAddSkill} style={{ marginLeft: spacing.xs }}>
+                  Add
+                </Button>
+              </View>
+
+              {/* Selected Skills */}
+              {profile.skills && profile.skills.length > 0 && (
+                <View style={{ marginVertical: spacing.sm }}>
+                  <Text style={[typography.captionBold, { color: colors.textMuted, marginBottom: spacing.xs }]}>
+                    Selected ({profile.skills.length}) - Tap to remove:
+                  </Text>
+                  <View style={styles.chipsWrap}>
+                    {profile.skills.map(s => (
+                      <Chip
+                        key={s}
+                        label={`${s} ✕`}
+                        selected={true}
+                        onPress={() => removeSkill(s)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Suggested Domains */}
+              <Text style={[typography.captionBold, { color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.xs }]}>
+                Suggested Domains:
+              </Text>
+              <View style={styles.chipsWrap}>
+                {allSkills.map(s => {
+                  const isSelected = profile.skills?.includes(s);
+                  return (
+                    <Chip
+                      key={s}
+                      label={s}
+                      selected={isSelected}
+                      onPress={() => toggleSkill(s)}
+                    />
+                  );
+                })}
               </View>
             </View>
           )}
@@ -238,15 +405,60 @@ export const MentorOnboardingScreen: React.FC<MentorOnboardingScreenProps> = ({ 
           {currentStep === 5 && (
             <View>
               <Text style={[typography.h3, styles.stepTitle]}>Technologies & Stacks</Text>
-              <View style={styles.chipsWrap}>
-                {allTech.map(t => (
-                  <Chip
-                    key={t}
-                    label={t}
-                    selected={profile.technologies?.includes(t)}
-                    onPress={() => toggleTech(t)}
+              <Text style={[typography.caption, { color: colors.textMuted, marginBottom: spacing.sm }]}>
+                Languages, frameworks, databases, and tools you have experience in.
+              </Text>
+
+              {/* Add Custom Tech */}
+              <View style={styles.customAddRow}>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    placeholder="Add new tech (e.g. LangChain, Flutter, Astro)..."
+                    value={customTechInput}
+                    onChangeText={setCustomTechInput}
+                    containerStyle={{ marginBottom: 0 }}
                   />
-                ))}
+                </View>
+                <Button size="sm" variant="outline" onPress={handleAddTech} style={{ marginLeft: spacing.xs }}>
+                  Add
+                </Button>
+              </View>
+
+              {/* Selected Tech */}
+              {profile.technologies && profile.technologies.length > 0 && (
+                <View style={{ marginVertical: spacing.sm }}>
+                  <Text style={[typography.captionBold, { color: colors.textMuted, marginBottom: spacing.xs }]}>
+                    Selected ({profile.technologies.length}) - Tap to remove:
+                  </Text>
+                  <View style={styles.chipsWrap}>
+                    {profile.technologies.map(t => (
+                      <Chip
+                        key={t}
+                        label={`${t} ✕`}
+                        selected={true}
+                        onPress={() => removeTech(t)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Suggested Tech */}
+              <Text style={[typography.captionBold, { color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.xs }]}>
+                Popular Stacks & Tools:
+              </Text>
+              <View style={styles.chipsWrap}>
+                {allTech.map(t => {
+                  const isSelected = profile.technologies?.includes(t);
+                  return (
+                    <Chip
+                      key={t}
+                      label={t}
+                      selected={isSelected}
+                      onPress={() => toggleTech(t)}
+                    />
+                  );
+                })}
               </View>
             </View>
           )}
@@ -254,16 +466,61 @@ export const MentorOnboardingScreen: React.FC<MentorOnboardingScreenProps> = ({ 
           {/* STEP 6: Mentoring Topics */}
           {currentStep === 6 && (
             <View>
-              <Text style={[typography.h3, styles.stepTitle]}>Mentoring Topics</Text>
-              <View style={styles.chipsWrap}>
-                {allTopics.map(topic => (
-                  <Chip
-                    key={topic}
-                    label={topic}
-                    selected={profile.mentoringTopics?.includes(topic)}
-                    onPress={() => toggleTopic(topic)}
+              <Text style={[typography.h3, styles.stepTitle]}>Mentoring Topics & Formats</Text>
+              <Text style={[typography.caption, { color: colors.textMuted, marginBottom: spacing.sm }]}>
+                Coaching topics and review formats you offer to students.
+              </Text>
+
+              {/* Add Custom Topic */}
+              <View style={styles.customAddRow}>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    placeholder="Add topic (e.g. AI Hackathons, 1-on-1 Debugging)..."
+                    value={customTopicInput}
+                    onChangeText={setCustomTopicInput}
+                    containerStyle={{ marginBottom: 0 }}
                   />
-                ))}
+                </View>
+                <Button size="sm" variant="outline" onPress={handleAddTopic} style={{ marginLeft: spacing.xs }}>
+                  Add
+                </Button>
+              </View>
+
+              {/* Selected Topics */}
+              {profile.mentoringTopics && profile.mentoringTopics.length > 0 && (
+                <View style={{ marginVertical: spacing.sm }}>
+                  <Text style={[typography.captionBold, { color: colors.textMuted, marginBottom: spacing.xs }]}>
+                    Selected ({profile.mentoringTopics.length}) - Tap to remove:
+                  </Text>
+                  <View style={styles.chipsWrap}>
+                    {profile.mentoringTopics.map(tp => (
+                      <Chip
+                        key={tp}
+                        label={`${tp} ✕`}
+                        selected={true}
+                        onPress={() => removeTopic(tp)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Suggested Topics */}
+              <Text style={[typography.captionBold, { color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.xs }]}>
+                Suggested Topics:
+              </Text>
+              <View style={styles.chipsWrap}>
+                {allTopics.map(topic => {
+                  const isSelected = profile.mentoringTopics?.includes(topic);
+                  return (
+                    <Chip
+                      key={topic}
+                      label={topic}
+                      selected={isSelected}
+                      onPress={() => toggleTopic(topic)}
+                    />
+                  );
+                })}
               </View>
             </View>
           )}
@@ -308,6 +565,29 @@ export const MentorOnboardingScreen: React.FC<MentorOnboardingScreenProps> = ({ 
                 <Text style={[typography.bodyBold, { color: colors.primary }]}>{profile.title} @ {profile.company}</Text>
                 <Text style={[typography.caption, { color: colors.textMuted }]}>{profile.college} • {profile.yearsExperience}+ yrs exp</Text>
                 <Text style={[typography.body, { marginTop: spacing.sm, color: colors.textMain }]}>{profile.bio}</Text>
+                {profile.projectsExperience ? (
+                  <Text style={[typography.caption, { marginTop: spacing.xs, color: colors.textMuted, fontStyle: 'italic' }]}>
+                    {profile.projectsExperience}
+                  </Text>
+                ) : null}
+                {profile.skills && profile.skills.length > 0 && (
+                  <View style={{ marginTop: spacing.sm }}>
+                    <Text style={[typography.captionBold, { color: colors.textMuted }]}>SKILLS</Text>
+                    <Text style={[typography.caption, { color: colors.textMain }]}>{profile.skills.join(' • ')}</Text>
+                  </View>
+                )}
+                {profile.technologies && profile.technologies.length > 0 && (
+                  <View style={{ marginTop: spacing.xs }}>
+                    <Text style={[typography.captionBold, { color: colors.textMuted }]}>TECHNOLOGIES</Text>
+                    <Text style={[typography.caption, { color: colors.primary }]}>{profile.technologies.join(', ')}</Text>
+                  </View>
+                )}
+                {profile.mentoringTopics && profile.mentoringTopics.length > 0 && (
+                  <View style={{ marginTop: spacing.xs }}>
+                    <Text style={[typography.captionBold, { color: colors.textMuted }]}>TOPICS</Text>
+                    <Text style={[typography.caption, { color: colors.textMain }]}>{profile.mentoringTopics.join(' • ')}</Text>
+                  </View>
+                )}
               </View>
             </View>
           )}
@@ -398,6 +678,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     marginVertical: spacing.md
+  },
+  customAddRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm
   },
   actionsRow: {
     flexDirection: 'row',

@@ -34,6 +34,15 @@ export class MentorController {
     }
   };
 
+  getOnboardingOptions = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = this.mentorService.getOnboardingOptions();
+      res.status(200).json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   discover = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const filters: MentorFilters = {
@@ -41,10 +50,12 @@ export class MentorController {
         minExperience: req.query.minExperience ? parseInt(req.query.minExperience as string, 10) : undefined,
         minRating: req.query.minRating ? parseFloat(req.query.minRating as string) : undefined,
         company: req.query.company as string,
+        availability: req.query.availability as string,
         sortBy: req.query.sortBy as any,
         sortOrder: req.query.sortOrder as any,
         technologies: req.query.technologies ? (req.query.technologies as string).split(',') : undefined,
-        skills: req.query.skills ? (req.query.skills as string).split(',') : undefined
+        skills: req.query.skills ? (req.query.skills as string).split(',') : undefined,
+        topics: req.query.topics ? (req.query.topics as string).split(',') : undefined
       };
 
       const mentors = await this.mentorService.discoverMentors(filters);

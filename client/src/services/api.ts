@@ -21,10 +21,19 @@ import {
   CloudinaryUploadResult,
   UploadSignatureResponse,
   StudentOnboardingOptions,
+  MentorOnboardingOptions,
   RecommendedMentor,
   MentorRecommendationCriteria
 } from '../../../shared/types.js';
-import { TARGET_TECHNOLOGIES, HELP_NEEDED_AREAS, SKILL_CATEGORIES } from '../constants/skills.js';
+import {
+  TARGET_TECHNOLOGIES,
+  HELP_NEEDED_AREAS,
+  SKILL_CATEGORIES,
+  MENTOR_PRESET_SKILLS,
+  MENTOR_PRESET_TECHNOLOGIES,
+  MENTOR_PRESET_EXPERIENCE_HIGHLIGHTS,
+  MENTOR_PRESET_TOPICS
+} from '../constants/skills.js';
 
 import {
   MOCK_USERS,
@@ -198,6 +207,48 @@ class ApiClient {
         updatedAt: new Date().toISOString()
       };
       dynamicUsers[id] = newUser;
+      if (data.role === 'MENTOR') {
+        dynamicMentorProfiles[id] = {
+          userId: id,
+          title: 'Software Engineer',
+          company: '',
+          college: '',
+          yearsExperience: 0,
+          bio: '',
+          skills: [],
+          technologies: [],
+          mentoringTopics: [],
+          experienceHighlights: [],
+          projectsExperience: '',
+          availabilitySchedule: 'Flexible',
+          hourlyRate: 0,
+          isVerified: false,
+          verificationStatus: 'PENDING',
+          rating: 5.0,
+          reviewsCount: 0,
+          studentsHelpedCount: 0,
+          onboardingStep: 1,
+          isCompleted: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      } else {
+        dynamicStudentProfiles[id] = {
+          userId: id,
+          college: '',
+          degree: '',
+          graduationYear: new Date().getFullYear() + 2,
+          currentSkills: [],
+          projectIdea: '',
+          targetTechnologies: [],
+          helpNeededAreas: [],
+          availability: '',
+          onboardingStep: 1,
+          isCompleted: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      }
       const token = `mock_token_${id}`;
       return { user: newUser, token };
     }
@@ -442,6 +493,8 @@ class ApiClient {
         skills: m.skills || [],
         technologies: m.technologies || [],
         mentoringTopics: m.mentoringTopics || [],
+        experienceHighlights: m.experienceHighlights || [],
+        projectsExperience: m.projectsExperience || '',
         rating: m.rating || 5.0,
         reviews_count: m.reviewsCount || 0,
         reviewsCount: m.reviewsCount || 0,
@@ -515,7 +568,33 @@ class ApiClient {
       return await this.request<MentorProfile>('/mentors/profile');
     } catch {
       const uid = this.getCurrentMockUserId();
-      return dynamicMentorProfiles[uid] || dynamicMentorProfiles['usr_mentor_nitin'];
+      if (!dynamicMentorProfiles[uid]) {
+        dynamicMentorProfiles[uid] = {
+          userId: uid,
+          title: 'Software Engineer',
+          company: '',
+          college: '',
+          yearsExperience: 0,
+          bio: '',
+          skills: [],
+          technologies: [],
+          mentoringTopics: [],
+          experienceHighlights: [],
+          projectsExperience: '',
+          availabilitySchedule: 'Flexible',
+          hourlyRate: 0,
+          isVerified: false,
+          verificationStatus: 'PENDING',
+          rating: 5.0,
+          reviewsCount: 0,
+          studentsHelpedCount: 0,
+          onboardingStep: 1,
+          isCompleted: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return dynamicMentorProfiles[uid];
     }
   }
 
@@ -560,6 +639,19 @@ class ApiClient {
     return this.updateMentorProfile({ ...data, onboardingStep: step });
   }
 
+  async getMentorOnboardingOptions(): Promise<MentorOnboardingOptions> {
+    try {
+      return await this.request<MentorOnboardingOptions>('/mentors/onboarding-options');
+    } catch {
+      return {
+        presetSkills: [...MENTOR_PRESET_SKILLS],
+        presetTechnologies: [...MENTOR_PRESET_TECHNOLOGIES],
+        presetExperienceHighlights: [...MENTOR_PRESET_EXPERIENCE_HIGHLIGHTS],
+        presetTopics: [...MENTOR_PRESET_TOPICS]
+      };
+    }
+  }
+
   async discoverMentors(filters: MentorFilters): Promise<(MentorProfile & { user: User })[]> {
     try {
       const params = new URLSearchParams();
@@ -567,10 +659,12 @@ class ApiClient {
       if (filters.minExperience) params.append('minExperience', filters.minExperience.toString());
       if (filters.minRating) params.append('minRating', filters.minRating.toString());
       if (filters.company) params.append('company', filters.company);
+      if (filters.availability) params.append('availability', filters.availability);
       if (filters.sortBy) params.append('sortBy', filters.sortBy);
       if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
       if (filters.technologies?.length) params.append('technologies', filters.technologies.join(','));
       if (filters.skills?.length) params.append('skills', filters.skills.join(','));
+      if (filters.topics?.length) params.append('topics', filters.topics.join(','));
 
       return await this.request<(MentorProfile & { user: User })[]>(`/mentors/discover?${params.toString()}`);
     } catch {
@@ -586,7 +680,10 @@ class ApiClient {
           m.title.toLowerCase().includes(q) ||
           m.company.toLowerCase().includes(q) ||
           m.skills.some(s => s.toLowerCase().includes(q)) ||
-          m.technologies.some(t => t.toLowerCase().includes(q))
+          m.technologies.some(t => t.toLowerCase().includes(q)) ||
+          (m.mentoringTopics && m.mentoringTopics.some(top => top.toLowerCase().includes(q))) ||
+          (m.experienceHighlights && m.experienceHighlights.some(eh => eh.toLowerCase().includes(q))) ||
+          (m.projectsExperience && m.projectsExperience.toLowerCase().includes(q))
         );
       }
 
@@ -603,9 +700,26 @@ class ApiClient {
         list = list.filter(m => m.company.toLowerCase().includes(comp));
       }
 
+      if (filters.availability) {
+        const avail = filters.availability.toLowerCase();
+        list = list.filter(m => m.availabilitySchedule?.toLowerCase().includes(avail));
+      }
+
       if (filters.technologies && filters.technologies.length > 0) {
         list = list.filter(m =>
           filters.technologies!.some(t => m.technologies.map(x => x.toLowerCase()).includes(t.toLowerCase()))
+        );
+      }
+
+      if (filters.skills && filters.skills.length > 0) {
+        list = list.filter(m =>
+          filters.skills!.some(s => m.skills.map(x => x.toLowerCase()).includes(s.toLowerCase()))
+        );
+      }
+
+      if (filters.topics && filters.topics.length > 0) {
+        list = list.filter(m =>
+          filters.topics!.some(t => (m.mentoringTopics || []).map(x => x.toLowerCase()).includes(t.toLowerCase()))
         );
       }
 
@@ -647,48 +761,149 @@ class ApiClient {
       return await this.request<any>('/mentors/dashboard');
     } catch {
       const uid = this.getCurrentMockUserId();
-      const profile = dynamicMentorProfiles[uid] || dynamicMentorProfiles['usr_mentor_nitin'];
-      const activeMentees = [
-        {
-          id: 'usr_student_akshay',
-          fullName: 'Akshay Ramkishor Rahangdale',
-          avatarUrl: MOCK_USERS['usr_student_akshay'].avatarUrl,
-          college: 'SAGE University Bhopal',
-          projectTitle: 'Guidely: E-learning & Collaborative Project Mentorship Platform',
-          projectId: 'proj_guidely_pbl',
-          progressPercentage: 68,
-          lastActivity: '2 hours ago'
-        },
-        {
-          id: 'usr_student_abhimanyu',
-          fullName: 'Abhimanyu Kumar Sahu',
-          avatarUrl: MOCK_USERS['usr_student_abhimanyu'].avatarUrl,
-          college: 'SAGE University Bhopal',
-          projectTitle: 'AI-Powered Cyber Threat Intelligence & Anomaly Detector',
-          projectId: 'proj_threat_intel',
-          progressPercentage: 45,
-          lastActivity: 'Yesterday'
-        }
-      ];
+      let profile = dynamicMentorProfiles[uid];
+      if (!profile) {
+        profile = {
+          userId: uid,
+          title: 'Software Engineer',
+          company: '',
+          college: '',
+          yearsExperience: 0,
+          bio: '',
+          skills: [],
+          technologies: [],
+          mentoringTopics: [],
+          experienceHighlights: [],
+          projectsExperience: '',
+          availabilitySchedule: 'Flexible',
+          hourlyRate: 0,
+          isVerified: false,
+          verificationStatus: 'PENDING',
+          rating: 5.0,
+          reviewsCount: 0,
+          studentsHelpedCount: 0,
+          onboardingStep: 1,
+          isCompleted: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        dynamicMentorProfiles[uid] = profile;
+      }
 
-      const upcomingSessions = dynamicSessions.filter(s => s.mentorId === uid && s.status === 'CONFIRMED');
-      const pendingRequests = dynamicRequests.filter(r => r.mentorId === uid && r.status === 'PENDING');
-      const recentReviews = dynamicReviews.filter(r => r.mentorId === uid);
+      const activeProjects = Object.values(dynamicProjects)
+        .filter(p => p.mentorId === uid && p.status !== 'COMPLETED')
+        .map(p => {
+          const student = dynamicUsers[p.studentId];
+          const prof = dynamicStudentProfiles[p.studentId];
+          return {
+            ...p,
+            id: p.id,
+            student_name: student?.fullName || 'Student',
+            student_avatar: student?.avatarUrl,
+            student_college: prof?.college || '',
+            student_degree: prof?.degree || '',
+            student_grad_year: prof?.graduationYear,
+            progressPercentage: p.progressPercentage || 0,
+            progress_percentage: p.progressPercentage || 0
+          };
+        });
+
+      const upcomingSessions = dynamicSessions
+        .filter(s => s.mentorId === uid && (s.status === 'CONFIRMED' || s.status === 'REQUESTED'))
+        .map(s => {
+          const student = dynamicUsers[s.studentId];
+          const prof = dynamicStudentProfiles[s.studentId];
+          const proj = dynamicProjects[s.projectId];
+          return {
+            ...s,
+            id: s.id,
+            student_name: student?.fullName || 'Student',
+            student_avatar: student?.avatarUrl,
+            student_college: prof?.college || '',
+            project_title: proj?.title || ''
+          };
+        });
+
+      const incomingRequests = dynamicRequests
+        .filter(r => r.mentorId === uid && (r.status === 'PENDING' || r.status === 'INFO_REQUESTED' || r.status === 'INFO_PROVIDED'))
+        .map(r => {
+          const student = dynamicUsers[r.studentId];
+          const prof = dynamicStudentProfiles[r.studentId];
+          return {
+            ...r,
+            id: r.id,
+            student_name: student?.fullName || 'Student',
+            student_avatar: student?.avatarUrl,
+            student_college: prof?.college || '',
+            student_degree: prof?.degree || '',
+            student_grad_year: prof?.graduationYear
+          };
+        });
+
+      const completedSessions = dynamicSessions.filter(s => s.mentorId === uid && s.status === 'COMPLETED').length;
+      const completedProjects = Object.values(dynamicProjects).filter(p => p.mentorId === uid && p.status === 'COMPLETED').length;
+      const totalReviews = dynamicReviews.filter(r => r.mentorId === uid).length;
+      const effectiveRating = (totalReviews > 0 || (profile.reviewsCount && profile.reviewsCount > 0)) ? profile.rating : 0;
 
       return {
+        user: dynamicUsers[uid],
         profile,
-        activeMentees,
+        incomingRequests,
+        pendingRequests: incomingRequests,
+        activeProjects,
+        activeMentees: activeProjects,
         upcomingSessions,
-        pendingRequests,
-        recentReviews,
+        recentConversations: [],
         stats: {
-          totalMentees: 45,
-          activeProjects: 4,
-          hoursMentored: 128,
-          rating: profile.rating || 4.97
-        }
+          activeStudents: activeProjects.length,
+          completedSessions,
+          completedProjects,
+          averageRating: effectiveRating,
+          totalReviews: totalReviews || profile.reviewsCount || 0
+        },
+        activeMenteesCount: activeProjects.length,
+        completedMenteesCount: completedProjects,
+        hoursMentored: completedSessions,
+        averageRating: effectiveRating
       };
     }
+  }
+
+  async getMentorActiveStudents(): Promise<{
+    activeProjects: any[];
+    incomingRequestsCount: number;
+    stats: {
+      totalStudents: number;
+      avgProgress: number;
+      milestonesCompleted: number;
+      upcomingSessionsCount: number;
+    };
+  }> {
+    const dashboard = await this.getMentorDashboard();
+    const activeProjects = dashboard.activeProjects || dashboard.activeMentees || [];
+    const incomingRequests = dashboard.incomingRequests || dashboard.pendingRequests || [];
+    const upcomingSessions = dashboard.upcomingSessions || [];
+
+    const totalProgress = activeProjects.reduce((acc: number, p: any) => acc + (p.progressPercentage || p.progress_percentage || 0), 0);
+    const avgProgress = activeProjects.length > 0 ? Math.round(totalProgress / activeProjects.length) : 0;
+
+    let milestonesCompleted = 0;
+    activeProjects.forEach((p: any) => {
+      if (Array.isArray(p.milestones)) {
+        milestonesCompleted += p.milestones.filter((m: any) => m.status === 'COMPLETED').length;
+      }
+    });
+
+    return {
+      activeProjects,
+      incomingRequestsCount: incomingRequests.length,
+      stats: {
+        totalStudents: activeProjects.length,
+        avgProgress,
+        milestonesCompleted,
+        upcomingSessionsCount: upcomingSessions.length
+      }
+    };
   }
 
   // --- Mentorship Requests ---
@@ -760,7 +975,7 @@ class ApiClient {
       return await this.request<MentorshipRequest[]>('/mentorship/mentor-requests');
     } catch {
       const uid = this.getCurrentMockUserId();
-      return dynamicRequests.filter(r => r.mentorId === uid || uid === 'usr_mentor_nitin');
+      return dynamicRequests.filter(r => r.mentorId === uid);
     }
   }
 

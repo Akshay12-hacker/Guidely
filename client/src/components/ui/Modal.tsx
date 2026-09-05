@@ -9,6 +9,7 @@ export interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   maxWidth?: string;
+  zIndex?: number;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -18,7 +19,8 @@ export const Modal: React.FC<ModalProps> = ({
   subtitle,
   children,
   footer,
-  maxWidth = '540px'
+  maxWidth = '540px',
+  zIndex
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -43,6 +45,7 @@ export const Modal: React.FC<ModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
+      style={zIndex ? { zIndex } : undefined}
     >
       <div
         className="guidely-modal-panel"
@@ -57,7 +60,8 @@ export const Modal: React.FC<ModalProps> = ({
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'space-between',
-            gap: '12px'
+            gap: '12px',
+            flexShrink: 0
           }}
         >
           <div>
@@ -99,7 +103,7 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Body */}
-        <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+        <div style={{ padding: '20px', overflowY: 'auto', flex: '1 1 auto', minHeight: 0 }}>
           {children}
         </div>
 
@@ -109,10 +113,12 @@ export const Modal: React.FC<ModalProps> = ({
             style={{
               padding: '14px 20px',
               borderTop: '1px solid var(--border)',
-              backgroundColor: 'var(--bg-body)',
+              backgroundColor: '#FFFFFF',
               display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '10px'
+              alignItems: 'center',
+              width: '100%',
+              boxSizing: 'border-box',
+              flexShrink: 0
             }}
           >
             {footer}

@@ -29,6 +29,8 @@ export class MongoMentorRepository implements IMentorRepository {
     if (profile.skills !== undefined) updateData.skills = profile.skills;
     if (profile.technologies !== undefined) updateData.technologies = profile.technologies;
     if (profile.mentoringTopics !== undefined) updateData.mentoringTopics = profile.mentoringTopics;
+    if (profile.experienceHighlights !== undefined) updateData.experienceHighlights = profile.experienceHighlights;
+    if (profile.projectsExperience !== undefined) updateData.projectsExperience = profile.projectsExperience;
     if (profile.availabilitySchedule !== undefined) updateData.availabilitySchedule = profile.availabilitySchedule;
     if (profile.availabilityDetails !== undefined) updateData.availabilityDetails = profile.availabilityDetails;
     if (profile.hourlyRate !== undefined) updateData.hourlyRate = profile.hourlyRate;
@@ -82,45 +84,36 @@ export class MongoMentorRepository implements IMentorRepository {
     if (!mentorDocs.length) return [];
 
     const userIds = mentorDocs.map(m => m.userId);
-    const userQuery: any = { _id: { $in: userIds }, status: 'ACTIVE' };
-
-    if (filters.search) {
-      userQuery.$or = [
-        { fullName: { $regex: filters.search, $options: 'i' } },
-        { bio: { $regex: filters.search, $options: 'i' } }
-      ];
-    }
-
-    const userDocs = await UserModel.find(userQuery).lean();
+    const userDocs = await UserModel.find({ _id: { $in: userIds }, status: 'ACTIVE' }).lean();
     const userMap = new Map(userDocs.map(u => [u._id, u]));
 
     const result: (MentorProfile & { user: User })[] = [];
 
     for (const mDoc of mentorDocs) {
       const uDoc = userMap.get(mDoc.userId);
-      if (!uDoc) {
-        // If search didn't match user name, check if search matched mentor title/company
-        if (filters.search) {
-          const s = filters.search.toLowerCase();
-          const matchTitle = mDoc.title?.toLowerCase().includes(s);
-          const matchCompany = mDoc.company?.toLowerCase().includes(s);
-          const matchBio = mDoc.bio?.toLowerCase().includes(s);
-          if (!matchTitle && !matchCompany && !matchBio) continue;
-          
-          const directUser = await UserModel.findOne({ _id: mDoc.userId, status: 'ACTIVE' }).lean();
-          if (!directUser) continue;
-          
-          const profile = this.mapDocToProfile(mDoc);
-          const user: User = this.mapDocToUser(directUser);
-          result.push({ ...profile, user });
+      if (!uDoc) continue;
+
+      if (filters.search) {
+        const s = filters.search.toLowerCase();
+        const matchUser = uDoc.fullName?.toLowerCase().includes(s) || uDoc.bio?.toLowerCase().includes(s) || uDoc.headline?.toLowerCase().includes(s);
+        const matchTitle = mDoc.title?.toLowerCase().includes(s);
+        const matchCompany = mDoc.company?.toLowerCase().includes(s);
+        const matchBio = mDoc.bio?.toLowerCase().includes(s);
+        const matchSkills = (mDoc.skills || []).some((sk: string) => sk.toLowerCase().includes(s));
+        const matchTech = (mDoc.technologies || []).some((tk: string) => tk.toLowerCase().includes(s));
+        const matchTopics = (mDoc.mentoringTopics || []).some((tp: string) => tp.toLowerCase().includes(s));
+        const matchHighlights = (mDoc.experienceHighlights || []).some((eh: string) => eh.toLowerCase().includes(s));
+        const matchProjects = mDoc.projectsExperience?.toLowerCase().includes(s);
+
+        if (!matchUser && !matchTitle && !matchCompany && !matchBio && !matchSkills && !matchTech && !matchTopics && !matchHighlights && !matchProjects) {
+          continue;
         }
-        continue;
       }
 
       const profile = this.mapDocToProfile(mDoc);
       const user: User = this.mapDocToUser(uDoc);
 
-      // In-memory technology and skill array matching
+      // In-memory technology, skill, and topic array matching
       if (filters.technologies && filters.technologies.length > 0) {
         const matchTech = filters.technologies.some(t =>
           profile.technologies.some(mt => mt.toLowerCase().includes(t.toLowerCase()))
@@ -133,6 +126,18 @@ export class MongoMentorRepository implements IMentorRepository {
           profile.skills.some(ms => ms.toLowerCase().includes(s.toLowerCase()))
         );
         if (!matchSkill) continue;
+      }
+
+      if (filters.topics && filters.topics.length > 0) {
+        const matchTopic = filters.topics.some(tp =>
+          profile.mentoringTopics.some(mt => mt.toLowerCase().includes(tp.toLowerCase()))
+        );
+        if (!matchTopic) continue;
+      }
+
+      if (filters.availability && filters.availability.trim()) {
+        const matchAvail = profile.availabilitySchedule?.toLowerCase().includes(filters.availability.toLowerCase());
+        if (!matchAvail) continue;
       }
 
       result.push({ ...profile, user });
@@ -230,6 +235,8 @@ export class MongoMentorRepository implements IMentorRepository {
       skills: doc.skills || [],
       technologies: doc.technologies || [],
       mentoringTopics: doc.mentoringTopics || [],
+      experienceHighlights: doc.experienceHighlights || [],
+      projectsExperience: doc.projectsExperience || '',
       availabilitySchedule: doc.availabilitySchedule || 'Weekends & Evenings',
       availabilityDetails: doc.availabilityDetails || undefined,
       hourlyRate: doc.hourlyRate || 0,

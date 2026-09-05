@@ -45,6 +45,8 @@ export interface MentorProfile {
   skills: string[];
   technologies: string[];
   mentoringTopics: string[];
+  experienceHighlights?: string[];
+  projectsExperience?: string;
   availabilitySchedule: string;
   hourlyRate: number;
   isVerified: boolean;

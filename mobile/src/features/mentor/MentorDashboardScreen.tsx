@@ -103,15 +103,15 @@ export const MentorDashboardScreen: React.FC<MentorDashboardScreenProps> = ({ on
     );
   }
 
-  const {
-    activeMenteesCount = 1,
-    completedMenteesCount = 4,
-    hoursMentored = 28,
-    averageRating = 4.95,
-    pendingRequests = [],
-    activeProjects = [],
-    upcomingSessions = []
-  } = data || {};
+  const stats = data?.stats || {};
+  const activeMenteesCount = stats.activeStudents ?? data?.activeMenteesCount ?? 0;
+  const completedMenteesCount = stats.completedProjects ?? data?.completedMenteesCount ?? 0;
+  const hoursMentored = stats.hoursMentored ?? data?.hoursMentored ?? 0;
+  const averageRating = stats.averageRating ?? data?.averageRating ?? 0;
+  const pendingRequests = data?.pendingRequests || data?.incomingRequests || [];
+  const activeProjects = data?.activeProjects || [];
+  const upcomingSessions = data?.upcomingSessions || [];
+  const isVerified = Boolean(data?.profile?.isVerified ?? user?.isVerified);
 
   return (
     <ScrollView
@@ -132,8 +132,20 @@ export const MentorDashboardScreen: React.FC<MentorDashboardScreenProps> = ({ on
             Welcome back, {user?.fullName?.split(' ')[0] || 'Mentor'} 👋
           </Text>
         </View>
-        <Avatar name={user?.fullName || 'Mentor'} src={user?.avatarUrl} size="md" isVerified />
+        <Avatar name={user?.fullName || 'Mentor'} src={user?.avatarUrl} size="md" isVerified={isVerified} />
       </View>
+
+      {/* Verification Notice */}
+      {!isVerified && (
+        <View style={styles.pendingNotice}>
+          <Text style={[typography.bodyBold, { color: '#92400E', marginBottom: 2 }]}>
+            Verification In Progress
+          </Text>
+          <Text style={[typography.caption, { color: '#B45309' }]}>
+            Your mentor credentials and profile are being reviewed by administrators. You will be listed in public discovery once approved.
+          </Text>
+        </View>
+      )}
 
       {/* KPI Grid */}
       <View style={styles.kpiRow}>
@@ -146,7 +158,7 @@ export const MentorDashboardScreen: React.FC<MentorDashboardScreenProps> = ({ on
         />
         <StatCard
           label="Avg Rating"
-          value={averageRating}
+          value={averageRating > 0 ? (typeof averageRating === 'number' ? averageRating.toFixed(1) : averageRating) : 'New'}
           iconName="star"
           iconBg="#FEF3C7"
           iconColor="#D97706"
@@ -334,6 +346,14 @@ const styles = StyleSheet.create({
   greetingText: {
     color: colors.textMain,
     marginBottom: 2
+  },
+  pendingNotice: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md
   },
   kpiRow: {
     flexDirection: 'row',

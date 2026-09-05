@@ -25,9 +25,10 @@ import { MentorMatchChatbot } from '../student/MentorMatchChatbot.js';
 
 interface MentorDiscoveryProps {
   onNavigate: (route: string, params?: any) => void;
+  initialMentorId?: string;
 }
 
-export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) => {
+export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate, initialMentorId }) => {
   const [mentors, setMentors] = useState<(MentorProfile & { user: User })[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -64,6 +65,18 @@ export const MentorDiscovery: React.FC<MentorDiscoveryProps> = ({ onNavigate }) 
   useEffect(() => {
     fetchMentors();
   }, [selectedTech, minExp, minRating, sortBy, companyFilter]);
+
+  useEffect(() => {
+    if (initialMentorId && mentors.length > 0) {
+      const found = mentors.find(
+        m => m.userId === initialMentorId || (m as any).id === initialMentorId
+      );
+      if (found) {
+        setSelectedMentorForRequest(found);
+        setIsRequestModalOpen(true);
+      }
+    }
+  }, [initialMentorId, mentors]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

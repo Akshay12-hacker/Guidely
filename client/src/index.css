@@ -4,6 +4,7 @@
   /* Neutral Surfaces */
   --bg-body: #F8FAFC;
   --bg-card: #FFFFFF;
+  --surface: #FFFFFF;
   --bg-card-hover: #F8FAFC;
   --bg-subtle: #F1F5F9;
   --bg-muted: #E2E8F0;
@@ -369,9 +370,9 @@ button, input, select, textarea {
 .guidely-modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(4px);
-  z-index: 9000;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(2px);
+  z-index: 10050;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -385,11 +386,44 @@ button, input, select, textarea {
   border: 1px solid var(--border);
   box-shadow: var(--shadow-xl);
   width: 100%;
-  max-height: calc(100vh - 32px);
+  max-height: min(88vh, 840px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+@media (max-width: 640px) {
+  .guidely-modal-overlay {
+    padding: 12px;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .guidely-modal-panel {
+    max-height: calc(100vh - 24px);
+    border-radius: var(--radius-lg);
+  }
+  .guidance-areas-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .modal-footer-content {
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .modal-footer-buttons {
+    display: flex !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .modal-footer-buttons > button {
+    flex: 1 !important;
+  }
+  .modal-footer-hint {
+    text-align: center !important;
+    justify-content: center !important;
+  }
 }
 
 /* ==========================================================================

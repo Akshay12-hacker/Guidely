@@ -191,6 +191,89 @@ export const HELP_NEEDED_AREAS = [
 ] as const;
 
 /**
+ * Mentor Onboarding Preset Constants
+ */
+export const MENTOR_PRESET_SKILLS = [
+  'Distributed Systems',
+  'System Design',
+  'Concurrency & Multithreading',
+  'Deep Learning & PyTorch',
+  'Computer Vision',
+  'Full Stack Architecture',
+  'Smart Contract Security',
+  'WebRTC & Streaming',
+  'Database Internals',
+  'Microservices',
+  'Code Reviews & Refactoring',
+  'DevOps & Kubernetes',
+  'Generative AI & LLMs',
+  'Cloud Infrastructure',
+  'Cybersecurity & Forensics',
+  'Mobile Architecture',
+  'API Design & Optimization',
+  'Data Engineering & ETL'
+] as const;
+
+export const MENTOR_PRESET_TECHNOLOGIES = [
+  'Go (Golang)',
+  'Python',
+  'PyTorch',
+  'Rust',
+  'TypeScript',
+  'React',
+  'Next.js',
+  'gRPC',
+  'Kubernetes',
+  'Docker',
+  'PostgreSQL',
+  'Redis',
+  'Kafka',
+  'Solidity',
+  'FastAPI',
+  'AWS / GCP',
+  'WebRTC',
+  'Flutter',
+  'C / C++',
+  'GraphQL',
+  'Java / Spring Boot',
+  'Node.js',
+  'Tailwind CSS',
+  'LangChain',
+  'MongoDB',
+  'Terraform',
+  'RabbitMQ',
+  'Elasticsearch',
+  'Swift',
+  'Kotlin'
+] as const;
+
+export const MENTOR_PRESET_EXPERIENCE_HIGHLIGHTS = [
+  'Open Source Maintainer / Core Contributor',
+  'High-Throughput Production Systems (10k+ QPS)',
+  'Multi-Region Cloud Architecture (AWS / GCP / Azure)',
+  'Microservices & Distributed Tracing',
+  'Tech Lead & Engineering Management',
+  'AI / LLM Production Pipeline Deployment',
+  'Research Publication (IEEE / ACM / NeurIPS)',
+  'Startup Founder / 0-to-1 Architecture',
+  'Security Auditing & Penetration Testing',
+  'Zero-Downtime Database Migration'
+] as const;
+
+export const MENTOR_PRESET_TOPICS = [
+  'System Architecture Formulation',
+  'PR Code Reviews & Concurrency Debugging',
+  'Research Formulation & Paper Guidance',
+  'Mock System Design & Resume Polish',
+  'Capstone Milestone Planning',
+  'Benchmarking & Performance Profiling',
+  'Database Normalization & Query Tuning',
+  'Security Hardening & Code Audits',
+  'Production Incident Post-Mortems',
+  'Career & Interview Transition'
+] as const;
+
+/**
  * Normalize skill or technology name casing to official preset casing if known, otherwise clean whitespace
  */
 export function normalizeSkillName(raw: string): string {
@@ -199,6 +282,18 @@ export function normalizeSkillName(raw: string): string {
 
   const skillMatch = PRESET_SKILLS.find(s => s.name.toLowerCase() === lower);
   if (skillMatch) return skillMatch.name;
+
+  const mentorSkillMatch = MENTOR_PRESET_SKILLS.find(s => s.toLowerCase() === lower);
+  if (mentorSkillMatch) return mentorSkillMatch;
+
+  const mentorTechMatch = MENTOR_PRESET_TECHNOLOGIES.find(t => t.toLowerCase() === lower);
+  if (mentorTechMatch) return mentorTechMatch;
+
+  const mentorHighlightMatch = MENTOR_PRESET_EXPERIENCE_HIGHLIGHTS.find(h => h.toLowerCase() === lower);
+  if (mentorHighlightMatch) return mentorHighlightMatch;
+
+  const mentorTopicMatch = MENTOR_PRESET_TOPICS.find(tp => tp.toLowerCase() === lower);
+  if (mentorTopicMatch) return mentorTopicMatch;
 
   const techMatch = TARGET_TECHNOLOGIES.find(t => t.toLowerCase() === lower);
   if (techMatch) return techMatch;

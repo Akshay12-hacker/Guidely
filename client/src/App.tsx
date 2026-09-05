@@ -18,6 +18,7 @@ import { StudentOnboarding } from './features/student/StudentOnboarding.js';
 import { MentorOnboarding } from './features/mentor/MentorOnboarding.js';
 import { StudentDashboard } from './features/student/StudentDashboard.js';
 import { MentorDashboard } from './features/mentor/MentorDashboard.js';
+import { MentorActiveStudentsPage } from './features/mentor/MentorActiveStudentsPage.js';
 import { MentorDiscovery } from './features/mentor/MentorDiscovery.js';
 import { MentorProfilePage } from './features/mentor/MentorProfilePage.js';
 import { StudentRequestsPage } from './features/mentorship/StudentRequestsPage.js';
@@ -109,10 +110,11 @@ const MainApp: React.FC = () => {
           <StudentDashboard onNavigate={handleNavigate} />
         );
       case 'mentor-dashboard':
-      case 'mentor-students':
         return <MentorDashboard onNavigate={handleNavigate} />;
+      case 'mentor-students':
+        return <MentorActiveStudentsPage onNavigate={handleNavigate} />;
       case 'find-mentor':
-        return <MentorDiscovery onNavigate={handleNavigate} />;
+        return <MentorDiscovery initialMentorId={routeParams?.mentorId} onNavigate={handleNavigate} />;
       case 'mentor-profile':
         return <MentorProfilePage mentorId={routeParams?.mentorId} onNavigate={handleNavigate} />;
       case 'student-requests':

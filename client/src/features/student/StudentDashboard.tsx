@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { ProfilePhotoModal } from '../../components/ui/ProfilePhotoModal.js';
 import { MentorMatchChatbot } from './MentorMatchChatbot.js';
+import { MentorshipRequestModal } from '../mentorship/MentorshipRequestModal.js';
 
 interface StudentDashboardProps {
   onNavigate: (route: string, params?: any) => void;
@@ -34,20 +35,60 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
   const [isLoading, setIsLoading] = useState(true);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  const [selectedMentorForRequest, setSelectedMentorForRequest] = useState<any>(null);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+
+  const fetchDashboard = async () => {
+    try {
+      const res = await api.getStudentDashboard();
+      setData(res);
+    } catch {
+      // fallback
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDashboard = async () => {
-      try {
-        const res = await api.getStudentDashboard();
-        setData(res);
-      } catch {
-        // fallback
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchDashboard();
   }, []);
+
+  const handleOpenRequest = (mentor: any) => {
+    setSelectedMentorForRequest({
+      userId: mentor.userId || mentor.id,
+      title: mentor.title || 'Senior Software Engineer',
+      company: mentor.company || '',
+      college: mentor.college || '',
+      yearsExperience: mentor.yearsExperience || mentor.years_experience || 5,
+      bio: mentor.bio || '',
+      skills: mentor.skills || [],
+      technologies: mentor.technologies || [],
+      mentoringTopics: mentor.mentoringTopics || [],
+      availabilitySchedule: mentor.availabilitySchedule || mentor.availability_schedule || '',
+      hourlyRate: 0,
+      isVerified: true,
+      verificationStatus: 'APPROVED',
+      rating: mentor.rating || 5.0,
+      reviewsCount: mentor.reviewsCount || mentor.reviews_count || 12,
+      studentsHelpedCount: mentor.studentsHelpedCount || mentor.students_helped_count || 15,
+      onboardingStep: 9,
+      isCompleted: true,
+      createdAt: '',
+      updatedAt: '',
+      user: mentor.user || {
+        id: mentor.userId || mentor.id,
+        fullName: mentor.full_name || mentor.fullName || mentor.title || 'Mentor',
+        avatarUrl: mentor.avatar_url || mentor.avatarUrl,
+        headline: mentor.headline,
+        role: 'MENTOR',
+        status: 'ACTIVE',
+        email: 'mentor@guidely.app',
+        createdAt: '',
+        updatedAt: ''
+      }
+    });
+    setIsRequestModalOpen(true);
+  };
 
   const greetingTime = () => {
     const hour = new Date().getHours();
@@ -482,7 +523,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
                   <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)' }}>
                     ⭐ {mentor.rating ? mentor.rating.toFixed(1) : '5.0'}
                   </span>
-                  <Button size="sm" variant="secondary" onClick={() => onNavigate('find-mentor', { mentorId: mentor.id })}>
+                  <Button size="sm" variant="primary" onClick={() => handleOpenRequest(mentor)}>
                     Request
                   </Button>
                 </div>
@@ -507,6 +548,18 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
           helpNeededAreas: data?.profile?.helpNeededAreas
         }}
       />
+
+      {selectedMentorForRequest && (
+        <MentorshipRequestModal
+          isOpen={isRequestModalOpen}
+          onClose={() => setIsRequestModalOpen(false)}
+          mentor={selectedMentorForRequest}
+          onSuccess={() => {
+            setIsRequestModalOpen(false);
+            fetchDashboard();
+          }}
+        />
+      )}
     </div>
   );
 };

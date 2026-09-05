@@ -47,6 +47,8 @@ export interface MentorProfile {
   skills: string[];
   technologies: string[];
   mentoringTopics: string[];
+  experienceHighlights?: string[];
+  projectsExperience?: string;
   availabilitySchedule: string;
   availabilityDetails?: AvailabilityScheduleData;
   hourlyRate: number; // 0 for free/volunteer mentorship
@@ -378,6 +380,7 @@ export interface MentorFilters {
   search?: string;
   technologies?: string[];
   skills?: string[];
+  topics?: string[];
   minExperience?: number;
   availability?: string;
   minRating?: number;
@@ -469,4 +472,56 @@ export interface StudentOnboardingOptions {
   availabilityPresets?: AvailabilityPreset[];
   availabilityTimezones?: TimezoneOption[];
 }
+
+export interface MentorOnboardingOptions {
+  presetSkills: string[];
+  presetTechnologies: string[];
+  presetExperienceHighlights: string[];
+  presetTopics: string[];
+  availabilityPresets?: AvailabilityPreset[];
+  availabilityTimezones?: TimezoneOption[];
+  availabilityDays?: string[];
+}
+
+export interface RecommendedMentor {
+  id: string;
+  userId?: string;
+  full_name?: string;
+  fullName?: string;
+  avatar_url?: string;
+  avatarUrl?: string;
+  headline?: string;
+  title: string;
+  company: string;
+  college?: string;
+  years_experience?: number;
+  yearsExperience?: number;
+  skills: string[];
+  technologies: string[];
+  mentoringTopics?: string[];
+  experienceHighlights?: string[];
+  projectsExperience?: string;
+  rating: number;
+  reviews_count?: number;
+  reviewsCount?: number;
+  students_helped_count?: number;
+  studentsHelpedCount?: number;
+  availability_schedule?: string;
+  availabilitySchedule?: string;
+  matchScore: number;
+  matchReasons: string[];
+  matchedTechnologies: string[];
+  matchedTopics: string[];
+  user?: User;
+}
+
+export interface MentorRecommendationCriteria {
+  projectIdea?: string;
+  targetTechnologies?: string[];
+  helpNeededAreas?: string[];
+  currentSkills?: string[];
+  query?: string;
+  preferences?: string;
+}
+
 

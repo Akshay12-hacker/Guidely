@@ -10,11 +10,18 @@ import {
   StudentProfileModel
 } from '../../infrastructure/database/models/index.js';
 import { AppError } from '../../shared/errors/AppError.js';
-import { MentorProfile, MentorFilters } from '../../shared/types.js';
+import { MentorProfile, MentorFilters, MentorOnboardingOptions } from '../../shared/types.js';
 import {
   sanitizeSkillsList,
   sanitizeAvailabilityString,
-  sanitizeAvailabilityDetails
+  sanitizeAvailabilityDetails,
+  MENTOR_PRESET_SKILLS,
+  MENTOR_PRESET_TECHNOLOGIES,
+  MENTOR_PRESET_EXPERIENCE_HIGHLIGHTS,
+  MENTOR_PRESET_TOPICS,
+  AVAILABILITY_PRESETS,
+  AVAILABILITY_TIMEZONES,
+  AVAILABILITY_DAYS
 } from '../../constants/skills.js';
 
 export class MentorService {
@@ -22,6 +29,18 @@ export class MentorService {
     private mentorRepo: IMentorRepository,
     private authRepo: IAuthRepository
   ) {}
+
+  getOnboardingOptions(): MentorOnboardingOptions {
+    return {
+      presetSkills: [...MENTOR_PRESET_SKILLS],
+      presetTechnologies: [...MENTOR_PRESET_TECHNOLOGIES],
+      presetExperienceHighlights: [...MENTOR_PRESET_EXPERIENCE_HIGHLIGHTS],
+      presetTopics: [...MENTOR_PRESET_TOPICS],
+      availabilityPresets: [...AVAILABILITY_PRESETS],
+      availabilityTimezones: [...AVAILABILITY_TIMEZONES],
+      availabilityDays: AVAILABILITY_DAYS.map(d => d.key)
+    };
+  }
 
   async getProfile(userId: string): Promise<MentorProfile> {
     let profile = await this.mentorRepo.findByUserId(userId);
@@ -44,6 +63,12 @@ export class MentorService {
     }
     if (sanitizedData.mentoringTopics !== undefined) {
       sanitizedData.mentoringTopics = sanitizeSkillsList(sanitizedData.mentoringTopics);
+    }
+    if (sanitizedData.experienceHighlights !== undefined) {
+      sanitizedData.experienceHighlights = sanitizeSkillsList(sanitizedData.experienceHighlights);
+    }
+    if (sanitizedData.projectsExperience !== undefined && typeof sanitizedData.projectsExperience === 'string') {
+      sanitizedData.projectsExperience = sanitizedData.projectsExperience.trim().slice(0, 3000);
     }
     if (sanitizedData.availabilitySchedule !== undefined) {
       sanitizedData.availabilitySchedule = sanitizeAvailabilityString(sanitizedData.availabilitySchedule);
@@ -69,6 +94,12 @@ export class MentorService {
     }
     if (sanitizedData.mentoringTopics !== undefined) {
       sanitizedData.mentoringTopics = sanitizeSkillsList(sanitizedData.mentoringTopics);
+    }
+    if (sanitizedData.experienceHighlights !== undefined) {
+      sanitizedData.experienceHighlights = sanitizeSkillsList(sanitizedData.experienceHighlights);
+    }
+    if (sanitizedData.projectsExperience !== undefined && typeof sanitizedData.projectsExperience === 'string') {
+      sanitizedData.projectsExperience = sanitizedData.projectsExperience.trim().slice(0, 3000);
     }
     if (sanitizedData.availabilitySchedule !== undefined) {
       sanitizedData.availabilitySchedule = sanitizeAvailabilityString(sanitizedData.availabilitySchedule);
@@ -152,7 +183,9 @@ export class MentorService {
         student_name: u?.fullName,
         student_avatar: u?.avatarUrl,
         student_college: sp?.college,
-        student_degree: sp?.degree
+        student_degree: sp?.degree,
+        progressPercentage: p.progressPercentage || 0,
+        progress_percentage: p.progressPercentage || 0
       };
     });
 
@@ -222,20 +255,28 @@ export class MentorService {
       ProjectModel.find({ mentorId: userId, status: { $ne: 'COMPLETED' } }).distinct('studentId')
     ]);
 
+    const effectiveRating = (totalReviews > 0 || (profile.reviewsCount && profile.reviewsCount > 0)) ? profile.rating : 0;
+
     return {
       user,
       profile,
       incomingRequests,
+      pendingRequests: incomingRequests,
       activeProjects,
+      activeMentees: activeProjects,
       upcomingSessions,
       recentConversations,
       stats: {
         activeStudents: activeProjectsCount.length,
         completedSessions,
         completedProjects,
-        averageRating: profile.rating,
-        totalReviews: totalReviews || profile.reviewsCount
-      }
+        averageRating: effectiveRating,
+        totalReviews: totalReviews || profile.reviewsCount || 0
+      },
+      activeMenteesCount: activeProjectsCount.length,
+      completedMenteesCount: completedProjects,
+      hoursMentored: completedSessions,
+      averageRating: effectiveRating
     };
   }
 }

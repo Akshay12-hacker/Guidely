@@ -24,6 +24,7 @@ import pino from 'pino';
 import { createApp } from '../src/app.js';
 import { WebSocketManager } from '../src/infrastructure/websocket/wsServer.js';
 import { CloudinaryService } from '../src/infrastructure/cloudinary/cloudinary.service.js';
+import { scoreAndRankMentors } from '../src/modules/students/mentor-matching.js';
 
 let passed = 0;
 let failed = 0;
@@ -91,6 +92,64 @@ async function runAllTests() {
     });
     assert(mentors.length >= 1);
     assert(mentors.some(m => m.user.fullName === 'Priya Sundaram'));
+  });
+
+  await test('Mentor onboarding options endpoint returns presets and schedules', async () => {
+    const options = mentorService.getOnboardingOptions();
+    assert(Array.isArray(options.presetSkills) && options.presetSkills.length > 5);
+    assert(Array.isArray(options.presetTechnologies) && options.presetTechnologies.length > 5);
+    assert(Array.isArray(options.presetExperienceHighlights) && options.presetExperienceHighlights.length > 5);
+    assert(Array.isArray(options.presetTopics) && options.presetTopics.length > 5);
+    assert(Array.isArray(options.availabilityPresets) && options.availabilityPresets.length > 0);
+  });
+
+  await test('Mentor profile supports custom technologies, highlights, and notable projects', async () => {
+    const customTech = 'WebAssembly / Rust WASI';
+    const customHighlight = 'Built custom multi-threaded WebAssembly execution engine';
+    const customTopic = 'Zero-Knowledge Proof Systems';
+    const customProjectExp = 'Engineered a WebAssembly bytecode verifier running at 100k checks/sec.';
+
+    const updated = await mentorService.updateProfile('usr_mentor_priya', {
+      technologies: ['Go (Golang)', customTech],
+      experienceHighlights: [customHighlight],
+      mentoringTopics: [customTopic],
+      projectsExperience: customProjectExp
+    });
+
+    assert(updated.technologies.includes(customTech));
+    assert(updated.experienceHighlights?.includes(customHighlight));
+    assert(updated.mentoringTopics?.includes(customTopic));
+    assert.strictEqual(updated.projectsExperience, customProjectExp);
+
+    // Filter by the custom technology
+    const foundByTech = await mentorService.discoverMentors({
+      technologies: [customTech]
+    });
+    assert(foundByTech.some(m => m.userId === 'usr_mentor_priya'));
+
+    // Search by keywords in custom notable projects
+    const foundByProject = await mentorService.discoverMentors({
+      search: 'WebAssembly bytecode verifier'
+    });
+    assert(foundByProject.some(m => m.userId === 'usr_mentor_priya'));
+  });
+
+  await test('Student recommendation engine ranks mentors with projectsExperience and highlights', async () => {
+    const allMentors = await mentorService.discoverMentors({});
+    const scored = scoreAndRankMentors(
+      allMentors.map(m => ({ profile: m, user: m.user })),
+      {
+        projectIdea: 'WebAssembly runtime optimization for edge microservices',
+        targetTechnologies: ['Go (Golang)']
+      }
+    );
+
+    assert(scored.length > 0);
+    const topMentor = scored.find(m => m.userId === 'usr_mentor_priya');
+    assert(topMentor !== undefined);
+    assert(topMentor.matchScore >= 70);
+    assert(Array.isArray(topMentor.experienceHighlights));
+    assert(typeof topMentor.projectsExperience === 'string');
   });
 
   console.log('\n--- 3. Mentorship Request Workflow ---');

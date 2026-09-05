@@ -248,6 +248,12 @@ export const MentorProfileScreen: React.FC<MentorProfileScreenProps> = ({
         onClose={() => setIsRequestModalVisible(false)}
         mentorId={mentor.userId}
         mentorName={mentor.user?.fullName || 'Mentor'}
+        mentorTitle={mentor.title}
+        mentorCompany={mentor.company}
+        mentorAvatar={mentor.user?.avatarUrl}
+        mentorRating={mentor.rating}
+        mentorReviewsCount={mentor.reviewsCount}
+        mentorTechnologies={mentor.technologies}
         onRequestSubmitted={() => {
           onNavigate('requests');
         }}

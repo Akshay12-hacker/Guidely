@@ -1,12 +1,14 @@
 // Mobile Mentorship Proposal Request Bottom Sheet Modal
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { BottomSheet } from '../../components/common/BottomSheet';
 import { Input } from '../../components/common/Input';
 import { TextArea } from '../../components/common/TextArea';
 import { Button } from '../../components/common/Button';
 import { Chip } from '../../components/common/Chip';
+import { Avatar } from '../../components/common/Avatar';
+import { Badge } from '../../components/common/Badge';
 import { mentorshipService } from '../../services/mentorship.service';
 import { useToast } from '../../context/ToastContext';
 import { colors } from '../../theme/colors';
@@ -25,6 +27,22 @@ export interface MentorshipRequestModalProps {
   onClose: () => void;
   mentorId: string;
   mentorName: string;
+  mentorTitle?: string;
+  mentorCompany?: string;
+  mentorAvatar?: string;
+  mentorRating?: number;
+  mentorReviewsCount?: number;
+  mentorTechnologies?: string[];
+  initialValues?: {
+    projectTitle?: string;
+    projectDescription?: string;
+    currentKnowledge?: string;
+    techKnown?: string[];
+    helpNeeded?: string[];
+    expectedOutcome?: string;
+    preferredTimes?: string;
+    additionalMessage?: string;
+  };
   onRequestSubmitted?: () => void;
 }
 
@@ -33,19 +51,42 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
   onClose,
   mentorId,
   mentorName,
+  mentorTitle,
+  mentorCompany,
+  mentorAvatar,
+  mentorRating,
+  mentorReviewsCount,
+  mentorTechnologies,
+  initialValues,
   onRequestSubmitted
 }) => {
   const { showToast } = useToast();
 
-  const [projectTitle, setProjectTitle] = useState('Distributed Fault-Tolerant Task Queue in Go');
-  const [projectDescription, setProjectDescription] = useState('Building a distributed async task queue with Raft consensus, worker crash heartbeats, and exponential backoff retry queues.');
-  const [currentKnowledge, setCurrentKnowledge] = useState('Intermediate in Go syntax and basic concurrency, but need guidance on leader election and network partitions.');
-  const [selectedTech, setSelectedTech] = useState<string[]>(['Go (Golang)', 'gRPC', 'PostgreSQL']);
-  const [selectedHelp, setSelectedHelp] = useState<string[]>(['Architecture & System Design', '1-on-1 Code Reviews']);
-  const [expectedOutcome, setExpectedOutcome] = useState('A production-grade open source repo with benchmarks and Docker compose setup.');
-  const [preferredTimes, setPreferredTimes] = useState('Weekdays after 6:30 PM IST or Weekend mornings');
-  const [additionalMessage, setAdditionalMessage] = useState('');
+  const [projectTitle, setProjectTitle] = useState(initialValues?.projectTitle || '');
+  const [projectDescription, setProjectDescription] = useState(initialValues?.projectDescription || '');
+  const [currentKnowledge, setCurrentKnowledge] = useState(initialValues?.currentKnowledge || '');
+  const [selectedTech, setSelectedTech] = useState<string[]>(initialValues?.techKnown || []);
+  const [selectedHelp, setSelectedHelp] = useState<string[]>(initialValues?.helpNeeded || []);
+  const [expectedOutcome, setExpectedOutcome] = useState(initialValues?.expectedOutcome || '');
+  const [preferredTimes, setPreferredTimes] = useState(initialValues?.preferredTimes || '');
+  const [additionalMessage, setAdditionalMessage] = useState(initialValues?.additionalMessage || '');
   const [isLoading, setIsLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (visible) {
+      setProjectTitle(initialValues?.projectTitle || '');
+      setProjectDescription(initialValues?.projectDescription || '');
+      setCurrentKnowledge(
+        initialValues?.currentKnowledge ||
+        (initialValues?.techKnown && initialValues.techKnown.length > 0 ? initialValues.techKnown.join(', ') : '')
+      );
+      setSelectedTech(initialValues?.techKnown || []);
+      setSelectedHelp(initialValues?.helpNeeded || []);
+      setExpectedOutcome(initialValues?.expectedOutcome || '');
+      setPreferredTimes(initialValues?.preferredTimes || '');
+      setAdditionalMessage(initialValues?.additionalMessage || '');
+    }
+  }, [visible, initialValues]);
 
   const availableTech = TARGET_TECHNOLOGIES;
   const availableHelp = HELP_NEEDED_AREAS;
@@ -112,6 +153,61 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
       subtitle={`Submit a structured project proposal to ${mentorName}`}
     >
       <View style={styles.content}>
+        {/* Mentor Preview Card */}
+        <View style={styles.mentorPreviewCard}>
+          <View style={styles.cardHeaderRow}>
+            <Avatar
+              name={mentorName}
+              src={mentorAvatar}
+              size="md"
+              isVerified
+              isOnline
+            />
+            <View style={styles.mentorInfoCol}>
+              <View style={styles.nameBadgeRow}>
+                <Text style={[typography.h3, styles.previewName]} numberOfLines={1}>
+                  {mentorName}
+                </Text>
+                <Badge variant="verified" size="sm">Verified</Badge>
+              </View>
+              {mentorTitle ? (
+                <Text style={[typography.captionBold, { color: colors.primary, marginTop: 1 }]} numberOfLines={1}>
+                  {mentorTitle} {mentorCompany ? `@ ${mentorCompany}` : ''}
+                </Text>
+              ) : null}
+              <View style={styles.ratingRow}>
+                <Icon name="star" size={13} color="#F59E0B" />
+                <Text style={[typography.captionBold, { color: colors.textMain, marginLeft: 3 }]}>
+                  {mentorRating ? Number(mentorRating).toFixed(1) : '5.0'}
+                </Text>
+                {mentorReviewsCount ? (
+                  <Text style={[typography.caption, { color: colors.textMuted, marginLeft: 2 }]}>
+                    ({mentorReviewsCount} reviews)
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          </View>
+
+          {mentorTechnologies && mentorTechnologies.length > 0 ? (
+            <View style={styles.mentorTechRow}>
+              {mentorTechnologies.slice(0, 4).map(t => (
+                <Badge key={t} variant="neutral" size="sm" style={{ marginRight: 4, marginBottom: 4 }}>
+                  {t}
+                </Badge>
+              ))}
+            </View>
+          ) : null}
+        </View>
+
+        {/* Tip Box */}
+        <View style={styles.tipBox}>
+          <Icon name="sparkles" size={15} color={colors.primary} />
+          <Text style={[typography.caption, styles.tipText]}>
+            Mentors review technical details before accepting. Clearly explain your capstone architecture and learning goals.
+          </Text>
+        </View>
+
         <Input
           label="Project Title"
           placeholder="e.g. Distributed Task Queue in Go"
@@ -187,17 +283,26 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
           onChangeText={setAdditionalMessage}
         />
 
-        <Button
-          size="lg"
-          variant="primary"
-          onPress={handleSubmit}
-          isLoading={isLoading}
-          fullWidth
-          rightIcon={<Icon name="send" size={16} color={colors.white} />}
-          style={{ marginTop: spacing.md }}
-        >
-          Send Proposal to {mentorName.split(' ')[0]}
-        </Button>
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: spacing.md }}>
+          <Button
+            size="lg"
+            variant="secondary"
+            onPress={onClose}
+            style={{ flex: 1 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="lg"
+            variant="primary"
+            onPress={handleSubmit}
+            isLoading={isLoading}
+            rightIcon={<Icon name="send" size={16} color={colors.white} />}
+            style={{ flex: 2 }}
+          >
+            Send Proposal
+          </Button>
+        </View>
       </View>
     </BottomSheet>
   );
@@ -206,6 +311,60 @@ export const MentorshipRequestModal: React.FC<MentorshipRequestModalProps> = ({
 const styles = StyleSheet.create({
   content: {
     paddingBottom: spacing.xxl
+  },
+  mentorPreviewCard: {
+    backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  mentorInfoCol: {
+    marginLeft: spacing.sm,
+    flex: 1
+  },
+  nameBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  previewName: {
+    color: colors.textMain,
+    fontSize: 14
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2
+  },
+  mentorTechRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.xs
+  },
+  tipBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primaryLight,
+    borderWidth: 1,
+    borderColor: colors.primaryBorder,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.md
+  },
+  tipText: {
+    flex: 1,
+    color: colors.primaryDark,
+    lineHeight: 16
   },
   fieldLabel: {
     color: colors.textMuted,

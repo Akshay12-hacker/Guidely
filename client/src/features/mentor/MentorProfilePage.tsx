@@ -17,7 +17,8 @@ import {
   Send,
   CheckCircle2,
   ArrowLeft,
-  Camera
+  Camera,
+  Award
 } from 'lucide-react';
 import { ProfilePhotoModal } from '../../components/ui/ProfilePhotoModal.js';
 
@@ -192,6 +193,43 @@ export const MentorProfilePage: React.FC<MentorProfilePageProps> = ({ mentorId, 
               {mentor.bio}
             </p>
           </Card>
+
+          {/* Engineering Experience & Highlights */}
+          {((mentor.experienceHighlights && mentor.experienceHighlights.length > 0) || mentor.projectsExperience) && (
+            <Card padding="lg">
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Award size={18} color="var(--primary)" /> Engineering Highlights & Notable Systems
+              </h3>
+              {mentor.experienceHighlights && mentor.experienceHighlights.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: mentor.projectsExperience ? '12px' : '0' }}>
+                  {mentor.experienceHighlights.map((hl, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '4px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: '#FEF3C7',
+                        color: '#92400E',
+                        border: '1px solid #FCD34D',
+                        fontSize: '0.8rem',
+                        fontWeight: 700
+                      }}
+                    >
+                      <Award size={12} color="#D97706" /> {hl}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {mentor.projectsExperience && (
+                <p style={{ fontSize: '0.88rem', color: 'var(--text-main)', lineHeight: 1.6, margin: 0 }}>
+                  {mentor.projectsExperience}
+                </p>
+              )}
+            </Card>
+          )}
 
           {/* Mentoring Topics */}
           <Card padding="lg">

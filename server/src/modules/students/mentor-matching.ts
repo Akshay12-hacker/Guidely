@@ -67,8 +67,8 @@ export function scoreAndRankMentors(
   criteria: MentorRecommendationCriteria = {},
   limit: number = 6
 ): RecommendedMentor[] {
-  const targetTech = (criteria.targetTechnologies || []).filter(t => t !== NO_IDEA_TECH);
-  const helpAreas = (criteria.helpNeededAreas || []).filter(h => h !== NO_IDEA_HELP);
+  const targetTech = (criteria.targetTechnologies || []).filter((t: string) => t !== NO_IDEA_TECH);
+  const helpAreas = (criteria.helpNeededAreas || []).filter((h: string) => h !== NO_IDEA_HELP);
   const currentSkills = criteria.currentSkills || [];
   const projectIdea = criteria.projectIdea || '';
   const query = criteria.query || '';
@@ -84,13 +84,17 @@ export function scoreAndRankMentors(
     const matchedTechnologies: string[] = [];
     const matchedTopics: string[] = [];
 
+    const mentorHighlights = profile.experienceHighlights || [];
+    const mentorProjectsExp = profile.projectsExperience || '';
     const mentorAllTech = [...(profile.technologies || []), ...(profile.skills || [])];
     const mentorTopics = profile.mentoringTopics || [];
-    const mentorBio = normalize(`${profile.bio} ${profile.title} ${profile.company}`);
+    const mentorBio = normalize(
+      `${profile.bio} ${profile.title} ${profile.company} ${mentorProjectsExp} ${mentorHighlights.join(' ')}`
+    );
 
     // 1. Target Technologies Match (Weight: up to 30 points)
     if (targetTech.length > 0) {
-      targetTech.forEach(tech => {
+      targetTech.forEach((tech: string) => {
         const found = mentorAllTech.find(mt => matchesTech(tech, mt));
         if (found && !matchedTechnologies.includes(found)) {
           matchedTechnologies.push(found);
@@ -104,7 +108,7 @@ export function scoreAndRankMentors(
 
     // 2. Help Needed Areas & Mentoring Topics Match (Weight: up to 20 points)
     if (helpAreas.length > 0) {
-      helpAreas.forEach(area => {
+      helpAreas.forEach((area: string) => {
         const normArea = normalize(area);
         const foundTopic = mentorTopics.find(mt => {
           const nmt = normalize(mt);
@@ -128,8 +132,9 @@ export function scoreAndRankMentors(
         const hasInBio = mentorBio.includes(kw);
         const hasInTech = mentorAllTech.some(t => normalize(t).includes(kw));
         const hasInTopics = mentorTopics.some(t => normalize(t).includes(kw));
+        const hasInHighlights = mentorHighlights.some(h => normalize(h).includes(kw));
 
-        if (hasInBio || hasInTech || hasInTopics) {
+        if (hasInBio || hasInTech || hasInTopics || hasInHighlights) {
           keywordHits++;
           score += 4;
         }
@@ -140,7 +145,19 @@ export function scoreAndRankMentors(
       }
     }
 
-    // 4. Mentor Background & Company Preferences Match (Weight: up to 10 points)
+    // 4. Experience Highlights Alignment (Bonus Weight: up to 6 points)
+    if (mentorHighlights.length > 0 && keywords.length > 0) {
+      const matchedHighlight = mentorHighlights.find(h => {
+        const nh = normalize(h);
+        return keywords.some(kw => nh.includes(kw));
+      });
+      if (matchedHighlight && matchReasons.length < 3) {
+        matchReasons.push(`Production experience: ${matchedHighlight}`);
+        score += 6;
+      }
+    }
+
+    // 5. Mentor Background & Company Preferences Match (Weight: up to 10 points)
     if (preferences) {
       if (mentorBio.includes(preferences) || preferences.split(/\s+/).some(p => p.length > 3 && mentorBio.includes(p))) {
         score += 8;
@@ -148,7 +165,7 @@ export function scoreAndRankMentors(
       }
     }
 
-    // 5. Mentor Seniority & Reputation Rating Factor
+    // 6. Mentor Seniority & Reputation Rating Factor
     const ratingBoost = Math.max(0, ((profile.rating || 5.0) - 4.5) * 8);
     const expBoost = Math.min(6, (profile.yearsExperience || 0) * 0.7);
     score += ratingBoost + expBoost;
@@ -183,6 +200,8 @@ export function scoreAndRankMentors(
       skills: profile.skills || [],
       technologies: profile.technologies || [],
       mentoringTopics: profile.mentoringTopics || [],
+      experienceHighlights: profile.experienceHighlights || [],
+      projectsExperience: profile.projectsExperience || '',
       rating: profile.rating || 5.0,
       reviews_count: profile.reviewsCount || 0,
       reviewsCount: profile.reviewsCount || 0,

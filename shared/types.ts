@@ -47,6 +47,8 @@ export interface MentorProfile {
   skills: string[];
   technologies: string[];
   mentoringTopics: string[];
+  experienceHighlights?: string[];
+  projectsExperience?: string;
   availabilitySchedule: string;
   availabilityDetails?: AvailabilityScheduleData;
   hourlyRate: number; // 0 for free/volunteer mentorship
@@ -378,6 +380,7 @@ export interface MentorFilters {
   search?: string;
   technologies?: string[];
   skills?: string[];
+  topics?: string[];
   minExperience?: number;
   availability?: string;
   minRating?: number;
@@ -470,6 +473,16 @@ export interface StudentOnboardingOptions {
   availabilityTimezones?: TimezoneOption[];
 }
 
+export interface MentorOnboardingOptions {
+  presetSkills: string[];
+  presetTechnologies: string[];
+  presetExperienceHighlights: string[];
+  presetTopics: string[];
+  availabilityPresets?: AvailabilityPreset[];
+  availabilityTimezones?: TimezoneOption[];
+  availabilityDays?: string[];
+}
+
 export interface RecommendedMentor {
   id: string;
   userId?: string;
@@ -486,6 +499,8 @@ export interface RecommendedMentor {
   skills: string[];
   technologies: string[];
   mentoringTopics?: string[];
+  experienceHighlights?: string[];
+  projectsExperience?: string;
   rating: number;
   reviews_count?: number;
   reviewsCount?: number;

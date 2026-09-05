@@ -191,3 +191,84 @@ export const HELP_NEEDED_AREAS = [
 
 export const NO_IDEA_TECH = 'No idea (Help Me Decide)';
 export const NO_IDEA_HELP = 'No idea (Need Guidance to Figure Out)';
+
+export const MENTOR_PRESET_SKILLS = [
+  'Distributed Systems',
+  'System Design',
+  'Concurrency & Multithreading',
+  'Deep Learning & PyTorch',
+  'Computer Vision',
+  'Full Stack Architecture',
+  'Smart Contract Security',
+  'WebRTC & Streaming',
+  'Database Internals',
+  'Microservices',
+  'Code Reviews & Refactoring',
+  'DevOps & Kubernetes',
+  'Generative AI & LLMs',
+  'Cloud Infrastructure',
+  'Cybersecurity & Forensics',
+  'Mobile Architecture',
+  'API Design & Optimization',
+  'Data Engineering & ETL'
+] as const;
+
+export const MENTOR_PRESET_TECHNOLOGIES = [
+  'Go (Golang)',
+  'Python',
+  'PyTorch',
+  'Rust',
+  'TypeScript',
+  'React',
+  'Next.js',
+  'gRPC',
+  'Kubernetes',
+  'Docker',
+  'PostgreSQL',
+  'Redis',
+  'Kafka',
+  'Solidity',
+  'FastAPI',
+  'AWS / GCP',
+  'WebRTC',
+  'Flutter',
+  'C / C++',
+  'GraphQL',
+  'Java / Spring Boot',
+  'Node.js',
+  'Tailwind CSS',
+  'LangChain',
+  'MongoDB',
+  'Terraform',
+  'RabbitMQ',
+  'Elasticsearch',
+  'Swift',
+  'Kotlin'
+] as const;
+
+export const MENTOR_PRESET_EXPERIENCE_HIGHLIGHTS = [
+  'Open Source Maintainer / Core Contributor',
+  'High-Throughput Production Systems (10k+ QPS)',
+  'Multi-Region Cloud Architecture (AWS / GCP / Azure)',
+  'Microservices & Distributed Tracing',
+  'Tech Lead & Engineering Management',
+  'AI / LLM Production Pipeline Deployment',
+  'Research Publication (IEEE / ACM / NeurIPS)',
+  'Startup Founder / 0-to-1 Architecture',
+  'Security Auditing & Penetration Testing',
+  'Zero-Downtime Database Migration'
+] as const;
+
+export const MENTOR_PRESET_TOPICS = [
+  'System Architecture Formulation',
+  'PR Code Reviews & Concurrency Debugging',
+  'Research Formulation & Paper Guidance',
+  'Mock System Design & Resume Polish',
+  'Capstone Milestone Planning',
+  'Benchmarking & Performance Profiling',
+  'Database Normalization & Query Tuning',
+  'Security Hardening & Code Audits',
+  'Production Incident Post-Mortems',
+  'Career & Interview Transition'
+] as const;
+
