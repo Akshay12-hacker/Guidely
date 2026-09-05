@@ -13,6 +13,7 @@ import { ProgressBar } from '../../components/ui/ProgressBar.js';
 import { Badge } from '../../components/ui/Badge.js';
 import { Avatar } from '../../components/ui/Avatar.js';
 import { ProfilePhotoModal } from '../../components/ui/ProfilePhotoModal.js';
+import { AvailabilityTimeBarPicker } from '../../components/ui/AvailabilityTimeBarPicker.js';
 import {
   PRESET_SKILLS,
   SKILL_CATEGORIES,
@@ -1324,14 +1325,15 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} className="animate-fade-in">
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Your Availability Schedule</h3>
             <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-              When are you generally available for 1-on-1 mentor syncs and project sprints?
+              Configure your weekly days and interactive timeline bars so mentors know exactly when you can attend 1-on-1 sprint reviews and sync sessions.
             </p>
-            <Input
-              label="Preferred Meeting Times"
-              placeholder="e.g. Weekdays post 6:00 PM IST & Saturday mornings"
+            <AvailabilityTimeBarPicker
               value={profile.availability || ''}
-              onChange={(e) => setProfile(prev => ({ ...prev, availability: e.target.value }))}
-              required
+              onChange={(formattedSchedule, details) => setProfile(prev => ({
+                ...prev,
+                availability: formattedSchedule,
+                availabilityDetails: details
+              }))}
             />
           </div>
         )}
@@ -1343,7 +1345,7 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
               <Badge variant="success" style={{ marginBottom: '8px' }}>Final Profile Review</Badge>
               <h3 style={{ fontSize: '1.3rem', fontWeight: 800 }}>Review Your Builder Profile</h3>
               <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-                This is how verified mentors on Guidly will see your profile.
+                This is how verified mentors on Guidely will see your profile.
               </p>
             </div>
 
@@ -1407,6 +1409,13 @@ export const StudentOnboarding: React.FC<StudentOnboardingProps> = ({ onComplete
                     <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>None selected (Discovery session)</span>
                   )}
                 </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-subtle)' }}>Preferred Meeting Schedule</span>
+                <p style={{ fontSize: '0.88rem', color: 'var(--text-main)', marginTop: '2px', fontWeight: 600 }}>
+                  {profile.availability || 'Flexible / Upon request'}
+                </p>
               </div>
             </div>
           </div>

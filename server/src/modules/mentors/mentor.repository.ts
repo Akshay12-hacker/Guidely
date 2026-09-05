@@ -30,6 +30,7 @@ export class MongoMentorRepository implements IMentorRepository {
     if (profile.technologies !== undefined) updateData.technologies = profile.technologies;
     if (profile.mentoringTopics !== undefined) updateData.mentoringTopics = profile.mentoringTopics;
     if (profile.availabilitySchedule !== undefined) updateData.availabilitySchedule = profile.availabilitySchedule;
+    if (profile.availabilityDetails !== undefined) updateData.availabilityDetails = profile.availabilityDetails;
     if (profile.hourlyRate !== undefined) updateData.hourlyRate = profile.hourlyRate;
     if (profile.isVerified !== undefined) updateData.isVerified = profile.isVerified;
     if (profile.verificationStatus !== undefined) updateData.verificationStatus = profile.verificationStatus;
@@ -230,6 +231,7 @@ export class MongoMentorRepository implements IMentorRepository {
       technologies: doc.technologies || [],
       mentoringTopics: doc.mentoringTopics || [],
       availabilitySchedule: doc.availabilitySchedule || 'Weekends & Evenings',
+      availabilityDetails: doc.availabilityDetails || undefined,
       hourlyRate: doc.hourlyRate || 0,
       isVerified: Boolean(doc.isVerified),
       verificationStatus: doc.verificationStatus || 'PENDING',

@@ -71,6 +71,7 @@ export interface IStudentProfile {
   targetTechnologies: string[];
   helpNeededAreas: string[];
   availability: string;
+  availabilityDetails?: any;
   onboardingStep: number;
   isCompleted: boolean;
   githubUrl?: string;
@@ -90,6 +91,7 @@ const StudentProfileSchema = new Schema<IStudentProfile>(
     targetTechnologies: { type: [String], default: [] },
     helpNeededAreas: { type: [String], default: [] },
     availability: { type: String, default: '' },
+    availabilityDetails: { type: Schema.Types.Mixed, default: null },
     onboardingStep: { type: Number, default: 1 },
     isCompleted: { type: Boolean, default: false },
     githubUrl: { type: String },
@@ -116,6 +118,7 @@ export interface IMentorProfile {
   technologies: string[];
   mentoringTopics: string[];
   availabilitySchedule: string;
+  availabilityDetails?: any;
   hourlyRate: number;
   isVerified: boolean;
   verificationStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -144,6 +147,7 @@ const MentorProfileSchema = new Schema<IMentorProfile>(
     technologies: { type: [String], default: [] },
     mentoringTopics: { type: [String], default: [] },
     availabilitySchedule: { type: String, default: '' },
+    availabilityDetails: { type: Schema.Types.Mixed, default: null },
     hourlyRate: { type: Number, default: 0 },
     isVerified: { type: Boolean, default: false, index: true },
     verificationStatus: { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'PENDING' },

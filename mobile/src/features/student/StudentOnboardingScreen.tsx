@@ -339,6 +339,51 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
     showToast('success', 'Guidance Area Added', `"${resolved}" added to your guidance areas.`);
   };
 
+  const [availDays, setAvailDays] = useState<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+  const [availStartHour, setAvailStartHour] = useState<number>(18);
+  const [availEndHour, setAvailEndHour] = useState<number>(22);
+  const [availTimezone, setAvailTimezone] = useState<string>('IST');
+  const [availNote, setAvailNote] = useState<string>('');
+
+  const formatHour = (hour: number): string => {
+    const normalized = Math.max(0, Math.min(24, hour));
+    if (normalized === 24) return '12:00 AM';
+    if (normalized === 0) return '12:00 AM';
+    const h = Math.floor(normalized);
+    const m = Math.round((normalized - h) * 60);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const displayH = h % 12 === 0 ? 12 : h % 12;
+    const displayM = m === 0 ? '00' : m < 10 ? `0${m}` : `${m}`;
+    return `${displayH}:${displayM} ${period}`;
+  };
+
+  const timePresets = [
+    { label: '🌅 Morning (8 AM - 12 PM)', start: 8, end: 12 },
+    { label: '☀️ Afternoon (12 PM - 5 PM)', start: 12, end: 17 },
+    { label: '🌆 Evening (5 PM - 9 PM)', start: 17, end: 21 },
+    { label: '🎓 Post-College (6 PM - 10 PM)', start: 18, end: 22 },
+    { label: '🌙 Late Night (9 PM - 12 AM)', start: 21, end: 24 }
+  ];
+
+  useEffect(() => {
+    if (availDays.length === 0) {
+      setProfile(prev => ({ ...prev, availability: availNote.trim() || 'Flexible / Upon request' }));
+      return;
+    }
+    const dayStr = availDays.length === 7
+      ? 'All Week'
+      : availDays.length === 5 && ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].every(d => availDays.includes(d))
+      ? 'Mon - Fri'
+      : availDays.join(', ');
+    const hours = Math.max(1, availEndHour - availStartHour);
+    const totalWeekly = availDays.length * hours;
+    let formatted = `${dayStr}: ${formatHour(availStartHour)} - ${formatHour(availEndHour)} ${availTimezone} (~${totalWeekly} hrs/wk)`;
+    if (availNote.trim()) {
+      formatted += ` • Note: ${availNote.trim()}`;
+    }
+    setProfile(prev => ({ ...prev, availability: formatted }));
+  }, [availDays, availStartHour, availEndHour, availTimezone, availNote]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -856,14 +901,191 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
             <View>
               <Text style={[typography.h3, styles.stepTitle]}>Availability Schedule</Text>
               <Text style={[typography.body, styles.stepDesc]}>
-                When are you generally available for 1-on-1 video syncs and sprints?
+                Configure your weekly days and interactive timeline bars so mentors know exactly when you can sync.
               </Text>
+
+              {/* Day selection */}
+              <View style={{ marginBottom: spacing.md }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs }}>
+                  <Text style={[typography.captionBold, { color: colors.textMuted }]}>
+                    AVAILABLE DAYS
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity onPress={() => setAvailDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])}>
+                      <Text style={[typography.captionBold, { color: colors.primary }]}>Weekdays</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setAvailDays(['Sat', 'Sun'])}>
+                      <Text style={[typography.captionBold, { color: colors.primary }]}>Weekends</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setAvailDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])}>
+                      <Text style={[typography.captionBold, { color: colors.primary }]}>All 7</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                    <Chip
+                      key={day}
+                      label={day}
+                      selected={availDays.includes(day)}
+                      onPress={() => setAvailDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])}
+                      style={{ minWidth: 44 }}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              {/* Presets */}
+              <View style={{ marginBottom: spacing.md }}>
+                <Text style={[typography.captionBold, { color: colors.textMuted, marginBottom: spacing.xs }]}>
+                  QUICK TIME SLOTS
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {timePresets.map(preset => (
+                    <Chip
+                      key={preset.label}
+                      label={preset.label}
+                      selected={availStartHour === preset.start && availEndHour === preset.end}
+                      onPress={() => {
+                        setAvailStartHour(preset.start);
+                        setAvailEndHour(preset.end);
+                      }}
+                      style={{ marginRight: 6 }}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Visual 24-Hour Timeline Bar */}
+              <View style={[styles.otherInputCard, { marginBottom: spacing.md }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                  <Text style={[typography.captionBold, { color: colors.textMain }]}>
+                    ACTIVE TIME WINDOW BAR
+                  </Text>
+                  <Text style={[typography.captionBold, { color: colors.primary }]}>
+                    {formatHour(availStartHour)} – {formatHour(availEndHour)} ({Math.max(1, availEndHour - availStartHour)} hrs)
+                  </Text>
+                </View>
+
+                {/* Visual timeline bar representation */}
+                <View style={{
+                  height: 38,
+                  backgroundColor: '#f1f5f9',
+                  borderRadius: radius.sm,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  justifyContent: 'center'
+                }}>
+                  {/* Highlight bar */}
+                  <View style={{
+                    position: 'absolute',
+                    left: `${(availStartHour / 24) * 100}%`,
+                    width: `${((Math.max(1, availEndHour - availStartHour)) / 24) * 100}%`,
+                    top: 3,
+                    bottom: 3,
+                    backgroundColor: colors.primary,
+                    borderRadius: 4,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: 40
+                  }}>
+                    <Text style={{ color: colors.white, fontSize: 10, fontWeight: 'bold' }}>
+                      {Math.max(1, availEndHour - availStartHour)}h
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Hour Ticks */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                  <Text style={[typography.caption, { color: colors.textMuted, fontSize: 10 }]}>12 AM</Text>
+                  <Text style={[typography.caption, { color: colors.textMuted, fontSize: 10 }]}>6 AM</Text>
+                  <Text style={[typography.caption, { color: colors.textMuted, fontSize: 10 }]}>12 PM</Text>
+                  <Text style={[typography.caption, { color: colors.textMuted, fontSize: 10 }]}>6 PM</Text>
+                  <Text style={[typography.caption, { color: colors.textMuted, fontSize: 10 }]}>12 AM</Text>
+                </View>
+
+                {/* Adjust Start/End Hour Buttons */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md, gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.caption, { color: colors.textMuted, marginBottom: 4 }]}>Start Time</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <TouchableOpacity
+                        onPress={() => setAvailStartHour(h => Math.max(0, h - 1))}
+                        style={{ padding: 6, backgroundColor: colors.surface, borderRadius: 4, borderWidth: 1, borderColor: colors.border }}
+                      >
+                        <Text style={{ fontWeight: 'bold' }}>-1h</Text>
+                      </TouchableOpacity>
+                      <Text style={[typography.captionBold, { flex: 1, textAlign: 'center' }]}>
+                        {formatHour(availStartHour)}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => setAvailStartHour(h => Math.min(availEndHour - 1, h + 1))}
+                        style={{ padding: 6, backgroundColor: colors.surface, borderRadius: 4, borderWidth: 1, borderColor: colors.border }}
+                      >
+                        <Text style={{ fontWeight: 'bold' }}>+1h</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.caption, { color: colors.textMuted, marginBottom: 4 }]}>End Time</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <TouchableOpacity
+                        onPress={() => setAvailEndHour(h => Math.max(availStartHour + 1, h - 1))}
+                        style={{ padding: 6, backgroundColor: colors.surface, borderRadius: 4, borderWidth: 1, borderColor: colors.border }}
+                      >
+                        <Text style={{ fontWeight: 'bold' }}>-1h</Text>
+                      </TouchableOpacity>
+                      <Text style={[typography.captionBold, { flex: 1, textAlign: 'center' }]}>
+                        {formatHour(availEndHour)}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => setAvailEndHour(h => Math.min(24, h + 1))}
+                        style={{ padding: 6, backgroundColor: colors.surface, borderRadius: 4, borderWidth: 1, borderColor: colors.border }}
+                      >
+                        <Text style={{ fontWeight: 'bold' }}>+1h</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Timezone chips */}
+              <View style={{ marginBottom: spacing.md }}>
+                <Text style={[typography.captionBold, { color: colors.textMuted, marginBottom: spacing.xs }]}>
+                  TIME ZONE
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  {['IST', 'UTC', 'EST', 'PST'].map(tz => (
+                    <Chip
+                      key={tz}
+                      label={tz}
+                      selected={availTimezone === tz}
+                      onPress={() => setAvailTimezone(tz)}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              {/* Optional Notes */}
               <Input
-                label="Preferred Sync Windows"
-                placeholder="e.g. Weekdays post 6 PM & Weekend mornings"
-                value={profile.availability || ''}
-                onChangeText={(text) => setProfile(prev => ({ ...prev, availability: text }))}
+                label="Extra Flexibility / Notes (Optional)"
+                placeholder="e.g. Can do morning syncs on Tuesdays"
+                value={availNote}
+                onChangeText={setAvailNote}
               />
+
+              {/* Generated summary */}
+              <View style={[styles.otherInputCard, { backgroundColor: colors.primaryLight, borderColor: colors.primary, marginTop: spacing.sm }]}>
+                <Text style={[typography.captionBold, { color: colors.primary, marginBottom: 2 }]}>
+                  GENERATED SCHEDULE
+                </Text>
+                <Text style={[typography.bodyBold, { color: colors.textMain }]}>
+                  {profile.availability}
+                </Text>
+              </View>
             </View>
           )}
 
@@ -953,6 +1175,13 @@ export const StudentOnboardingScreen: React.FC<StudentOnboardingScreenProps> = (
                     </Text>
                   )}
                 </View>
+
+                <View style={styles.previewDivider} />
+
+                <Text style={[typography.captionBold, { color: colors.textSubtle }]}>PREFERRED AVAILABILITY</Text>
+                <Text style={[typography.captionBold, { color: colors.primary, marginTop: 2 }]}>
+                  {profile.availability || 'Flexible / Upon request'}
+                </Text>
               </View>
             </View>
           )}

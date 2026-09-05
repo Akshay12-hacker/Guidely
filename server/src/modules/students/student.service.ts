@@ -16,9 +16,14 @@ import {
   SKILL_CATEGORIES,
   TARGET_TECHNOLOGIES,
   HELP_NEEDED_AREAS,
+  AVAILABILITY_DAYS,
+  AVAILABILITY_PRESETS,
+  AVAILABILITY_TIMEZONES,
   searchSkillsCatalog,
   normalizeSkillName,
-  sanitizeSkillsList
+  sanitizeSkillsList,
+  sanitizeAvailabilityString,
+  sanitizeAvailabilityDetails
 } from '../../constants/skills.js';
 
 export class StudentService {
@@ -49,6 +54,12 @@ export class StudentService {
     if (sanitizedData.helpNeededAreas !== undefined) {
       sanitizedData.helpNeededAreas = sanitizeSkillsList(sanitizedData.helpNeededAreas);
     }
+    if (sanitizedData.availability !== undefined) {
+      sanitizedData.availability = sanitizeAvailabilityString(sanitizedData.availability);
+    }
+    if (sanitizedData.availabilityDetails !== undefined) {
+      sanitizedData.availabilityDetails = sanitizeAvailabilityDetails(sanitizedData.availabilityDetails);
+    }
 
     return this.studentRepo.upsert({
       ...sanitizedData,
@@ -67,6 +78,12 @@ export class StudentService {
     }
     if (sanitizedData.helpNeededAreas !== undefined) {
       sanitizedData.helpNeededAreas = sanitizeSkillsList(sanitizedData.helpNeededAreas);
+    }
+    if (sanitizedData.availability !== undefined) {
+      sanitizedData.availability = sanitizeAvailabilityString(sanitizedData.availability);
+    }
+    if (sanitizedData.availabilityDetails !== undefined) {
+      sanitizedData.availabilityDetails = sanitizeAvailabilityDetails(sanitizedData.availabilityDetails);
     }
 
     return this.studentRepo.upsert({
@@ -312,7 +329,10 @@ export class StudentService {
     return {
       targetTechnologies: [...TARGET_TECHNOLOGIES],
       helpNeededAreas: [...HELP_NEEDED_AREAS],
-      skillCategories: [...SKILL_CATEGORIES]
+      skillCategories: [...SKILL_CATEGORIES],
+      availabilityDays: AVAILABILITY_DAYS.map(d => d.key),
+      availabilityPresets: [...AVAILABILITY_PRESETS],
+      availabilityTimezones: [...AVAILABILITY_TIMEZONES]
     };
   }
 }

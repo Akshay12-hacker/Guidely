@@ -23,6 +23,7 @@ export class MongoStudentRepository implements IStudentRepository {
     if (profile.targetTechnologies !== undefined) updateData.targetTechnologies = profile.targetTechnologies;
     if (profile.helpNeededAreas !== undefined) updateData.helpNeededAreas = profile.helpNeededAreas;
     if (profile.availability !== undefined) updateData.availability = profile.availability;
+    if (profile.availabilityDetails !== undefined) updateData.availabilityDetails = profile.availabilityDetails;
     if (profile.onboardingStep !== undefined) updateData.onboardingStep = profile.onboardingStep;
     if (profile.isCompleted !== undefined) updateData.isCompleted = profile.isCompleted;
     if (profile.githubUrl !== undefined) updateData.githubUrl = profile.githubUrl;
@@ -51,6 +52,7 @@ export class MongoStudentRepository implements IStudentRepository {
       targetTechnologies: doc.targetTechnologies || [],
       helpNeededAreas: doc.helpNeededAreas || [],
       availability: doc.availability || '',
+      availabilityDetails: doc.availabilityDetails || undefined,
       onboardingStep: doc.onboardingStep || 1,
       isCompleted: Boolean(doc.isCompleted),
       githubUrl: doc.githubUrl || undefined,

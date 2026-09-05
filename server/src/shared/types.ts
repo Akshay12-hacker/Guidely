@@ -28,6 +28,7 @@ export interface StudentProfile {
   targetTechnologies: string[];
   helpNeededAreas: string[];
   availability: string;
+  availabilityDetails?: AvailabilityScheduleData;
   onboardingStep: number;
   isCompleted: boolean;
   githubUrl?: string;
@@ -47,6 +48,7 @@ export interface MentorProfile {
   technologies: string[];
   mentoringTopics: string[];
   availabilitySchedule: string;
+  availabilityDetails?: AvailabilityScheduleData;
   hourlyRate: number; // 0 for free/volunteer mentorship
   isVerified: boolean;
   verificationStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -433,9 +435,38 @@ export interface SkillsDirectoryResponse {
   total: number;
 }
 
+export interface AvailabilityPreset {
+  id: string;
+  name: string;
+  description: string;
+  startHour: number;
+  endHour: number;
+}
+
+export interface TimezoneOption {
+  code: string;
+  label: string;
+}
+
+export interface AvailabilityScheduleData {
+  days: string[];
+  startHour: number;
+  endHour: number;
+  splitWeekends?: boolean;
+  weekendStartHour?: number;
+  weekendEndHour?: number;
+  timezone: string;
+  customNote?: string;
+  totalWeeklyHours?: number;
+  formattedSchedule?: string;
+}
+
 export interface StudentOnboardingOptions {
   targetTechnologies: string[];
   helpNeededAreas: string[];
   skillCategories: string[];
+  availabilityDays?: string[];
+  availabilityPresets?: AvailabilityPreset[];
+  availabilityTimezones?: TimezoneOption[];
 }
 

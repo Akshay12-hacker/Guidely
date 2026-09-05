@@ -11,6 +11,11 @@ import {
 } from '../../infrastructure/database/models/index.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import { MentorProfile, MentorFilters } from '../../shared/types.js';
+import {
+  sanitizeSkillsList,
+  sanitizeAvailabilityString,
+  sanitizeAvailabilityDetails
+} from '../../constants/skills.js';
 
 export class MentorService {
   constructor(
@@ -30,16 +35,50 @@ export class MentorService {
     const user = await this.authRepo.findById(userId);
     if (!user) throw AppError.notFound('User not found');
 
+    const sanitizedData = { ...data };
+    if (sanitizedData.skills !== undefined) {
+      sanitizedData.skills = sanitizeSkillsList(sanitizedData.skills);
+    }
+    if (sanitizedData.technologies !== undefined) {
+      sanitizedData.technologies = sanitizeSkillsList(sanitizedData.technologies);
+    }
+    if (sanitizedData.mentoringTopics !== undefined) {
+      sanitizedData.mentoringTopics = sanitizeSkillsList(sanitizedData.mentoringTopics);
+    }
+    if (sanitizedData.availabilitySchedule !== undefined) {
+      sanitizedData.availabilitySchedule = sanitizeAvailabilityString(sanitizedData.availabilitySchedule);
+    }
+    if (sanitizedData.availabilityDetails !== undefined) {
+      sanitizedData.availabilityDetails = sanitizeAvailabilityDetails(sanitizedData.availabilityDetails);
+    }
+
     return this.mentorRepo.upsert({
-      ...data,
+      ...sanitizedData,
       userId
     });
   }
 
   async saveOnboardingStep(userId: string, step: number, stepData: Partial<MentorProfile>): Promise<MentorProfile> {
     const isCompleted = step >= 9;
+    const sanitizedData = { ...stepData };
+    if (sanitizedData.skills !== undefined) {
+      sanitizedData.skills = sanitizeSkillsList(sanitizedData.skills);
+    }
+    if (sanitizedData.technologies !== undefined) {
+      sanitizedData.technologies = sanitizeSkillsList(sanitizedData.technologies);
+    }
+    if (sanitizedData.mentoringTopics !== undefined) {
+      sanitizedData.mentoringTopics = sanitizeSkillsList(sanitizedData.mentoringTopics);
+    }
+    if (sanitizedData.availabilitySchedule !== undefined) {
+      sanitizedData.availabilitySchedule = sanitizeAvailabilityString(sanitizedData.availabilitySchedule);
+    }
+    if (sanitizedData.availabilityDetails !== undefined) {
+      sanitizedData.availabilityDetails = sanitizeAvailabilityDetails(sanitizedData.availabilityDetails);
+    }
+
     return this.mentorRepo.upsert({
-      ...stepData,
+      ...sanitizedData,
       userId,
       onboardingStep: step,
       isCompleted

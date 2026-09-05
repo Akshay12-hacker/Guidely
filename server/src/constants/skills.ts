@@ -1,4 +1,4 @@
-import { SkillItem } from '../shared/types.js';
+import { SkillItem, AvailabilityPreset, TimezoneOption, AvailabilityScheduleData } from '../shared/types.js';
 
 export const SKILL_CATEGORIES = [
   'All',
@@ -228,3 +228,148 @@ export function sanitizeSkillsList(skills: unknown): string[] {
 
   return sanitized.slice(0, 50); // maximum 50 skills to prevent payload abuse
 }
+
+/**
+ * Standard Day Definitions for Availability
+ */
+export const AVAILABILITY_DAYS = [
+  { key: 'Mon', label: 'Mon', full: 'Monday' },
+  { key: 'Tue', label: 'Tue', full: 'Tuesday' },
+  { key: 'Wed', label: 'Wed', full: 'Wednesday' },
+  { key: 'Thu', label: 'Thu', full: 'Thursday' },
+  { key: 'Fri', label: 'Fri', full: 'Friday' },
+  { key: 'Sat', label: 'Sat', full: 'Saturday' },
+  { key: 'Sun', label: 'Sun', full: 'Sunday' }
+] as const;
+
+/**
+ * Common Availability Time Presets for Onboarding
+ */
+export const AVAILABILITY_PRESETS: AvailabilityPreset[] = [
+  {
+    id: 'morning',
+    name: '🌅 Morning',
+    description: '8:00 AM – 12:00 PM',
+    startHour: 8,
+    endHour: 12
+  },
+  {
+    id: 'afternoon',
+    name: '☀️ Afternoon',
+    description: '12:00 PM – 5:00 PM',
+    startHour: 12,
+    endHour: 17
+  },
+  {
+    id: 'evening',
+    name: '🌆 Evening',
+    description: '5:00 PM – 9:00 PM',
+    startHour: 17,
+    endHour: 21
+  },
+  {
+    id: 'post-college',
+    name: '🎓 Post-College',
+    description: '6:00 PM – 10:00 PM',
+    startHour: 18,
+    endHour: 22
+  },
+  {
+    id: 'late-night',
+    name: '🌙 Late Night',
+    description: '9:00 PM – 12:00 AM',
+    startHour: 21,
+    endHour: 24
+  }
+];
+
+/**
+ * Standard Supported Timezones for Guidely Mentorship
+ */
+export const AVAILABILITY_TIMEZONES: TimezoneOption[] = [
+  { code: 'IST', label: 'IST (India Standard Time • UTC+5:30)' },
+  { code: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+  { code: 'EST', label: 'EST (US Eastern Time • UTC-5)' },
+  { code: 'PST', label: 'PST (US Pacific Time • UTC-8)' },
+  { code: 'BST', label: 'BST / GMT (British Summer Time • UTC+1)' },
+  { code: 'SGT', label: 'SGT (Singapore / Asia • UTC+8)' }
+];
+
+/**
+ * Format a numeric hour (0 - 24) to a friendly 12-hour AM/PM string
+ */
+export function formatHour(hour: number): string {
+  const normalized = Math.max(0, Math.min(24, Number(hour) || 0));
+  if (normalized === 24) return '12:00 AM (midnight)';
+  if (normalized === 0) return '12:00 AM';
+
+  const h = Math.floor(normalized);
+  const m = Math.round((normalized - h) * 60);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const displayH = h % 12 === 0 ? 12 : h % 12;
+  const displayM = m === 0 ? '00' : m < 10 ? `0${m}` : `${m}`;
+  return `${displayH}:${displayM} ${period}`;
+}
+
+/**
+ * Sanitize raw string availability input
+ */
+export function sanitizeAvailabilityString(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  return raw.trim().slice(0, 500);
+}
+
+/**
+ * Sanitize and validate structured availability details payload
+ */
+export function sanitizeAvailabilityDetails(raw: unknown): AvailabilityScheduleData | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+
+  const input = raw as Partial<AvailabilityScheduleData>;
+  const validDays = new Set(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+
+  const days = Array.isArray(input.days)
+    ? input.days.filter(d => typeof d === 'string' && validDays.has(d))
+    : [];
+
+  const startHour = typeof input.startHour === 'number' ? Math.max(0, Math.min(24, input.startHour)) : 18;
+  const endHour = typeof input.endHour === 'number' ? Math.max(startHour, Math.min(24, input.endHour)) : 22;
+
+  const timezone = typeof input.timezone === 'string' && input.timezone.trim()
+    ? input.timezone.trim().slice(0, 10)
+    : 'IST';
+
+  const customNote = typeof input.customNote === 'string'
+    ? input.customNote.trim().slice(0, 200)
+    : undefined;
+
+  const splitWeekends = Boolean(input.splitWeekends);
+  const weekendStartHour = typeof input.weekendStartHour === 'number'
+    ? Math.max(0, Math.min(24, input.weekendStartHour))
+    : undefined;
+  const weekendEndHour = typeof input.weekendEndHour === 'number'
+    ? Math.max(weekendStartHour || 0, Math.min(24, input.weekendEndHour))
+    : undefined;
+
+  const totalWeeklyHours = typeof input.totalWeeklyHours === 'number' && input.totalWeeklyHours >= 0
+    ? Math.min(168, input.totalWeeklyHours)
+    : undefined;
+
+  const formattedSchedule = typeof input.formattedSchedule === 'string'
+    ? input.formattedSchedule.trim().slice(0, 500)
+    : undefined;
+
+  return {
+    days,
+    startHour,
+    endHour,
+    splitWeekends,
+    weekendStartHour,
+    weekendEndHour,
+    timezone,
+    customNote,
+    totalWeeklyHours,
+    formattedSchedule
+  };
+}
+

@@ -13,6 +13,7 @@ import { ProgressBar } from '../../components/ui/ProgressBar.js';
 import { Badge } from '../../components/ui/Badge.js';
 import { Avatar } from '../../components/ui/Avatar.js';
 import { ProfilePhotoModal } from '../../components/ui/ProfilePhotoModal.js';
+import { AvailabilityTimeBarPicker } from '../../components/ui/AvailabilityTimeBarPicker.js';
 import {
   User,
   Briefcase,
@@ -465,14 +466,17 @@ export const MentorOnboarding: React.FC<MentorOnboardingProps> = ({ onComplete }
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} className="animate-fade-in">
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Your Mentoring Availability</h3>
             <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-              Set expectations for when you can take 1-on-1 video sessions and reply to asynchronous chat messages.
+              Configure your weekly days and interactive timeline bars so students know when you are open for 1-on-1 video reviews and guidance syncs.
             </p>
-            <Input
-              label="Availability Schedule"
-              placeholder="e.g. Weekends (10 AM - 6 PM IST) & Weekday evenings post 7 PM"
+            <AvailabilityTimeBarPicker
               value={profile.availabilitySchedule || ''}
-              onChange={(e) => setProfile(prev => ({ ...prev, availabilitySchedule: e.target.value }))}
-              required
+              onChange={(formattedSchedule, details) => setProfile(prev => ({
+                ...prev,
+                availabilitySchedule: formattedSchedule,
+                availabilityDetails: details
+              }))}
+              label="Weekly Mentoring Windows"
+              description="Choose your weekly days, sprint windows, and timezone."
             />
           </div>
         )}
