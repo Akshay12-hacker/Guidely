@@ -48,7 +48,9 @@ export class MongoAdminRepository implements IAdminRepository {
       ProjectModel.countDocuments({ status: 'IN_PROGRESS' }),
       ProjectModel.countDocuments({ status: 'COMPLETED' }),
       MentorshipSessionModel.countDocuments({ status: 'COMPLETED' }),
-      MentorProfileModel.countDocuments({ verificationStatus: 'PENDING' }),
+      MentorProfileModel.countDocuments({
+        $or: [{ verificationStatus: 'PENDING' }, { isVerified: false }]
+      }),
       ReportModel.countDocuments({ status: 'PENDING' }),
       MentorshipRequestModel.countDocuments({ status: 'ACCEPTED' }),
       MentorshipRequestModel.countDocuments()
@@ -153,7 +155,12 @@ export class MongoAdminRepository implements IAdminRepository {
   }
 
   async getPendingMentorVerifications(): Promise<(MentorProfile & { user: User })[]> {
-    const mentorDocs = await MentorProfileModel.find({ verificationStatus: 'PENDING' })
+    const mentorDocs = await MentorProfileModel.find({
+      $or: [
+        { verificationStatus: 'PENDING' },
+        { isVerified: false }
+      ]
+    })
       .sort({ createdAt: 1 })
       .lean();
 

@@ -134,6 +134,32 @@ export const MOCK_USERS: Record<string, User> = {
     createdAt: pastDate(70),
     updatedAt: pastDate(6)
   },
+  // Pending Mentor Applicant 1 - Kavita Sharma (Flipkart)
+  'usr_mentor_kavita': {
+    id: 'usr_mentor_kavita',
+    email: 'kavita.sharma@flipkart.com',
+    role: 'MENTOR',
+    fullName: 'Kavita Sharma',
+    avatarUrl: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80',
+    headline: 'Staff Data Engineer @ Flipkart | Apache Spark, Kafka & Big Data Architecture',
+    bio: 'Specialist in high-throughput distributed data pipelines, Apache Spark, Kafka streaming, and data warehouse architecture.',
+    status: 'ACTIVE',
+    createdAt: pastDate(2),
+    updatedAt: pastDate(1)
+  },
+  // Pending Mentor Applicant 2 - Devendra Patle (Razorpay)
+  'usr_mentor_devendra': {
+    id: 'usr_mentor_devendra',
+    email: 'devendra.patle@razorpay.com',
+    role: 'MENTOR',
+    fullName: 'Devendra Patle',
+    avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    headline: 'Senior Security Architect @ Razorpay | DevSecOps, Cloud Hardening & FinTech',
+    bio: 'DevSecOps and fintech infrastructure security specialist. Passionate about guiding capstone students in cloud security and vulnerability assessment.',
+    status: 'ACTIVE',
+    createdAt: pastDate(3),
+    updatedAt: pastDate(1)
+  },
   // Admin - Dr. Gourav Shrivastava (HOD)
   'usr_admin_1': {
     id: 'usr_admin_1',
@@ -330,6 +356,54 @@ export const MOCK_MENTOR_PROFILES: Record<string, MentorProfile> = {
     linkedinUrl: 'https://linkedin.com/in/ananya-joshi-security',
     createdAt: pastDate(70),
     updatedAt: pastDate(6)
+  },
+  'usr_mentor_kavita': {
+    userId: 'usr_mentor_kavita',
+    title: 'Staff Data Engineer',
+    company: 'Flipkart (Bangalore)',
+    college: 'NIT Trichy (B.Tech CSE)',
+    yearsExperience: 6,
+    bio: 'Specialist in high-throughput distributed data pipelines, Apache Spark, Kafka streaming, and data warehouse architecture.',
+    skills: ['Data Engineering', 'Apache Spark', 'Kafka', 'SQL Optimization', 'Python', 'Distributed Pipelines'],
+    technologies: ['Python', 'Apache Spark', 'Kafka', 'PostgreSQL', 'Airflow', 'AWS'],
+    mentoringTopics: ['Big Data Architecture', 'Data Modeling & ETL', 'Industry System Design'],
+    availabilitySchedule: 'Weekends (11 AM - 5 PM IST)',
+    hourlyRate: 0,
+    isVerified: false,
+    verificationStatus: 'PENDING',
+    rating: 5.0,
+    reviewsCount: 0,
+    studentsHelpedCount: 0,
+    onboardingStep: 9,
+    isCompleted: true,
+    githubUrl: 'https://github.com/kavita-data',
+    linkedinUrl: 'https://linkedin.com/in/kavita-sharma-data',
+    createdAt: pastDate(2),
+    updatedAt: pastDate(1)
+  },
+  'usr_mentor_devendra': {
+    userId: 'usr_mentor_devendra',
+    title: 'Senior Security Architect',
+    company: 'Razorpay',
+    college: 'MANIT Bhopal (B.Tech CSE)',
+    yearsExperience: 7,
+    bio: 'DevSecOps and fintech infrastructure security specialist. Passionate about guiding capstone students in cloud security and vulnerability assessment.',
+    skills: ['Application Security', 'DevSecOps', 'Cloud Security', 'PCI-DSS', 'Kubernetes Security', 'API Security Audits'],
+    technologies: ['Go', 'Docker', 'Kubernetes', 'Trivy', 'HashiCorp Vault', 'AWS', 'Linux'],
+    mentoringTopics: ['FinTech Security Compliance', 'Cloud Hardening', 'Vulnerability Assessment'],
+    availabilitySchedule: 'Weekdays post 6 PM & Saturday',
+    hourlyRate: 0,
+    isVerified: false,
+    verificationStatus: 'PENDING',
+    rating: 5.0,
+    reviewsCount: 0,
+    studentsHelpedCount: 0,
+    onboardingStep: 9,
+    isCompleted: true,
+    githubUrl: 'https://github.com/devendra-patle-sec',
+    linkedinUrl: 'https://linkedin.com/in/devendra-patle',
+    createdAt: pastDate(3),
+    updatedAt: pastDate(1)
   }
 };
 

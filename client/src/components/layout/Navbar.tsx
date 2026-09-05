@@ -19,6 +19,7 @@ import {
   Camera
 } from 'lucide-react';
 import { ProfilePhotoModal } from '../ui/ProfilePhotoModal.js';
+import { formatGreetingName } from '../../utils/formatters.js';
 
 interface NavbarProps {
   onNavigate: (route: string) => void;
@@ -311,7 +312,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentRoute, onTogg
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.2 }}>
-                    {user?.fullName?.split(' ')[0]}
+                    {formatGreetingName(user?.fullName, 'User')}
                   </span>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
                     {user?.role?.toLowerCase()}

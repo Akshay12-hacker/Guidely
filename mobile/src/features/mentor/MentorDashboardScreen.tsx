@@ -26,7 +26,7 @@ import { Icon } from '../../components/icons/Icon';
 import { colors } from '../../theme/colors';
 import { spacing, radius, shadows } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { formatDateTime } from '../../utils/formatters';
+import { formatDateTime, formatGreetingName } from '../../utils/formatters';
 
 export interface MentorDashboardScreenProps {
   onNavigate: (route: string, params?: any) => void;
@@ -129,7 +129,7 @@ export const MentorDashboardScreen: React.FC<MentorDashboardScreenProps> = ({ on
             Mentor Dashboard
           </Text>
           <Text style={[typography.body, { color: colors.textMuted }]}>
-            Welcome back, {user?.fullName?.split(' ')[0] || 'Mentor'} 👋
+            Welcome back, {formatGreetingName(user?.fullName || data?.profile?.user?.fullName, 'Mentor')} 👋
           </Text>
         </View>
         <Avatar name={user?.fullName || 'Mentor'} src={user?.avatarUrl} size="md" isVerified={isVerified} />

@@ -142,6 +142,8 @@ const MainApp: React.FC = () => {
         return <AdminDashboard initialTab="users" onNavigate={handleNavigate} />;
       case 'admin-verifications':
         return <AdminDashboard initialTab="verifications" onNavigate={handleNavigate} />;
+      case 'admin-projects':
+        return <AdminDashboard initialTab="projects" onNavigate={handleNavigate} />;
       case 'admin-reports':
         return <AdminDashboard initialTab="reports" onNavigate={handleNavigate} />;
       case 'admin-reviews':

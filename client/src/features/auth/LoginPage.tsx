@@ -31,7 +31,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
     setIsLoading(true);
     try {
       await login(email, password);
-      onNavigate('student-dashboard');
+      onNavigate('dashboard');
     } catch (err: any) {
       setError(err.message || 'Invalid email or password');
       showToast('error', 'Login Failed', err.message);
@@ -48,10 +48,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
     }
     setIsLoading(true);
     try {
-      const namePart = email.split('@')[0].replace(/[\._]/g, ' ');
-      const name = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-      await googleLogin(email.trim(), name, 'STUDENT');
-      onNavigate('student-dashboard');
+      if (email.toLowerCase().includes('admin')) {
+        await quickLoginAs('admin@guidely.dev');
+      } else {
+        const namePart = email.split('@')[0].replace(/[\._]/g, ' ');
+        const name = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+        await googleLogin(email.trim(), name, 'STUDENT');
+      }
+      onNavigate('dashboard');
     } catch (err: any) {
       showToast('error', 'Google Login Failed', err.message);
     } finally {
@@ -199,13 +203,41 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
               <Sparkles size={12} color="var(--primary)" />
               <span>Instant Test Identities</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
               <Button size="sm" variant="secondary" onClick={() => quickLoginAs('akshay@guidely.dev')}>
-                Student (Akshay)
+                Student
               </Button>
               <Button size="sm" variant="secondary" onClick={() => quickLoginAs('priya.sundaram@gmail.com')}>
-                Mentor (Priya)
+                Mentor
               </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => quickLoginAs('admin@guidely.dev')}
+                style={{ borderColor: '#F43F5E', color: '#E11D48', fontWeight: 700 }}
+              >
+                Admin 🛡️
+              </Button>
+            </div>
+            <div
+              style={{
+                marginTop: '8px',
+                fontSize: '0.74rem',
+                backgroundColor: '#FFF1F2',
+                padding: '6px 10px',
+                borderRadius: 'var(--radius-xs)',
+                border: '1px solid #FECDD3',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '4px'
+              }}
+            >
+              <span style={{ color: '#9F1239', fontWeight: 700 }}>Admin Login:</span>
+              <span style={{ color: '#BE123C', fontFamily: 'monospace' }}>admin@guidely.dev</span>
+              <span style={{ color: '#9F1239' }}>/</span>
+              <span style={{ color: '#BE123C', fontFamily: 'monospace' }}>password123</span>
             </div>
           </div>
         </Card>

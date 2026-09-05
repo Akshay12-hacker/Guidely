@@ -59,6 +59,17 @@ export const QuickRoleSwitcher: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
         {demoProfiles.map((profile) => {
           const isCurrent = user?.email.toLowerCase() === profile.email.toLowerCase();
+          const isAdmin = profile.role === 'ADMIN';
+
+          let bg = isCurrent ? 'var(--primary)' : 'rgba(255,255,255,0.06)';
+          let color = isCurrent ? '#FFFFFF' : '#CBD5E1';
+          let border = isCurrent ? '1px solid #818CF8' : '1px solid rgba(255,255,255,0.1)';
+
+          if (isAdmin) {
+            bg = isCurrent ? '#E11D48' : 'rgba(244, 63, 94, 0.18)';
+            color = isCurrent ? '#FFFFFF' : '#FDA4AF';
+            border = isCurrent ? '1px solid #FDA4AF' : '1px solid rgba(244, 63, 94, 0.4)';
+          }
 
           return (
             <button
@@ -66,9 +77,9 @@ export const QuickRoleSwitcher: React.FC = () => {
               onClick={() => quickLoginAs(profile.email)}
               title={`${profile.email} (${profile.desc})`}
               style={{
-                backgroundColor: isCurrent ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
-                color: isCurrent ? '#FFFFFF' : '#CBD5E1',
-                border: isCurrent ? '1px solid #818CF8' : '1px solid rgba(255,255,255,0.1)',
+                backgroundColor: bg,
+                color: color,
+                border: border,
                 borderRadius: 'var(--radius-xs)',
                 padding: '2px 8px',
                 fontSize: '0.72rem',
@@ -76,17 +87,18 @@ export const QuickRoleSwitcher: React.FC = () => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '4px',
-                fontWeight: isCurrent ? 700 : 500,
+                fontWeight: isCurrent || isAdmin ? 700 : 500,
                 transition: 'all 0.15s ease'
               }}
               onMouseEnter={(e) => {
-                if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.14)';
+                if (!isCurrent) e.currentTarget.style.backgroundColor = isAdmin ? 'rgba(244, 63, 94, 0.3)' : 'rgba(255,255,255,0.14)';
               }}
               onMouseLeave={(e) => {
-                if (!isCurrent) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)';
+                if (!isCurrent) e.currentTarget.style.backgroundColor = bg;
               }}
             >
               {isCurrent && <UserCheck size={11} />}
+              {isAdmin && !isCurrent && <span>🛡️</span>}
               {profile.label}
             </button>
           );

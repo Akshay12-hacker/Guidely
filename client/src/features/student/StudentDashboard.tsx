@@ -24,6 +24,7 @@ import {
 import { ProfilePhotoModal } from '../../components/ui/ProfilePhotoModal.js';
 import { MentorMatchChatbot } from './MentorMatchChatbot.js';
 import { MentorshipRequestModal } from '../mentorship/MentorshipRequestModal.js';
+import { formatGreetingName } from '../../utils/formatters.js';
 
 interface StudentDashboardProps {
   onNavigate: (route: string, params?: any) => void;
@@ -155,7 +156,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ onNavigate }
 
           <div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
-              {greetingTime()}, {user?.fullName?.split(' ')[0] || 'Student'} 👋
+              {greetingTime()}, {formatGreetingName(user?.fullName || data?.profile?.user?.fullName, 'Student')} 👋
             </h1>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '2px' }}>
               Welcome back to your project development workspace.

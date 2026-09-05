@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { getOptimizedCloudinaryUrl } from '../../utils/cloudinary.js';
+import { formatInitials } from '../../utils/formatters.js';
 
 export interface AvatarProps {
   src?: string;
@@ -44,13 +45,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   };
 
   const dim = getDimension();
-  const initials = (name || 'User')
-    .split(' ')
-    .filter(Boolean)
-    .map(p => p[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase() || 'U';
+  const initials = formatInitials(name, 'U');
 
   const hash = (name || 'U').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const palette = PALETTES[hash % PALETTES.length];

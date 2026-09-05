@@ -20,6 +20,7 @@ import {
   ArrowRight,
   Video
 } from 'lucide-react';
+import { formatGreetingName } from '../../utils/formatters.js';
 
 interface MentorDashboardProps {
   onNavigate: (route: string, params?: any) => void;
@@ -77,6 +78,9 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({ onNavigate }) 
   const activeProjects = data?.activeProjects || data?.activeMentees || [];
   const upcomingSessions = data?.upcomingSessions || [];
 
+  const mentorFullName = user?.fullName || profile?.fullName || profile?.user?.fullName;
+  const greetingName = formatGreetingName(mentorFullName, 'Mentor');
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }} className="animate-fade-in">
       {/* Header */}
@@ -84,7 +88,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({ onNavigate }) 
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.025em' }}>
-              {greetingTime()}, {user?.fullName?.split(' ')[0] || 'Mentor'} 👋
+              {greetingTime()}, {greetingName} 👋
             </h1>
             {profile?.isVerified || profile?.verificationStatus === 'APPROVED' ? (
               <Badge variant="verified">Verified Mentor</Badge>

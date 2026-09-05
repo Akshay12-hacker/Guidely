@@ -23,7 +23,7 @@ import { Icon } from '../../components/icons/Icon';
 import { colors } from '../../theme/colors';
 import { spacing, radius, shadows } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
-import { formatDateTime } from '../../utils/formatters';
+import { formatDateTime, formatGreetingName } from '../../utils/formatters';
 import { MentorMatchChatModal } from './MentorMatchChatModal';
 
 export interface StudentDashboardScreenProps {
@@ -101,7 +101,7 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({ 
       <View style={styles.greetingHeader}>
         <View style={{ flex: 1 }}>
           <Text style={[typography.h1, styles.greetingTitle]}>
-            {greeting()}, {user?.fullName?.split(' ')[0] || 'Student'} 👋
+            {greeting()}, {formatGreetingName(user?.fullName, 'Student')} 👋
           </Text>
           <Text style={[typography.body, { color: colors.textMuted }]}>
             Welcome back to your project workspace

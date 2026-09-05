@@ -1475,27 +1475,62 @@ class ApiClient {
 
   async getPendingVerifications(): Promise<(MentorProfile & { user: User })[]> {
     try {
-      return await this.request<any>('/admin/verifications');
+      const res = await this.request<any>('/admin/verifications');
+      if (Array.isArray(res) && res.length > 0) return res;
+      throw new Error('Check dynamic verifications');
     } catch {
-      return [
-        {
-          ...dynamicMentorProfiles['usr_mentor_ananya'],
-          verificationStatus: 'PENDING',
-          user: dynamicUsers['usr_mentor_ananya']
+      const pending: (MentorProfile & { user: User })[] = [];
+      for (const [uid, prof] of Object.entries(dynamicMentorProfiles)) {
+        if (!prof.isVerified || prof.verificationStatus === 'PENDING') {
+          const u = dynamicUsers[uid] || {
+            id: uid,
+            email: `${uid}@guidely.dev`,
+            role: 'MENTOR' as const,
+            fullName: (prof as any).fullName || 'Mentor Applicant',
+            status: 'ACTIVE' as const,
+            createdAt: prof.createdAt || new Date().toISOString(),
+            updatedAt: prof.updatedAt || new Date().toISOString()
+          };
+          pending.push({
+            ...prof,
+            user: u
+          });
         }
-      ];
+      }
+      return pending;
     }
   }
 
   async verifyMentor(userId: string, status: 'APPROVED' | 'REJECTED', notes?: string): Promise<MentorProfile> {
-    const prof = dynamicMentorProfiles[userId];
-    if (prof) {
-      prof.isVerified = status === 'APPROVED';
-      prof.verificationStatus = status;
-      prof.verificationNotes = notes;
-      return prof;
+    try {
+      const res = await this.request<MentorProfile>(`/admin/verifications/${userId}`, {
+        method: 'POST',
+        body: JSON.stringify({ status, notes })
+      });
+      if (dynamicMentorProfiles[userId]) {
+        dynamicMentorProfiles[userId].isVerified = status === 'APPROVED';
+        dynamicMentorProfiles[userId].verificationStatus = status;
+        dynamicMentorProfiles[userId].verificationNotes = notes;
+      }
+      return res;
+    } catch {
+      const prof = dynamicMentorProfiles[userId];
+      if (prof) {
+        prof.isVerified = status === 'APPROVED';
+        prof.verificationStatus = status;
+        prof.verificationNotes = notes;
+        return prof;
+      }
+      throw new Error('Mentor not found');
     }
-    throw new Error('Mentor not found');
+  }
+
+  async getAdminProjects(): Promise<any[]> {
+    try {
+      return await this.request<any[]>('/admin/projects');
+    } catch {
+      return Object.values(dynamicProjects);
+    }
   }
 
   async getAdminReports(): Promise<Report[]> {

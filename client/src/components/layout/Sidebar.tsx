@@ -58,8 +58,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentRoute, onNavigate, isOp
 
   const adminNav: NavItem[] = [
     { id: 'admin-overview', label: 'Overview & KPIs', icon: <BarChart3 size={18} /> },
-    { id: 'admin-users', label: 'Users Directory', icon: <Users size={18} /> },
     { id: 'admin-verifications', label: 'Verification Queue', icon: <CheckCircle size={18} /> },
+    { id: 'admin-projects', label: 'Projects Oversight', icon: <FolderKanban size={18} /> },
+    { id: 'admin-users', label: 'Users Directory', icon: <Users size={18} /> },
     { id: 'admin-reports', label: 'Reports & Issues', icon: <FileWarning size={18} /> },
     { id: 'admin-reviews', label: 'Reviews Moderation', icon: <Star size={18} /> }
   ];
@@ -94,7 +95,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentRoute, onNavigate, isOp
         {currentNav.map((item) => {
           const isActive = currentRoute === item.id ||
             (item.id === 'student-dashboard' && currentRoute === 'dashboard') ||
-            (item.id === 'mentor-dashboard' && currentRoute === 'dashboard');
+            (item.id === 'mentor-dashboard' && currentRoute === 'dashboard') ||
+            (item.id === 'admin-overview' && (currentRoute === 'dashboard' || currentRoute === 'admin'));
 
           return (
             <button

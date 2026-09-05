@@ -1,10 +1,21 @@
-// Formatting helpers for Android UI
+// String and date formatting utilities for Guidely Client
 
 const HONORIFICS = new Set([
   'dr', 'dr.', 'prof', 'prof.', 'mr', 'mr.', 'mrs', 'mrs.', 'ms', 'ms.',
   'miss', 'er', 'er.', 'shri', 'smt', 'sir', 'madam'
 ]);
 
+/**
+ * Formats a user's full name into an appropriate greeting / short display name.
+ * Prevents titles/honorifics (e.g., "Dr.", "Prof.") from showing alone without the actual name.
+ *
+ * Examples:
+ * - "Dr. Rohan Mehra" -> "Dr. Rohan"
+ * - "Prof. Nitin Choudhary" -> "Prof. Nitin"
+ * - "Akshay Sharma" -> "Akshay"
+ * - "Dr. Rohan" -> "Dr. Rohan"
+ * - "Dr." -> fallback
+ */
 export const formatGreetingName = (fullName?: string | null, fallback: string = 'User'): string => {
   if (!fullName || !fullName.trim()) return fallback;
   const parts = fullName.trim().split(/\s+/);
@@ -17,16 +28,23 @@ export const formatGreetingName = (fullName?: string | null, fallback: string = 
     index++;
   }
 
+  // If there are titles and an actual name after them
   if (titles.length > 0) {
     if (index < parts.length) {
       return `${titles.join(' ')} ${parts[index]}`;
     }
+    // Only title was given, fallback
     return fallback;
   }
 
+  // Regular name, return first name
   return parts[0];
 };
 
+/**
+ * Returns initials from a name, safely ignoring leading honorifics like "Dr." or "Prof."
+ * Example: "Dr. Rohan Mehra" -> "RM"
+ */
 export const formatInitials = (name?: string | null, fallback: string = 'U'): string => {
   if (!name || !name.trim()) return fallback;
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -34,23 +52,10 @@ export const formatInitials = (name?: string | null, fallback: string = 'U'): st
   const targetParts = nonHonorificParts.length > 0 ? nonHonorificParts : parts;
 
   return targetParts
-    .map(part => part[0])
+    .map(p => p[0])
     .slice(0, 2)
     .join('')
     .toUpperCase() || fallback;
-};
-
-export const getAvatarColor = (name: string): { bg: string; text: string } => {
-  if (!name) return { bg: '#EEF2FF', text: '#4F46E5' };
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = Math.abs(hash) % 360;
-  return {
-    bg: `hsl(${hue}, 70%, 92%)`,
-    text: `hsl(${hue}, 80%, 30%)`
-  };
 };
 
 export const formatDate = (dateString?: string): string => {
@@ -74,34 +79,4 @@ export const formatDateTime = (dateString?: string): string => {
     hour: '2-digit',
     minute: '2-digit'
   });
-};
-
-export const formatTime = (dateString?: string): string => {
-  if (!dateString) return '';
-  const d = new Date(dateString);
-  if (isNaN(d.getTime())) return dateString;
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
-
-export const formatRelativeTime = (dateString?: string): string => {
-  if (!dateString) return '';
-  const now = new Date();
-  const past = new Date(dateString);
-  const diffMs = now.getTime() - past.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
-
-  if (diffSec < 60) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHr < 24) return `${diffHr}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return formatDate(dateString);
-};
-
-export const truncateText = (text: string, maxChars: number = 80): string => {
-  if (!text) return '';
-  if (text.length <= maxChars) return text;
-  return text.substring(0, maxChars).trim() + '...';
 };
