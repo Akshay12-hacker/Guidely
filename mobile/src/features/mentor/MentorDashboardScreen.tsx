@@ -111,7 +111,7 @@ export const MentorDashboardScreen: React.FC<MentorDashboardScreenProps> = ({ on
   const pendingRequests = data?.pendingRequests || data?.incomingRequests || [];
   const activeProjects = data?.activeProjects || [];
   const upcomingSessions = data?.upcomingSessions || [];
-  const isVerified = Boolean(data?.profile?.isVerified ?? user?.isVerified);
+  const isVerified = Boolean(data?.profile?.isVerified ?? (user as any)?.isVerified);
 
   return (
     <ScrollView

@@ -27,17 +27,17 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, onTabPres
 
   const studentTabs: TabItem[] = [
     { id: 'dashboard', label: 'Home', icon: 'compass' },
-    { id: 'discover', label: 'Mentors', icon: 'users' },
-    { id: 'project', label: 'Workspace', icon: 'folder-kanban' },
+    { id: 'discover', label: 'Discover', icon: 'users' },
+    { id: 'messages', label: 'Messages', icon: 'message-square' },
     { id: 'sessions', label: 'Sessions', icon: 'calendar' },
-    { id: 'messages', label: 'Chat', icon: 'message-square' }
+    { id: 'profile', label: 'Profile', icon: 'users' }
   ];
 
   const mentorTabs: TabItem[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'compass' },
-    { id: 'requests', label: 'Requests', icon: 'folder-kanban' },
+    { id: 'dashboard', label: 'Home', icon: 'compass' },
+    { id: 'requests', label: 'Students', icon: 'users' },
+    { id: 'messages', label: 'Messages', icon: 'message-square' },
     { id: 'sessions', label: 'Sessions', icon: 'calendar' },
-    { id: 'messages', label: 'Chat', icon: 'message-square' },
     { id: 'profile', label: 'Profile', icon: 'users' }
   ];
 

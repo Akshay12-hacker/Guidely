@@ -46,7 +46,12 @@ export type IconName =
   | 'paperclip'
   | 'eye'
   | 'eye-off'
-  | 'bar-chart';
+  | 'bar-chart'
+  | 'camera'
+  | 'share'
+  | 'download'
+  | 'play'
+  | 'file';
 
 interface IconProps {
   name: IconName;
@@ -327,6 +332,53 @@ function renderIconGlyph(name: IconName, size: number, color: string) {
           <View style={{ width: strokeWidth + 1, height: '40%', backgroundColor: color, borderRadius: 1 }} />
           <View style={{ width: strokeWidth + 1, height: '90%', backgroundColor: color, borderRadius: 1 }} />
           <View style={{ width: strokeWidth + 1, height: '65%', backgroundColor: color, borderRadius: 1 }} />
+        </View>
+      );
+
+    case 'camera':
+      return (
+        <View style={{ width: size * 0.85, height: size * 0.7, borderRadius: 3, borderWidth: strokeWidth, borderColor: color, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ position: 'absolute', top: -3, left: 4, width: size * 0.25, height: 3, backgroundColor: color, borderRadius: 1 }} />
+          <View style={{ width: size * 0.35, height: size * 0.35, borderRadius: 99, borderWidth: strokeWidth, borderColor: color }} />
+        </View>
+      );
+
+    case 'share':
+      return (
+        <View style={{ width: size * 0.8, height: size * 0.8, justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-start' }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
+          </View>
+        </View>
+      );
+
+    case 'download':
+      return (
+        <View style={{ width: size * 0.85, height: size * 0.85, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: strokeWidth, height: size * 0.5, backgroundColor: color }} />
+          <View style={{ width: size * 0.35, height: size * 0.35, borderBottomWidth: strokeWidth, borderRightWidth: strokeWidth, borderColor: color, transform: [{ rotate: '45deg' }], marginTop: -size * 0.2 }} />
+          <View style={{ width: size * 0.7, height: strokeWidth, backgroundColor: color, marginTop: 4 }} />
+        </View>
+      );
+
+    case 'play':
+      return (
+        <View style={{ width: size * 0.7, height: size * 0.7, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 0, height: 0, borderLeftWidth: size * 0.45, borderTopWidth: size * 0.28, borderBottomWidth: size * 0.28, borderTopColor: 'transparent', borderBottomColor: 'transparent', borderLeftColor: color, marginLeft: 2 }} />
+        </View>
+      );
+
+    case 'file':
+      return (
+        <View style={{ width: size * 0.7, height: size * 0.85, borderRadius: 2, borderWidth: strokeWidth, borderColor: color, padding: 2 }}>
+          <View style={{ width: '60%', height: 2, backgroundColor: color, marginBottom: 2 }} />
+          <View style={{ width: '80%', height: 2, backgroundColor: color }} />
         </View>
       );
 

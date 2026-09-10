@@ -142,6 +142,78 @@ class ApiClient {
   delete<T>(endpoint: string, options?: RequestOptions): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
   }
+
+  async uploadProfilePhoto(imageUri: string): Promise<{ url: string; secureUrl: string; publicId: string }> {
+    const formData = new FormData();
+    const filename = imageUri.split('/').pop() || 'profile.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+
+    formData.append('file', {
+      uri: imageUri,
+      name: filename,
+      type
+    } as any);
+
+    const headers: Record<string, string> = {
+      Accept: 'application/json'
+    };
+
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+
+    const response = await fetch(`${apiConfig.httpBaseUrl}/api/upload/profile-photo`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new ApiError(data?.message || 'Failed to upload profile photo', response.status, data);
+    }
+
+    return data?.data || data;
+  }
+
+  async uploadMedia(fileUri: string, folder: string = 'general', mimeType?: string): Promise<{ url: string; secureUrl: string; publicId: string }> {
+    const formData = new FormData();
+    const filename = fileUri.split('/').pop() || 'upload.bin';
+    const match = /\.(\w+)$/.exec(filename);
+    const inferredType = mimeType || (match ? `image/${match[1].toLowerCase()}` : 'application/octet-stream');
+
+    formData.append('file', {
+      uri: fileUri,
+      name: filename,
+      type: inferredType
+    } as any);
+
+    const headers: Record<string, string> = {
+      Accept: 'application/json'
+    };
+
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+
+    const response = await fetch(`${apiConfig.httpBaseUrl}/api/upload/media?folder=${encodeURIComponent(folder)}`, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new ApiError(data?.message || 'Failed to upload media', response.status, data);
+    }
+
+    return data?.data || data;
+  }
+
+  uploadImage(imageUri: string): Promise<{ url: string; secureUrl: string; publicId: string }> {
+    return this.uploadProfilePhoto(imageUri);
+  }
 }
 
 export const apiClient = new ApiClient();

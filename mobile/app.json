@@ -2,19 +2,72 @@
   "expo": {
     "name": "Guidely",
     "slug": "guidely-mobile",
+    "scheme": "guidely",
     "version": "1.0.0",
     "entryPoint": "./index.js",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#F8FAFC",
+    "backgroundColor": "#FFFFFF",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    },
     "android": {
       "package": "com.guidely.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
       "permissions": [
-        "CAMERA",
-        "RECORD_AUDIO",
         "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "ACCESS_NETWORK_STATE",
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "guidely"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "guidely-theta.vercel.app",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
       ]
-    }
+    },
+    "plugins": [
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Guidely to access photos to save mentorship guides and upload attachments.",
+          "savePhotosPermission": "Allow Guidely to save mentorship resources and shared media to your device."
+        }
+      ]
+    ]
   }
 }

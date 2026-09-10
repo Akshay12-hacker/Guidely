@@ -31,7 +31,7 @@ export interface StudentDashboardScreenProps {
 }
 
 export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({ onNavigate }) => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -402,9 +402,9 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({ 
         onClose={() => setIsChatModalVisible(false)}
         onSelectMentor={(id) => onNavigate('mentor-profile', { mentorId: id })}
         initialCriteria={{
-          projectIdea: profile?.projectIdea || activeProject?.title,
-          targetTechnologies: profile?.targetTechnologies,
-          helpNeededAreas: profile?.helpNeededAreas
+          projectIdea: (profile as any)?.projectIdea || activeProject?.title,
+          targetTechnologies: (profile as any)?.targetTechnologies,
+          helpNeededAreas: (profile as any)?.helpNeededAreas
         }}
       />
     </ScrollView>

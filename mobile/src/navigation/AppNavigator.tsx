@@ -1,7 +1,15 @@
 // Root App Navigator for Guidely Mobile
 
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, BackHandler, ActivityIndicator, StatusBar } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  StyleSheet,
+  BackHandler,
+  ActivityIndicator,
+  StatusBar,
+  ToastAndroid,
+  Platform
+} from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { QuickRoleBar } from '../components/common/QuickRoleBar';
 import { BottomTabBar } from '../components/common/BottomTabBar';
@@ -38,6 +46,9 @@ import { ChatScreen } from '../features/messaging/ChatScreen';
 // Notifications
 import { NotificationsScreen } from '../features/notifications/NotificationsScreen';
 
+// Profile
+import { ProfileScreen } from '../features/profile/ProfileScreen';
+
 // Admin Screens
 import { AdminDashboardScreen } from '../features/admin/AdminDashboardScreen';
 
@@ -57,6 +68,8 @@ export const AppNavigator: React.FC = () => {
     params?: any;
   } | null>(null);
 
+  const lastBackPressTime = useRef<number>(0);
+
   // Hardware Back Button Handling for Android
   useEffect(() => {
     const backAction = () => {
@@ -68,12 +81,27 @@ export const AppNavigator: React.FC = () => {
         setAuthScreen('LOGIN');
         return true;
       }
-      return false;
+      if (isAuthenticated && activeTab !== 'dashboard') {
+        setActiveTab('dashboard');
+        return true;
+      }
+
+      // On home dashboard: double tap to exit
+      const now = Date.now();
+      if (now - lastBackPressTime.current < 2000) {
+        BackHandler.exitApp();
+        return true;
+      }
+      lastBackPressTime.current = now;
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Press back again to exit Guidely', ToastAndroid.SHORT);
+      }
+      return true;
     };
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
-  }, [activeSubRoute, isAuthenticated, authScreen]);
+  }, [activeSubRoute, isAuthenticated, authScreen, activeTab]);
 
   // Loading Screen
   if (isLoading) {
@@ -156,6 +184,14 @@ export const AppNavigator: React.FC = () => {
           />
         );
 
+      case 'project':
+        return (
+          <ProjectWorkspaceScreen
+            projectId={params?.projectId}
+            onNavigate={(r, p) => setActiveSubRoute({ route: r, params: p })}
+          />
+        );
+
       case 'requests':
         return isStudent ? (
           <StudentRequestsScreen
@@ -227,7 +263,7 @@ export const AppNavigator: React.FC = () => {
             <MentorDashboardScreen
               onNavigate={(r, p) => {
                 if (r === 'project') {
-                  setActiveTab('requests');
+                  setActiveSubRoute({ route: 'project', params: p });
                 } else {
                   setActiveSubRoute({ route: r, params: p });
                 }
@@ -266,9 +302,9 @@ export const AppNavigator: React.FC = () => {
           );
         case 'profile':
           return (
-            <MentorProfileScreen
-              mentorId={user!.id}
-              onBack={() => setActiveTab('dashboard')}
+            <ProfileScreen
+              onOpenServerConfig={() => setActiveSubRoute({ route: 'server-config' })}
+              onNavigateToOnboarding={() => setActiveSubRoute({ route: 'onboarding' })}
               onNavigate={(r, p) => setActiveSubRoute({ route: r, params: p })}
             />
           );
@@ -287,8 +323,10 @@ export const AppNavigator: React.FC = () => {
         return (
           <StudentDashboardScreen
             onNavigate={(r, p) => {
-              if (r === 'discover' || r === 'project' || r === 'sessions' || r === 'messages') {
+              if (r === 'discover' || r === 'sessions' || r === 'messages' || r === 'profile') {
                 setActiveTab(r);
+              } else if (r === 'project') {
+                setActiveSubRoute({ route: 'project', params: p });
               } else {
                 setActiveSubRoute({ route: r, params: p });
               }
@@ -307,12 +345,6 @@ export const AppNavigator: React.FC = () => {
             }}
           />
         );
-      case 'project':
-        return (
-          <ProjectWorkspaceScreen
-            onNavigate={(r, p) => setActiveSubRoute({ route: r, params: p })}
-          />
-        );
       case 'sessions':
         return (
           <SessionsScreen
@@ -329,6 +361,14 @@ export const AppNavigator: React.FC = () => {
               });
             }}
             onNavigate={(r) => setActiveTab(r)}
+          />
+        );
+      case 'profile':
+        return (
+          <ProfileScreen
+            onOpenServerConfig={() => setActiveSubRoute({ route: 'server-config' })}
+            onNavigateToOnboarding={() => setActiveSubRoute({ route: 'onboarding' })}
+            onNavigate={(r, p) => setActiveSubRoute({ route: r, params: p })}
           />
         );
       default:
