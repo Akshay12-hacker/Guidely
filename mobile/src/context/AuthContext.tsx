@@ -15,7 +15,6 @@ interface AuthContextType {
   profile: StudentProfile | MentorProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  serverHost: string;
   login: (email: string, passwordHash: string) => Promise<void>;
   register: (email: string, passwordHash: string, fullName: string, role: UserRole) => Promise<void>;
   googleLogin: (email: string, fullName: string, role?: UserRole) => Promise<void>;
@@ -23,7 +22,6 @@ interface AuthContextType {
   selectRole: (role: UserRole) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
-  updateServerHost: (host: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,13 +30,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<StudentProfile | MentorProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [serverHost, setServerHostState] = useState<string>(apiConfig.host);
   const { showToast } = useToast();
 
   const loadSession = useCallback(async () => {
     try {
       await apiConfig.init();
-      setServerHostState(apiConfig.host);
       await apiClient.initToken();
       const token = apiClient.getToken();
 
@@ -52,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           apiClient.setToken(null);
           setUser(null);
           setProfile(null);
+          await storage.removeItem(STORAGE_KEYS.USER_DATA);
         }
       }
     } catch (e) {
@@ -59,6 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       apiClient.setToken(null);
       setUser(null);
       setProfile(null);
+      await storage.removeItem(STORAGE_KEYS.USER_DATA);
     } finally {
       setIsLoading(false);
     }
@@ -66,7 +64,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     loadSession();
-  }, [loadSession]);
+
+    // Register 401 session expiration handler
+    const unsubscribeAuthExpired = apiClient.onAuthExpired(() => {
+      setUser(null);
+      setProfile(null);
+      storage.removeItem(STORAGE_KEYS.USER_DATA);
+      showToast('warning', 'Session Expired', 'Your session has ended. Please sign in again.');
+    });
+
+    return () => {
+      unsubscribeAuthExpired();
+    };
+  }, [loadSession, showToast]);
 
   const refreshUser = async () => {
     try {
@@ -170,15 +180,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     authService.logout();
+    storage.removeItem(STORAGE_KEYS.USER_DATA).catch(() => {});
     setUser(null);
     setProfile(null);
     showToast('info', 'Signed Out', 'You have been logged out of your session.');
-  };
-
-  const updateServerHost = async (newHost: string) => {
-    await apiConfig.setServerHost(newHost);
-    setServerHostState(newHost);
-    showToast('success', 'Server URL Updated', `Connecting to ${apiConfig.httpBaseUrl}`);
   };
 
   return (
@@ -188,15 +193,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         isAuthenticated: !!user,
         isLoading,
-        serverHost,
         login,
         register,
         googleLogin,
         quickLoginAs,
         selectRole,
         logout,
-        refreshUser,
-        updateServerHost
+        refreshUser
       }}
     >
       {children}

@@ -16,6 +16,7 @@ import { useToast } from '../../context/ToastContext';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
+import { Badge } from '../../components/common/Badge';
 import { Icon } from '../../components/icons/Icon';
 import { colors } from '../../theme/colors';
 import { spacing, radius, shadows } from '../../theme/spacing';
@@ -24,12 +25,10 @@ import { ForgotPasswordModal } from './ForgotPasswordModal';
 
 export interface LoginScreenProps {
   onNavigateToRegister: () => void;
-  onOpenServerConfig: () => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
-  onNavigateToRegister,
-  onOpenServerConfig
+  onNavigateToRegister
 }) => {
   const { login, googleLogin, quickLoginAs } = useAuth();
   const { showToast } = useToast();
@@ -54,16 +53,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    if (!email.trim()) {
-      showToast('warning', 'Missing Email', 'Please enter your email address above to continue with Google.');
-      return;
-    }
+  const [isGoogleModalVisible, setIsGoogleModalVisible] = useState(false);
+  const [googleCustomEmail, setGoogleCustomEmail] = useState('');
+  const [googleCustomRole, setGoogleCustomRole] = useState<'STUDENT' | 'MENTOR'>('STUDENT');
+
+  const handleGoogleSignInPress = () => {
+    setIsGoogleModalVisible(true);
+  };
+
+  const handlePerformGoogleAuth = async (authEmail: string, authName: string, role: 'STUDENT' | 'MENTOR') => {
     setIsLoading(true);
+    setIsGoogleModalVisible(false);
     try {
-      const namePart = email.split('@')[0].replace(/[\._]/g, ' ');
-      const name = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-      await googleLogin(email.trim(), name, 'STUDENT');
+      await googleLogin(authEmail, authName, role);
     } catch {
       // handled in context
     } finally {
@@ -144,7 +146,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <Button
               variant="outline"
               size="md"
-              onPress={handleGoogleSignIn}
+              onPress={handleGoogleSignInPress}
               fullWidth
               leftIcon={<Icon name="globe" size={18} color={colors.primary} />}
             >
@@ -156,17 +158,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <View style={styles.demoHeader}>
                 <Icon name="sparkles" size={14} color={colors.primary} />
                 <Text style={[typography.captionBold, { color: colors.textMain }]}>
-                  One-Tap Demo Logins
+                  One-Tap Seeded Accounts
                 </Text>
               </View>
               <View style={styles.demoButtonsRow}>
                 <Button
                   size="sm"
                   variant="secondary"
-                  onPress={() => quickLoginAs('aarav.sharma@iitd.ac.in')}
+                  onPress={() => quickLoginAs('akshay@guidely.dev')}
                   style={styles.demoBtn}
                 >
-                  🎓 Aarav (Student)
+                  🎓 Akshay (Student)
                 </Button>
                 <Button
                   size="sm"
@@ -174,7 +176,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   onPress={() => quickLoginAs('priya.sundaram@gmail.com')}
                   style={styles.demoBtn}
                 >
-                  👩‍💻 Priya (Google)
+                  👩‍💻 Priya (Mentor)
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => quickLoginAs('admin@guidely.dev')}
+                  style={styles.demoBtn}
+                >
+                  🛡️ Admin
                 </Button>
               </View>
             </View>
@@ -198,6 +208,107 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         visible={isForgotModalVisible}
         onClose={() => setIsForgotModalVisible(false)}
       />
+
+      {/* Google Account Selector Dialog */}
+      {isGoogleModalVisible && (
+        <View style={styles.googleModalOverlay}>
+          <View style={styles.googleModalCard}>
+            <View style={styles.googleModalHeader}>
+              <Icon name="globe" size={24} color={colors.primary} />
+              <Text style={[typography.h3, { color: colors.textMain, marginTop: spacing.xs }]}>
+                Sign in with Google
+              </Text>
+              <Text style={[typography.caption, { color: colors.textMuted, textAlign: 'center' }]}>
+                Select an account or enter your Google credentials to continue to Guidely.
+              </Text>
+            </View>
+
+            <View style={styles.googleAccountsList}>
+              <TouchableOpacity
+                style={styles.googleAccountItem}
+                onPress={() => handlePerformGoogleAuth('akshay@guidely.dev', 'Akshay Ramkishor Rahangdale', 'STUDENT')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.googleAvatarCircle}>
+                  <Text style={{ fontWeight: '700', color: colors.primary }}>A</Text>
+                </View>
+                <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                  <Text style={[typography.bodyBold, { color: colors.textMain }]}>Akshay Rahangdale</Text>
+                  <Text style={[typography.caption, { color: colors.textMuted }]}>akshay@guidely.dev</Text>
+                </View>
+                <Badge variant="primary" size="sm">Student</Badge>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.googleAccountItem}
+                onPress={() => handlePerformGoogleAuth('priya.sundaram@gmail.com', 'Priya Sundaram', 'MENTOR')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.googleAvatarCircle}>
+                  <Text style={{ fontWeight: '700', color: colors.primary }}>P</Text>
+                </View>
+                <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                  <Text style={[typography.bodyBold, { color: colors.textMain }]}>Priya Sundaram</Text>
+                  <Text style={[typography.caption, { color: colors.textMuted }]}>priya.sundaram@gmail.com</Text>
+                </View>
+                <Badge variant="success" size="sm">Mentor</Badge>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ marginTop: spacing.sm }}>
+              <Input
+                label="Or use another Google email:"
+                placeholder="you@gmail.com"
+                value={googleCustomEmail}
+                onChangeText={setGoogleCustomEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <View style={{ flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md }}>
+                <TouchableOpacity
+                  onPress={() => setGoogleCustomRole('STUDENT')}
+                  style={[styles.roleSelectChip, googleCustomRole === 'STUDENT' && styles.roleSelectChipActive]}
+                >
+                  <Text style={[typography.captionBold, { color: googleCustomRole === 'STUDENT' ? colors.primary : colors.textMuted }]}>
+                    Student
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setGoogleCustomRole('MENTOR')}
+                  style={[styles.roleSelectChip, googleCustomRole === 'MENTOR' && styles.roleSelectChipActive]}
+                >
+                  <Text style={[typography.captionBold, { color: googleCustomRole === 'MENTOR' ? colors.primary : colors.textMuted }]}>
+                    Mentor
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {googleCustomEmail.trim().length > 0 && (
+                <Button
+                  size="md"
+                  variant="primary"
+                  onPress={() => {
+                    const name = googleCustomEmail.split('@')[0];
+                    handlePerformGoogleAuth(googleCustomEmail.trim(), name, googleCustomRole);
+                  }}
+                  fullWidth
+                  style={{ marginBottom: spacing.sm }}
+                >
+                  Continue with this email
+                </Button>
+              )}
+            </View>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={() => setIsGoogleModalVisible(false)}
+              fullWidth
+            >
+              Cancel
+            </Button>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -292,5 +403,59 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.xl,
     marginBottom: spacing.lg
+  },
+  googleModalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+    zIndex: 9999
+  },
+  googleModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    ...shadows.lg
+  },
+  googleModalHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.lg
+  },
+  googleAccountsList: {
+    gap: spacing.sm,
+    marginBottom: spacing.md
+  },
+  googleAccountItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.sm + 2,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  googleAvatarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  roleSelectChip: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: 'center',
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  roleSelectChipActive: {
+    backgroundColor: colors.primaryLight,
+    borderColor: colors.primary
   }
 });

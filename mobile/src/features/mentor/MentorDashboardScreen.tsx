@@ -21,6 +21,7 @@ import { Avatar } from '../../components/common/Avatar';
 import { StatCard } from '../../components/common/StatCard';
 import { ProgressBar } from '../../components/common/ProgressBar';
 import { EmptyState } from '../../components/common/EmptyState';
+import { ErrorState } from '../../components/common/ErrorState';
 import { CardSkeleton } from '../../components/common/Skeleton';
 import { Icon } from '../../components/icons/Icon';
 import { colors } from '../../theme/colors';
@@ -38,15 +39,20 @@ export const MentorDashboardScreen: React.FC<MentorDashboardScreenProps> = ({ on
 
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   const fetchStats = useCallback(async () => {
+    setIsLoading(true);
+    setHasError(false);
     try {
       const res = await mentorService.getDashboardData();
       setData(res);
-    } catch {
-      // fallback
+    } catch (err: any) {
+      setHasError(true);
+      setErrorMessage(err.message || 'Failed to load mentor dashboard.');
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -94,11 +100,23 @@ export const MentorDashboardScreen: React.FC<MentorDashboardScreenProps> = ({ on
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
       <View style={{ padding: spacing.lg }}>
         <CardSkeleton />
         <CardSkeleton />
+      </View>
+    );
+  }
+
+  if (hasError && !data) {
+    return (
+      <View style={{ padding: spacing.lg }}>
+        <ErrorState
+          title="Could Not Load Dashboard"
+          message={errorMessage}
+          onRetry={fetchStats}
+        />
       </View>
     );
   }

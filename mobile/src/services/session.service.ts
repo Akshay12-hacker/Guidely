@@ -5,7 +5,11 @@ import { MentorshipSession } from '../types';
 
 export const sessionService = {
   async getMySessions(): Promise<MentorshipSession[]> {
-    return apiClient.get<MentorshipSession[]>('/sessions/my');
+    return apiClient.get<MentorshipSession[]>('/sessions/my-sessions');
+  },
+
+  async getSessionById(sessionId: string): Promise<MentorshipSession> {
+    return apiClient.get<MentorshipSession>(`/sessions/${sessionId}`);
   },
 
   async requestSession(data: {
@@ -20,23 +24,23 @@ export const sessionService = {
   },
 
   async confirmSession(sessionId: string): Promise<MentorshipSession> {
-    return apiClient.put<MentorshipSession>(`/sessions/${sessionId}/confirm`);
+    return apiClient.post<MentorshipSession>(`/sessions/${sessionId}/confirm`);
   },
 
   async rescheduleSession(sessionId: string, newScheduledAt: string): Promise<MentorshipSession> {
-    return apiClient.put<MentorshipSession>(`/sessions/${sessionId}/reschedule`, { newScheduledAt });
+    return apiClient.post<MentorshipSession>(`/sessions/${sessionId}/reschedule`, { newScheduledAt });
   },
 
   async cancelSession(sessionId: string): Promise<MentorshipSession> {
-    return apiClient.put<MentorshipSession>(`/sessions/${sessionId}/cancel`);
+    return apiClient.post<MentorshipSession>(`/sessions/${sessionId}/cancel`);
   },
 
   async completeSession(sessionId: string, sessionNotes: string): Promise<MentorshipSession> {
-    return apiClient.put<MentorshipSession>(`/sessions/${sessionId}/complete`, { sessionNotes });
+    return apiClient.post<MentorshipSession>(`/sessions/${sessionId}/complete`, { sessionNotes });
   },
 
   async submitFeedback(sessionId: string, studentFeedback: string, studentRating: number): Promise<MentorshipSession> {
-    return apiClient.put<MentorshipSession>(`/sessions/${sessionId}/feedback`, {
+    return apiClient.post<MentorshipSession>(`/sessions/${sessionId}/feedback`, {
       studentFeedback,
       studentRating
     });

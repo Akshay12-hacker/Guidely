@@ -51,9 +51,9 @@ export const SessionsScreen: React.FC<SessionsScreenProps> = ({ onBack, onNaviga
   const [isRequestModalVisible, setIsRequestModalVisible] = useState(false);
   const [mentorsList, setMentorsList] = useState<(MentorProfile & { user: User })[]>([]);
   const [selectedMentorId, setSelectedMentorId] = useState<string>('');
-  const [sessionTitle, setSessionTitle] = useState('Raft Leader Election & Architecture Review');
-  const [sessionAgenda, setSessionAgenda] = useState('Review concurrency locks, leader heartbeat timers, and network split-brain prevention.');
-  const [sessionDate, setSessionDate] = useState('Tomorrow, 7:00 PM IST');
+  const [sessionTitle, setSessionTitle] = useState('');
+  const [sessionAgenda, setSessionAgenda] = useState('');
+  const [sessionDate, setSessionDate] = useState('');
   const [sessionDuration, setSessionDuration] = useState<number>(45);
 
   // Review Modal

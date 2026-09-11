@@ -33,13 +33,11 @@ import { mentorService } from '../../services/mentor.service';
 import { apiClient } from '../../api/client';
 
 export interface ProfileScreenProps {
-  onOpenServerConfig?: () => void;
   onNavigateToOnboarding?: () => void;
   onNavigate?: (route: string, params?: any) => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
-  onOpenServerConfig,
   onNavigateToOnboarding,
   onNavigate
 }) => {
@@ -262,26 +260,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
       </Card>
 
-      {/* Grouped Android Settings: Network & System */}
-      <Text style={styles.groupHeading}>APP & DEVELOPER SETTINGS</Text>
+      {/* App Information */}
+      <Text style={styles.groupHeading}>ABOUT GUIDELY</Text>
       <Card padding="none" style={styles.settingsGroupCard}>
-        {onOpenServerConfig && (
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={onOpenServerConfig}
-            style={styles.settingActionItem}
-          >
-            <View style={styles.settingLabelCol}>
-              <Text style={[typography.bodyBold, styles.settingLabel]}>Server Configuration</Text>
-              <Text style={[typography.caption, styles.settingSub]}>
-                API Endpoint & WebSocket LAN IP
-              </Text>
-            </View>
-            <Icon name="chevron-right" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
-
-        <View style={styles.divider} />
 
         <View style={styles.settingActionItem}>
           <View style={styles.settingLabelCol}>

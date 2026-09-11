@@ -1,4 +1,5 @@
-// Root App Navigator for Guidely Mobile
+// Production App Navigator for Guidely Mobile
+// Clean, secure navigation with no developer switcher bars or exposed API endpoints
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -11,7 +12,6 @@ import {
   Platform
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { QuickRoleBar } from '../components/common/QuickRoleBar';
 import { BottomTabBar } from '../components/common/BottomTabBar';
 
 // Auth Screens
@@ -52,16 +52,18 @@ import { ProfileScreen } from '../features/profile/ProfileScreen';
 // Admin Screens
 import { AdminDashboardScreen } from '../features/admin/AdminDashboardScreen';
 
-// Settings
-import { ServerConfigScreen } from '../features/settings/ServerConfigScreen';
-
 import { colors } from '../theme/colors';
+
+// Introductory Onboarding
+import { IntroOnboardingScreen } from '../features/onboarding/IntroOnboardingScreen';
+import { storage, STORAGE_KEYS } from '../utils/storage';
 
 export const AppNavigator: React.FC = () => {
   const { user, profile, isAuthenticated, isLoading, selectRole, refreshUser } = useAuth();
 
   // Navigation Stack State
-  const [authScreen, setAuthScreen] = useState<'LOGIN' | 'REGISTER' | 'ROLE_SELECT' | 'SERVER_CONFIG'>('LOGIN');
+  const [hasIntroCompleted, setHasIntroCompleted] = useState<boolean | null>(null);
+  const [authScreen, setAuthScreen] = useState<'LOGIN' | 'REGISTER' | 'ROLE_SELECT'>('LOGIN');
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [activeSubRoute, setActiveSubRoute] = useState<{
     route: string;
@@ -69,6 +71,12 @@ export const AppNavigator: React.FC = () => {
   } | null>(null);
 
   const lastBackPressTime = useRef<number>(0);
+
+  useEffect(() => {
+    storage.getItem<string>(STORAGE_KEYS.ONBOARDING_COMPLETED).then((val) => {
+      setHasIntroCompleted(val === 'true');
+    });
+  }, []);
 
   // Hardware Back Button Handling for Android
   useEffect(() => {
@@ -104,7 +112,7 @@ export const AppNavigator: React.FC = () => {
   }, [activeSubRoute, isAuthenticated, authScreen, activeTab]);
 
   // Loading Screen
-  if (isLoading) {
+  if (isLoading || hasIntroCompleted === null) {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar backgroundColor={colors.surface} barStyle="dark-content" />
@@ -113,17 +121,24 @@ export const AppNavigator: React.FC = () => {
     );
   }
 
+  // 0. First-Launch Introductory Onboarding Carousel
+  if (!isAuthenticated && !hasIntroCompleted) {
+    return (
+      <IntroOnboardingScreen
+        onFinish={() => setHasIntroCompleted(true)}
+      />
+    );
+  }
+
   // 1. Unauthenticated Flow
   if (!isAuthenticated) {
     return (
       <View style={styles.container}>
         <StatusBar backgroundColor="#0F172A" barStyle="light-content" />
-        <QuickRoleBar onOpenServerConfig={() => setAuthScreen('SERVER_CONFIG')} />
 
         {authScreen === 'LOGIN' && (
           <LoginScreen
             onNavigateToRegister={() => setAuthScreen('REGISTER')}
-            onOpenServerConfig={() => setAuthScreen('SERVER_CONFIG')}
           />
         )}
 
@@ -140,12 +155,6 @@ export const AppNavigator: React.FC = () => {
             }}
           />
         )}
-
-        {authScreen === 'SERVER_CONFIG' && (
-          <ServerConfigScreen
-            onBack={() => setAuthScreen('LOGIN')}
-          />
-        )}
       </View>
     );
   }
@@ -159,7 +168,6 @@ export const AppNavigator: React.FC = () => {
     return (
       <View style={styles.container}>
         <StatusBar backgroundColor="#0F172A" barStyle="light-content" />
-        <QuickRoleBar onOpenServerConfig={() => setActiveSubRoute({ route: 'server-config' })} />
         {isStudent ? (
           <StudentOnboardingScreen onComplete={refreshUser} />
         ) : (
@@ -224,13 +232,6 @@ export const AppNavigator: React.FC = () => {
               setActiveSubRoute(null);
               setActiveTab(r);
             }}
-          />
-        );
-
-      case 'server-config':
-        return (
-          <ServerConfigScreen
-            onBack={() => setActiveSubRoute(null)}
           />
         );
 
@@ -303,7 +304,6 @@ export const AppNavigator: React.FC = () => {
         case 'profile':
           return (
             <ProfileScreen
-              onOpenServerConfig={() => setActiveSubRoute({ route: 'server-config' })}
               onNavigateToOnboarding={() => setActiveSubRoute({ route: 'onboarding' })}
               onNavigate={(r, p) => setActiveSubRoute({ route: r, params: p })}
             />
@@ -366,7 +366,6 @@ export const AppNavigator: React.FC = () => {
       case 'profile':
         return (
           <ProfileScreen
-            onOpenServerConfig={() => setActiveSubRoute({ route: 'server-config' })}
             onNavigateToOnboarding={() => setActiveSubRoute({ route: 'onboarding' })}
             onNavigate={(r, p) => setActiveSubRoute({ route: r, params: p })}
           />
@@ -383,11 +382,6 @@ export const AppNavigator: React.FC = () => {
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor="#0F172A" barStyle="light-content" />
-
-      {/* Demo Switcher Sticky Bar */}
-      <QuickRoleBar
-        onOpenServerConfig={() => setActiveSubRoute({ route: 'server-config' })}
-      />
 
       {/* Main Content (SubRoute or Active Tab) */}
       <View style={styles.contentArea}>

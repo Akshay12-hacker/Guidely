@@ -19,7 +19,6 @@ export * from './Modal';
 export * from './NotificationItem';
 export * from './ProgressBar';
 export * from './ProjectCard';
-export * from './QuickRoleBar';
 export * from './SearchBar';
 export * from './SessionCard';
 export * from './Skeleton';

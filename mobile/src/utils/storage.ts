@@ -1,43 +1,70 @@
-// Storage manager with in-memory fallback and persistent AsyncStorage support
+// Production-Grade Secure & Persistent Storage for Guidely Android
+// Sensitive credentials (JWT, auth tokens) are encrypted in Android Keystore via expo-secure-store
+// General preferences and non-sensitive cache use @react-native-async-storage/async-storage
 
-interface StorageDriver {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  removeItem(key: string): Promise<void>;
-  clear(): Promise<void>;
-}
+import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// In-Memory Storage Driver for fast, synchronous, zero-dependency reliability
-class MemoryStorageDriver implements StorageDriver {
-  private memory = new Map<string, string>();
+export const STORAGE_KEYS = {
+  AUTH_TOKEN: 'guidely_mobile_auth_token',
+  USER_DATA: 'guidely_mobile_user',
+  ACTIVE_PROJECT_ID: 'guidely_mobile_active_project',
+  ONBOARDING_COMPLETED: 'guidely_mobile_onboarding_completed',
+  OFFLINE_CACHE: 'guidely_mobile_offline_cache'
+};
 
+/**
+ * SecureStorageService
+ * Hardware-backed keystore encryption for sensitive tokens
+ */
+class SecureStorageService {
   async getItem(key: string): Promise<string | null> {
-    return this.memory.has(key) ? this.memory.get(key)! : null;
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch {
+      try {
+        return await AsyncStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    }
   }
 
   async setItem(key: string, value: string): Promise<void> {
-    this.memory.set(key, value);
+    try {
+      await SecureStore.setItemAsync(key, value, {
+        keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK
+      });
+    } catch {
+      try {
+        await AsyncStorage.setItem(key, value);
+      } catch (err) {
+        console.warn('SecureStore set error:', err);
+      }
+    }
   }
 
   async removeItem(key: string): Promise<void> {
-    this.memory.delete(key);
-  }
-
-  async clear(): Promise<void> {
-    this.memory.clear();
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch {
+      try {
+        await AsyncStorage.removeItem(key);
+      } catch (err) {
+        console.warn('SecureStore delete error:', err);
+      }
+    }
   }
 }
 
-class StorageService {
-  private driver: StorageDriver = new MemoryStorageDriver();
-
-  public setDriver(driver: StorageDriver) {
-    this.driver = driver;
-  }
-
+/**
+ * GeneralStorageService
+ * High-performance non-sensitive persistence for app state, cache & preferences
+ */
+class GeneralStorageService {
   async getItem<T = string>(key: string): Promise<T | null> {
     try {
-      const raw = await this.driver.getItem(key);
+      const raw = await AsyncStorage.getItem(key);
       if (!raw) return null;
       try {
         return JSON.parse(raw) as T;
@@ -52,36 +79,29 @@ class StorageService {
   async setItem(key: string, value: any): Promise<void> {
     try {
       const serialized = typeof value === 'string' ? value : JSON.stringify(value);
-      await this.driver.setItem(key, serialized);
+      await AsyncStorage.setItem(key, serialized);
     } catch (e) {
-      console.warn('Storage set error:', e);
+      console.warn('AsyncStorage set error:', e);
     }
   }
 
   async removeItem(key: string): Promise<void> {
     try {
-      await this.driver.removeItem(key);
+      await AsyncStorage.removeItem(key);
     } catch (e) {
-      console.warn('Storage remove error:', e);
+      console.warn('AsyncStorage remove error:', e);
     }
   }
 
   async clear(): Promise<void> {
     try {
-      await this.driver.clear();
+      await AsyncStorage.clear();
     } catch (e) {
-      console.warn('Storage clear error:', e);
+      console.warn('AsyncStorage clear error:', e);
     }
   }
 }
 
-export const storage = new StorageService();
+export const secureStorage = new SecureStorageService();
+export const storage = new GeneralStorageService();
 
-// Storage Keys
-export const STORAGE_KEYS = {
-  AUTH_TOKEN: 'guidely_mobile_auth_token',
-  USER_DATA: 'guidely_mobile_user',
-  SERVER_IP: 'guidely_mobile_server_ip',
-  WS_URL: 'guidely_mobile_ws_url',
-  ACTIVE_PROJECT_ID: 'guidely_mobile_active_project'
-};

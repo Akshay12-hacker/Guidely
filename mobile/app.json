@@ -17,6 +17,7 @@
     "android": {
       "package": "com.guidely.app",
       "versionCode": 1,
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
@@ -67,7 +68,8 @@
           "photosPermission": "Allow Guidely to access photos to save mentorship guides and upload attachments.",
           "savePhotosPermission": "Allow Guidely to save mentorship resources and shared media to your device."
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }

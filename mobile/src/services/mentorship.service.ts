@@ -15,15 +15,19 @@ export const mentorshipService = {
     preferredTimes: string;
     additionalMessage?: string;
   }): Promise<MentorshipRequest> {
-    return apiClient.post<MentorshipRequest>('/mentorship/requests', data);
+    return apiClient.post<MentorshipRequest>('/mentorship/request', data);
   },
 
   async getStudentRequests(): Promise<MentorshipRequest[]> {
-    return apiClient.get<MentorshipRequest[]>('/mentorship/requests/student');
+    return apiClient.get<MentorshipRequest[]>('/mentorship/student-requests');
   },
 
   async getMentorRequests(): Promise<MentorshipRequest[]> {
-    return apiClient.get<MentorshipRequest[]>('/mentorship/requests/mentor');
+    return apiClient.get<MentorshipRequest[]>('/mentorship/mentor-requests');
+  },
+
+  async getRequestById(requestId: string): Promise<MentorshipRequest> {
+    return apiClient.get<MentorshipRequest>(`/mentorship/request/${requestId}`);
   },
 
   async respondToRequest(
@@ -31,14 +35,14 @@ export const mentorshipService = {
     action: 'ACCEPT' | 'REJECT' | 'REQUEST_INFO',
     notes?: string
   ): Promise<MentorshipRequest> {
-    return apiClient.put<MentorshipRequest>(`/mentorship/requests/${requestId}/respond`, {
+    return apiClient.post<MentorshipRequest>(`/mentorship/request/${requestId}/respond`, {
       action,
       notes
     });
   },
 
   async provideAdditionalInfo(requestId: string, additionalMessage: string): Promise<MentorshipRequest> {
-    return apiClient.put<MentorshipRequest>(`/mentorship/requests/${requestId}/provide-info`, {
+    return apiClient.post<MentorshipRequest>(`/mentorship/request/${requestId}/info`, {
       additionalMessage
     });
   }

@@ -89,7 +89,7 @@ export function createApp(): express.Application {
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Accept', 'Origin', 'X-Requested-With'],
       exposedHeaders: ['X-Request-Id', 'X-Response-Time'],
       maxAge: 86400 // Cache preflight requests for 24 hours
     })

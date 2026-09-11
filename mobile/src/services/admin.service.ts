@@ -37,11 +37,15 @@ export const adminService = {
     return apiClient.put<Report>(`/admin/reports/${reportId}/resolve`, { status, adminNotes });
   },
 
+  async createReport(data: { reportedUserId: string; reason: string; details?: string; category?: string }): Promise<Report> {
+    return apiClient.post<Report>('/admin/reports/create', data);
+  },
+
   async getReviewsForModeration(): Promise<Review[]> {
     return apiClient.get<Review[]>('/admin/reviews');
   },
 
   async moderateReview(reviewId: string, isApproved: boolean): Promise<void> {
-    return apiClient.post<void>(`/admin/reviews/${reviewId}/moderate`, { isApproved });
+    return apiClient.put<void>(`/admin/reviews/${reviewId}/moderate`, { isApproved });
   }
 };

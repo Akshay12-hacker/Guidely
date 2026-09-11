@@ -111,6 +111,7 @@ export const uploadRateLimiter = rateLimit({
   max: 30, // 30 uploads per 15 minutes
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { ip: false },
   keyGenerator: (req: Request) => {
     const user = (req as any).user;
     return user?.userId || req.ip || 'anonymous';

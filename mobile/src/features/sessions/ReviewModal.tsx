@@ -31,7 +31,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
 }) => {
   const { showToast } = useToast();
   const [rating, setRating] = useState<number>(5);
-  const [comment, setComment] = useState('Incredible session! Provided crystal clear guidance on concurrency locks and system design tradeoffs.');
+  const [comment, setComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {

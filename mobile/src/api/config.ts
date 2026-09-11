@@ -1,54 +1,76 @@
-// Server and Network Configuration for Android
+// Production-Grade Secure Environment & Network Configuration for Guidely Mobile
+// Configured strictly via .env (EXPO_PUBLIC_API_URL, EXPO_PUBLIC_WS_URL)
+// No sensitive endpoints or developer switchers are exposed on the user interface
 
 import { Platform } from 'react-native';
-import { storage, STORAGE_KEYS } from '../utils/storage';
 
-// Default development hosts
-const DEFAULT_EMULATOR_HOST = '10.0.2.2'; // Standard Android Emulator host loopback
-const DEFAULT_DEVICE_HOST = '192.168.1.100'; // Default local LAN placeholder
+export type AppEnvironment = 'development' | 'staging' | 'production';
+
+// Fallback Cloud URLs for production/staging builds
+const PRODUCTION_API_URL = 'https://guidely-server-ccg1.onrender.com/api';
+const STAGING_API_URL = 'https://guidely-server-ccg1.onrender.com/api';
+
+// Android emulator default host: 10.0.2.2 points to host machine loopback
+const DEFAULT_DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 const DEFAULT_PORT = '5000';
 
 class ApiConfig {
-  private currentHost: string = Platform.OS === 'android' ? DEFAULT_EMULATOR_HOST : 'localhost';
-  private currentPort: string = DEFAULT_PORT;
-  private customBaseUrl: string | null = null;
-  private customWsUrl: string | null = null;
+  private environment: AppEnvironment = __DEV__ ? 'development' : 'production';
 
   async init() {
-    const savedHost = await storage.getItem<string>(STORAGE_KEYS.SERVER_IP);
-    if (savedHost) {
-      this.currentHost = savedHost;
-    }
-    const savedWs = await storage.getItem<string>(STORAGE_KEYS.WS_URL);
-    if (savedWs) {
-      this.customWsUrl = savedWs;
-    }
+    // Environment initialized at bundle/runtime
   }
 
-  async setServerHost(host: string, port: string = DEFAULT_PORT) {
-    this.currentHost = host.trim();
-    this.currentPort = port.trim();
-    this.customBaseUrl = null;
-    this.customWsUrl = null;
-    await storage.setItem(STORAGE_KEYS.SERVER_IP, this.currentHost);
+  setEnvironment(env: AppEnvironment) {
+    this.environment = env;
   }
 
-  get host(): string {
-    return this.currentHost;
+  get isProduction(): boolean {
+    return this.environment === 'production' && !__DEV__;
   }
 
-  get port(): string {
-    return this.currentPort;
-  }
-
+  /**
+   * HTTP API Base URL
+   * Prioritizes EXPO_PUBLIC_API_URL from .env
+   */
   get httpBaseUrl(): string {
-    if (this.customBaseUrl) return this.customBaseUrl;
-    return `http://${this.currentHost}:${this.currentPort}/api`;
+    const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+    if (envApiUrl && envApiUrl.trim().length > 0) {
+      const sanitized = envApiUrl.trim().replace(/\/+$/, '');
+      return sanitized.endsWith('/api') ? sanitized : `${sanitized}/api`;
+    }
+
+    if (this.isProduction) {
+      return PRODUCTION_API_URL;
+    }
+
+    if (this.environment === 'staging') {
+      return STAGING_API_URL;
+    }
+
+    // Development default
+    return `http://${DEFAULT_DEV_HOST}:${DEFAULT_PORT}/api`;
   }
 
+  /**
+   * WebSocket Base URL
+   * Prioritizes EXPO_PUBLIC_WS_URL from .env or cleanly derives from httpBaseUrl
+   */
   get wsBaseUrl(): string {
-    if (this.customWsUrl) return this.customWsUrl;
-    return `ws://${this.currentHost}:${this.currentPort}/ws`;
+    const envWsUrl = process.env.EXPO_PUBLIC_WS_URL;
+    if (envWsUrl && envWsUrl.trim().length > 0) {
+      return envWsUrl.trim().replace(/\/+$/, '');
+    }
+
+    const httpUrl = this.httpBaseUrl;
+    const isSecure = httpUrl.startsWith('https://');
+    const wsProtocol = isSecure ? 'wss://' : 'ws://';
+    const hostWithPort = httpUrl
+      .replace(/^https?:\/\//, '')
+      .replace(/\/api\/?$/, '')
+      .replace(/\/+$/, '');
+
+    return `${wsProtocol}${hostWithPort}`;
   }
 }
 

@@ -1,10 +1,12 @@
-// Mobile Mentor Discovery & Marketplace Screen
+// Production Mentor Discovery & Marketplace Screen for Guidely Mobile
+// Virtualized FlatList, debounced search, active technology filters, and 4 explicit states
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
+  FlatList,
   ScrollView,
   RefreshControl,
   TouchableOpacity,
@@ -20,6 +22,7 @@ import { Avatar } from '../../components/common/Avatar';
 import { Chip } from '../../components/common/Chip';
 import { CardSkeleton } from '../../components/common/Skeleton';
 import { EmptyState } from '../../components/common/EmptyState';
+import { ErrorState } from '../../components/common/ErrorState';
 import { Icon } from '../../components/icons/Icon';
 import { colors } from '../../theme/colors';
 import { spacing, radius, shadows } from '../../theme/spacing';
@@ -33,28 +36,44 @@ export interface MentorDiscoveryScreenProps {
 export const MentorDiscoveryScreen: React.FC<MentorDiscoveryScreenProps> = ({ onNavigate }) => {
   const [mentors, setMentors] = useState<(MentorProfile & { user: User })[]>([]);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedTech, setSelectedTech] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'rating' | 'experience' | 'students'>('rating');
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
   // Proposal modal state
   const [selectedMentorForProposal, setSelectedMentorForProposal] = useState<any>(null);
 
+  const debounceTimerRef = useRef<any>(null);
+
+  const handleSearchChange = (text: string) => {
+    setSearch(text);
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(text);
+    }, 300);
+  };
+
   const fetchMentors = useCallback(async () => {
+    setIsLoading(true);
+    setHasError(false);
     try {
       const filters: any = { sortBy };
-      if (search.trim()) filters.search = search.trim();
+      if (debouncedSearch.trim()) filters.search = debouncedSearch.trim();
       if (selectedTech) filters.technologies = [selectedTech];
       const data = await mentorService.discoverMentors(filters);
-      setMentors(data);
-    } catch {
-      // fallback
+      setMentors(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setHasError(true);
+      setErrorMessage(err.message || 'Could not fetch mentors. Please check connection.');
     } finally {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [search, selectedTech, sortBy]);
+  }, [debouncedSearch, selectedTech, sortBy]);
 
   useEffect(() => {
     fetchMentors();
@@ -67,15 +86,97 @@ export const MentorDiscoveryScreen: React.FC<MentorDiscoveryScreenProps> = ({ on
 
   const techFilters = ['All', 'Go', 'PyTorch', 'Rust', 'Kubernetes', 'React', 'TypeScript', 'Solidity'];
 
+  const renderMentorCard = ({ item: m }: { item: MentorProfile & { user: User } }) => {
+    return (
+      <Card
+        padding="md"
+        style={styles.mentorCard}
+        onPress={() => onNavigate('mentor-profile', { mentorId: m.userId })}
+      >
+        {/* Header Row */}
+        <View style={styles.cardTop}>
+          <Avatar
+            name={m.user?.fullName || 'Mentor'}
+            src={m.user?.avatarUrl}
+            size="lg"
+            isVerified
+            isOnline
+          />
+          <View style={styles.cardHeaderInfo}>
+            <View style={styles.nameRow}>
+              <Text style={[typography.h3, styles.mentorName]} numberOfLines={1}>
+                {m.user?.fullName}
+              </Text>
+              <Badge variant="verified" size="sm">Verified</Badge>
+            </View>
+            <Text style={[typography.bodyMedium, { color: colors.primary }]} numberOfLines={1}>
+              {m.title} @ {m.company}
+            </Text>
+            <Text style={[typography.caption, { color: colors.textMuted }]} numberOfLines={1}>
+              {m.college} • {m.yearsExperience} yrs exp
+            </Text>
+          </View>
+        </View>
+
+        {/* Bio */}
+        {m.bio ? (
+          <Text style={[typography.body, styles.bioText]} numberOfLines={2}>
+            {m.bio}
+          </Text>
+        ) : null}
+
+        {/* Tech Chips */}
+        <View style={styles.chipsRow}>
+          {m.technologies?.slice(0, 4).map(t => (
+            <Badge key={t} variant="neutral" size="sm" style={{ marginRight: 4, marginBottom: 4 }}>
+              {t}
+            </Badge>
+          ))}
+          {(m.technologies?.length || 0) > 4 && (
+            <Badge variant="neutral" size="sm">+{(m.technologies?.length || 0) - 4}</Badge>
+          )}
+        </View>
+
+        {/* Stats & Actions Footer */}
+        <View style={styles.cardFooter}>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Icon name="star" size={14} color="#F59E0B" />
+              <Text style={[typography.captionBold, styles.statText]}>{m.rating || 5.0}</Text>
+              <Text style={[typography.caption, { color: colors.textSubtle, fontSize: 10.5 }]}>
+                ({m.reviewsCount || 0})
+              </Text>
+            </View>
+            <View style={styles.statDivider} />
+            <Text style={[typography.caption, { color: colors.textMuted }]}>
+              {m.studentsHelpedCount || 0} guided
+            </Text>
+          </View>
+
+          <View style={styles.actionButtons}>
+            <Button
+              size="sm"
+              variant="primary"
+              onPress={() => setSelectedMentorForProposal(m)}
+              rightIcon={<Icon name="send" size={12} color={colors.white} />}
+            >
+              Request
+            </Button>
+          </View>
+        </View>
+      </Card>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         {/* Top Search & Filter Bar */}
         <View style={styles.searchSection}>
           <Input
-            placeholder="Search by mentor name, company, or college..."
+            placeholder="Search by mentor name, company, or tech..."
             value={search}
-            onChangeText={setSearch}
+            onChangeText={handleSearchChange}
             leftIcon={<Icon name="search" size={18} color={colors.textMuted} />}
             containerStyle={{ marginBottom: spacing.xs }}
           />
@@ -132,112 +233,43 @@ export const MentorDiscoveryScreen: React.FC<MentorDiscoveryScreenProps> = ({ on
           </View>
         </View>
 
-        {/* Mentor Cards Feed */}
-        <ScrollView
-          contentContainerStyle={styles.cardsContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
-          }
-        >
-          {isLoading ? (
-            <View>
-              <CardSkeleton />
-              <CardSkeleton />
-              <CardSkeleton />
-            </View>
-          ) : mentors.length === 0 ? (
-            <EmptyState
-              iconName="users"
-              title="No Mentors Found"
-              description="Try adjusting your search terms or clearing your technology filter."
-              actionText="Reset Filters"
-              onAction={() => {
-                setSearch('');
-                setSelectedTech(null);
-              }}
-            />
-          ) : (
-            mentors.map(m => (
-              <Card
-                key={m.userId}
-                padding="md"
-                style={styles.mentorCard}
-                onPress={() => onNavigate('mentor-profile', { mentorId: m.userId })}
-              >
-                {/* Header Row */}
-                <View style={styles.cardTop}>
-                  <Avatar
-                    name={m.user?.fullName || 'Mentor'}
-                    src={m.user?.avatarUrl}
-                    size="lg"
-                    isVerified
-                    isOnline
-                  />
-                  <View style={styles.cardHeaderInfo}>
-                    <View style={styles.nameRow}>
-                      <Text style={[typography.h3, styles.mentorName]} numberOfLines={1}>
-                        {m.user?.fullName}
-                      </Text>
-                      <Badge variant="verified" size="sm">Verified</Badge>
-                    </View>
-                    <Text style={[typography.bodyMedium, { color: colors.primary }]} numberOfLines={1}>
-                      {m.title} @ {m.company}
-                    </Text>
-                    <Text style={[typography.caption, { color: colors.textMuted }]} numberOfLines={1}>
-                      {m.college} • {m.yearsExperience} yrs exp
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Bio */}
-                <Text style={[typography.body, styles.bioText]} numberOfLines={2}>
-                  {m.bio}
-                </Text>
-
-                {/* Tech Chips */}
-                <View style={styles.chipsRow}>
-                  {m.technologies?.slice(0, 4).map(t => (
-                    <Badge key={t} variant="neutral" size="sm" style={{ marginRight: 4, marginBottom: 4 }}>
-                      {t}
-                    </Badge>
-                  ))}
-                  {m.technologies?.length > 4 && (
-                    <Badge variant="neutral" size="sm">+{m.technologies.length - 4}</Badge>
-                  )}
-                </View>
-
-                {/* Stats & Actions Footer */}
-                <View style={styles.cardFooter}>
-                  <View style={styles.statsRow}>
-                    <View style={styles.statItem}>
-                      <Icon name="star" size={14} color="#F59E0B" />
-                      <Text style={[typography.captionBold, styles.statText]}>{m.rating || 5.0}</Text>
-                      <Text style={[typography.caption, { color: colors.textSubtle, fontSize: 10.5 }]}>
-                        ({m.reviewsCount || 0})
-                      </Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <Text style={[typography.caption, { color: colors.textMuted }]}>
-                      {m.studentsHelpedCount || 0} students guided
-                    </Text>
-                  </View>
-
-                  <View style={styles.actionButtons}>
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      onPress={() => setSelectedMentorForProposal(m)}
-                      rightIcon={<Icon name="send" size={12} color={colors.white} />}
-                    >
-                      Request
-                    </Button>
-                  </View>
-                </View>
-              </Card>
-            ))
-          )}
-        </ScrollView>
+        {/* 4 Explicit States: Loading, Error, Empty, Success (Virtualized FlatList) */}
+        {isLoading ? (
+          <View style={styles.loadingBox}>
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </View>
+        ) : hasError ? (
+          <ErrorState
+            title="Failed to Load Mentors"
+            message={errorMessage}
+            onRetry={fetchMentors}
+          />
+        ) : mentors.length === 0 ? (
+          <EmptyState
+            iconName="users"
+            title="No Mentors Found"
+            description="Try adjusting your search terms or clearing your technology filter."
+            actionText="Reset Filters"
+            onAction={() => {
+              setSearch('');
+              setDebouncedSearch('');
+              setSelectedTech(null);
+            }}
+          />
+        ) : (
+          <FlatList
+            data={mentors}
+            renderItem={renderMentorCard}
+            keyExtractor={(item) => item.userId || (item as any).id}
+            contentContainerStyle={styles.cardsContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+            }
+          />
+        )}
       </View>
 
       {/* Proposal Request Modal */}
@@ -303,6 +335,9 @@ const styles = StyleSheet.create({
   },
   activeSortBtn: {
     backgroundColor: colors.primaryLight
+  },
+  loadingBox: {
+    padding: spacing.lg
   },
   cardsContent: {
     padding: spacing.lg,

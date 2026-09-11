@@ -18,6 +18,7 @@ import { Badge } from '../../components/common/Badge';
 import { Avatar } from '../../components/common/Avatar';
 import { ProgressBar } from '../../components/common/ProgressBar';
 import { EmptyState } from '../../components/common/EmptyState';
+import { ErrorState } from '../../components/common/ErrorState';
 import { CardSkeleton } from '../../components/common/Skeleton';
 import { Icon } from '../../components/icons/Icon';
 import { colors } from '../../theme/colors';
@@ -34,15 +35,20 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({ 
   const { user, profile } = useAuth();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [isChatModalVisible, setIsChatModalVisible] = useState(false);
 
   const fetchDashboard = useCallback(async () => {
+    setIsLoading(true);
+    setHasError(false);
     try {
       const res = await studentService.getDashboardData();
       setData(res);
-    } catch {
-      // fallback
+    } catch (err: any) {
+      setHasError(true);
+      setErrorMessage(err.message || 'Failed to load student dashboard.');
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -71,11 +77,23 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({ 
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
       <View style={styles.loadingContainer}>
         <CardSkeleton />
         <CardSkeleton />
+      </View>
+    );
+  }
+
+  if (hasError && !data) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ErrorState
+          title="Could Not Load Dashboard"
+          message={errorMessage}
+          onRetry={fetchDashboard}
+        />
       </View>
     );
   }

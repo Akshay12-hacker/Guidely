@@ -88,6 +88,13 @@ export const authService = {
     }, { skipAuth: true });
   },
 
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>('/auth/change-password', {
+      currentPassword,
+      newPassword
+    });
+  },
+
   async selectRole(role: UserRole): Promise<User> {
     return apiClient.post<User>('/auth/select-role', { role });
   },

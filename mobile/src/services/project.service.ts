@@ -15,7 +15,7 @@ import {
 
 export const projectService = {
   async getMyProjects(): Promise<Project[]> {
-    return apiClient.get<Project[]>('/projects/my');
+    return apiClient.get<Project[]>('/projects/my-projects');
   },
 
   async getWorkspace(projectId: string): Promise<{
@@ -26,7 +26,7 @@ export const projectService = {
     resources: ProjectResource[];
     notes: ProjectNote[];
   }> {
-    return apiClient.get<any>(`/projects/${projectId}/workspace`);
+    return apiClient.get<any>(`/projects/${projectId}`);
   },
 
   async updateProject(projectId: string, data: Partial<Project>): Promise<Project> {
